@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">HandmadeExpo</string>
+    <string name="title_activity_log_in">LogInActivity</string>
+    <string name="title_activity_sign_in">SignInActivity</string>
 </resources>
