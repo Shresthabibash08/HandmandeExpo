@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color.Companion.Black
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -56,7 +57,6 @@ import com.example.handmadeexpo.ui.theme.AquaGreen
 import com.example.handmadeexpo.ui.theme.Blue
 import com.example.handmadeexpo.ui.theme.Purple80
 import com.example.handmadeexpo.ui.theme.White
-import com.example.handmadeexpo.view.ui.theme.HandmadeExpoTheme
 
 class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,14 +85,26 @@ fun SignInBody() {
                 .background(White)
         ) {
             Spacer(modifier = Modifier.height(60.dp))
+            Row(modifier=Modifier.fillMaxWidth()
+                .padding(padding),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center) {
+                Image(
+                    painter = painterResource(R.drawable.logo),
+                    contentDescription = null,
+                            modifier = Modifier
+                            .size(180.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop)
+            }
             Text(
                 "Welcome Back!",
                 modifier = Modifier.fillMaxWidth(),
                 style = TextStyle(
-                    color = AquaGreen,
+                    color = Black,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
-                    fontSize = 24.sp
+                    fontSize = 40.sp
                 )
             )
 
@@ -114,8 +126,6 @@ fun SignInBody() {
                     Text("Email/Phone")
                 },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Purple80,
-                    unfocusedContainerColor = Purple80,
                     focusedIndicatorColor = Blue,
                     unfocusedIndicatorColor = Color.Transparent
                 )
@@ -152,8 +162,6 @@ fun SignInBody() {
                     Text("*********")
                 },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Purple80,
-                    unfocusedContainerColor = Purple80,
                     focusedIndicatorColor = Blue,
                     unfocusedIndicatorColor = Color.Transparent
                 )
@@ -190,15 +198,12 @@ fun SignInBody() {
                 Text("Sign In")
             }
 
-            Text(buildAnnotatedString {
-                append("Don't have an account?")
-
-                withStyle(style = SpanStyle(color = Blue)){
-                    append(" Sign Up")
-                }
-            }, modifier = Modifier.padding(horizontal = 15.dp),
-                style = TextStyle(fontSize = 16.sp)
-            )
+            Text("Don't have an account?", modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = TextStyle(fontSize = 16.sp))
+            Text("Sign Up",  modifier=Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = TextStyle(fontSize = 16.sp, color = Blue))
         }
     }
 }
