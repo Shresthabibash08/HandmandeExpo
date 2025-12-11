@@ -1,13 +1,16 @@
 package com.example.handmadeexpo.view
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -74,135 +77,156 @@ fun SignInBody() {
     val context = LocalContext.current
     val activity = context as? Activity
     Scaffold { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(White)
+        Box(
+            modifier = Modifier.fillMaxSize()
         ) {
-            item{
-            Spacer(modifier = Modifier.height(60.dp))
-            Row(modifier=Modifier.fillMaxWidth()
-                .padding(padding),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center) {
-                Image(
-                    painter = painterResource(R.drawable.logo),
-                    contentDescription = null,
-                            modifier = Modifier
-                            .size(180.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop)
-            }
-            Text(
-                "Welcome Back!",
-                modifier = Modifier.fillMaxWidth(),
-                style = TextStyle(
-                    color = Black,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    fontSize = 40.sp
-                )
+
+            // 🔹 Background Image
+            Image(
+                painter = painterResource(R.drawable.bg),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
             )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            OutlinedTextField(
-                value = email,
-                onValueChange = { data ->
-                    email = data
-                },
-                shape = RoundedCornerShape(12.dp),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email
-                ),
+            LazyColumn(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 15.dp),
-                placeholder = {
-                    Text("Email/Phone")
-                },
-                colors = TextFieldDefaults.colors(
-                    focusedIndicatorColor = Blue,
-                    unfocusedIndicatorColor = Color.Transparent
-                )
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-
-            OutlinedTextField(
-                value = password,
-                onValueChange = { data ->
-                    password = data
-                },
-
-                shape = RoundedCornerShape(12.dp),
-                visualTransformation = if (!visibility) PasswordVisualTransformation() else VisualTransformation.None,
-                trailingIcon = {
-                    IconButton(onClick = {
-                        visibility = !visibility
-                    }) {
-                        Icon(
-                            painter = if (visibility)
-                                painterResource(R.drawable.baseline_visibility_off_24)
-                            else
-                                painterResource(
-                                    R.drawable.baseline_visibility_24
-                                ),
-                            contentDescription = null
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                item {
+                    Spacer(modifier = Modifier.height(60.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(padding),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.logo),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(180.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
                         )
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 15.dp),
-                placeholder = {
-                    Text("*********")
-                },
-                colors = TextFieldDefaults.colors(
-                    focusedIndicatorColor = Blue,
-                    unfocusedIndicatorColor = Color.Transparent
-                )
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 15.dp),
-                horizontalArrangement = Arrangement.End
-            ) {
-                Text(
-                    "Forget password?", style = TextStyle(
-                        color = Color.Black.copy(0.6f)
+                    Text(
+                        "Welcome Back!",
+                        modifier = Modifier.fillMaxWidth(),
+                        style = TextStyle(
+                            color = Black,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            fontSize = 40.sp
+                        )
                     )
-                )
-            }
 
-            Button(
-                onClick = {
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AquaGreen
-                ),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 6.dp
-                ),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier
-                    .fillMaxWidth().height(95.dp)
-                    .padding(horizontal = 20.dp, vertical = 20.dp),
-            ) {
-                Text("Sign In")
-            }
+                    Spacer(modifier = Modifier.height(20.dp))
 
-            Text("Don't have an account?", modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                style = TextStyle(fontSize = 16.sp))
-            Text("Sign Up",  modifier=Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                style = TextStyle(fontSize = 16.sp, color = Blue))
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { data ->
+                            email = data
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 15.dp),
+                        placeholder = {
+                            Text("Email/Phone")
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedIndicatorColor = Blue,
+                            unfocusedIndicatorColor = Color.Transparent
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { data ->
+                            password = data
+                        },
+
+                        shape = RoundedCornerShape(12.dp),
+                        visualTransformation = if (!visibility) PasswordVisualTransformation() else VisualTransformation.None,
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                visibility = !visibility
+                            }) {
+                                Icon(
+                                    painter = if (visibility)
+                                        painterResource(R.drawable.baseline_visibility_off_24)
+                                    else
+                                        painterResource(
+                                            R.drawable.baseline_visibility_24
+                                        ),
+                                    contentDescription = null
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 15.dp),
+                        placeholder = {
+                            Text("*********")
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedIndicatorColor = Blue,
+                            unfocusedIndicatorColor = Color.Transparent
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 15.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Text(
+                            "Forget password?",
+                            modifier = Modifier.clickable {
+                                val intent = Intent(context, ForgetPasswordActivity::class.java)
+                                activity?.startActivity(intent)
+
+                            }
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AquaGreen
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 6.dp
+                        ),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth().height(95.dp)
+                            .padding(horizontal = 20.dp, vertical = 20.dp),
+                    ) {
+                        Text("Sign In")
+                    }
+
+                    Text(
+                        "Don't have an account?", modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        style = TextStyle(fontSize = 16.sp)
+                    )
+                    Text(
+                        "Sign Up", modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        style = TextStyle(fontSize = 16.sp, color = Blue)
+                    )
+                }
+            }
         }
-            }
     }
 }
 

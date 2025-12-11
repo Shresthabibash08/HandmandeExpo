@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -44,6 +46,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.ui.theme.AquaGreen
 import com.example.handmadeexpo.ui.theme.Blue
 import com.example.handmadeexpo.ui.theme.White
 
@@ -86,6 +89,8 @@ fun ForgetPasswordBody() {
                         contentScale = ContentScale.Crop
                     )
                 }
+                Spacer(modifier = Modifier.height(20.dp))
+
                 Text(
                     "Forget Password",
                     modifier = Modifier.fillMaxWidth(),
@@ -132,6 +137,23 @@ fun ForgetPasswordBody() {
                     )
                 )
                 Spacer(modifier = Modifier.height(20.dp))
+
+                Button(
+                    onClick = {
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AquaGreen
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 6.dp
+                    ),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth().height(95.dp)
+                        .padding(horizontal = 20.dp, vertical = 20.dp),
+                ) {
+                    Text("Send")
+                }
             }
         }
     }
