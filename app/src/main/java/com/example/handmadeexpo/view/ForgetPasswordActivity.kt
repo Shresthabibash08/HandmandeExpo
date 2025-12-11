@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -66,93 +67,103 @@ fun ForgetPasswordBody() {
     val context = LocalContext.current
     val activity = context as? Activity
     Scaffold { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(White)
+        Box(
+            modifier = Modifier.fillMaxSize()
         ) {
-            item {
-                Spacer(modifier = Modifier.height(60.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth()
-                        .padding(padding),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.logo),
-                        contentDescription = null,
+
+            // 🔹 Background Image
+            Image(
+                painter = painterResource(R.drawable.bg),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                item {
+                    Spacer(modifier = Modifier.height(150.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(padding),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.logo),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(180.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        "Forgot Password",
+                        modifier = Modifier.fillMaxWidth(),
+                        style = TextStyle(
+                            color = Black,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            fontSize = 40.sp
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+
+                    Text(
+                        "Enter your Email",
+                        modifier = Modifier.fillMaxWidth(),
+                        style = TextStyle(
+                            color = Black,
+                            textAlign = TextAlign.Center,
+                            fontSize = 25.sp
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(30.dp))
+
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { data ->
+                            email = data
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email
+                        ),
                         modifier = Modifier
-                            .size(180.dp)
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
+                            .fillMaxWidth()
+                            .padding(horizontal = 15.dp),
+                        placeholder = {
+                            Text("Email")
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedIndicatorColor = Blue,
+                            unfocusedIndicatorColor = Color.Transparent
+                        )
                     )
-                }
-                Spacer(modifier = Modifier.height(20.dp))
 
-                Text(
-                    "Forget Password",
-                    modifier = Modifier.fillMaxWidth(),
-                    style = TextStyle(
-                        color = Black,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        fontSize = 40.sp
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-
-                Text(
-                    "Enter your Email",
-                    modifier = Modifier.fillMaxWidth(),
-                    style = TextStyle(
-                        color = Black,
-                        textAlign = TextAlign.Center,
-                        fontSize = 25.sp
-                    )
-                )
-                Spacer(modifier = Modifier.height(30.dp))
-
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { data ->
-                        email = data
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Email
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 15.dp),
-                    placeholder = {
-                        Text("Email")
-                    },
-                    colors = TextFieldDefaults.colors(
-                        focusedIndicatorColor = Blue,
-                        unfocusedIndicatorColor = Color.Transparent
-                    )
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Button(
-                    onClick = {
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AquaGreen
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 6.dp
-                    ),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier
-                        .fillMaxWidth().height(95.dp)
-                        .padding(horizontal = 20.dp, vertical = 20.dp),
-                ) {
-                    Text("Send")
+                    Button(
+                        onClick = {
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AquaGreen
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 6.dp
+                        ),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth().height(95.dp)
+                            .padding(horizontal = 20.dp, vertical = 20.dp),
+                    ) {
+                        Text("Send")
+                    }
                 }
             }
         }

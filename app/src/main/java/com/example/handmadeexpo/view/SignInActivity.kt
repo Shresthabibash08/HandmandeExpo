@@ -188,7 +188,7 @@ fun SignInBody() {
                         horizontalArrangement = Arrangement.End
                     ) {
                         Text(
-                            "Forget password?",
+                            "Forgot password?",
                             modifier = Modifier.clickable {
                                 val intent = Intent(context, ForgetPasswordActivity::class.java)
                                 activity?.startActivity(intent)
