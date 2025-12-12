@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">HandmadeExpo</string>
     <string name="title_activity_seller_profile">SellerProfile</string>
+    <string name="title_activity_seller_dashboard">SellerDashboard</string>
 </resources>

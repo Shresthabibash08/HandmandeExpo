@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "645427762742",
+    "project_id": "handiexpo-70dca",
+    "storage_bucket": "handiexpo-70dca.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:645427762742:android:5bc9770f3dc4b601d4ea97",
+        "android_client_info": {
+          "package_name": "com.example.handmadeexpo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQCHg1fA5sE96ZZAVpgERIeX5ZYYv5O6E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
