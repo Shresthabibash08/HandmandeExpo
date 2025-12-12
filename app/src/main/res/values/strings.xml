@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">HandmadeExpo</string>
+    <string name="title_activity_signup">SignupActivity</string>
+    <string name="title_activity_main_dashboard">MainActivityDashboard</string>
+    <string name="title_activity_dashboard">DashboardActivity</string>
 </resources>
