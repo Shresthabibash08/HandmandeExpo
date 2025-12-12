@@ -95,7 +95,7 @@ fun SellerRegisterScreen() {
             modifier = Modifier.fillMaxSize()
         ) {
             Image(
-                painter = painterResource(R.drawable.bg),
+                painter = painterResource(R.drawable.finalbackground),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -108,7 +108,7 @@ fun SellerRegisterScreen() {
             ) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Image(
-                    painter = painterResource(com.example.handmadeexpo.R.drawable.logo),
+                    painter = painterResource(com.example.handmadeexpo.R.drawable.finallogo),
                     contentDescription = null,
                     modifier = Modifier.height(100.dp).width(100.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
@@ -281,7 +281,7 @@ fun CustomTextField(
             Text(
                 text = placeholder,
                 style = TextStyle(
-                    color = Color.Gray,
+                    color = Color.Black,
                     textAlign = TextAlign.Center
                 )
             )
