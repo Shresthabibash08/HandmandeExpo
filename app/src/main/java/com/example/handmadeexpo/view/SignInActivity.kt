@@ -7,7 +7,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,7 +54,6 @@ import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.ui.theme.AquaGreen
 import com.example.handmadeexpo.ui.theme.Blue
-import com.example.handmadeexpo.ui.theme.White
 
 class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,9 +79,8 @@ fun SignInBody() {
             modifier = Modifier.fillMaxSize()
         ) {
 
-            // 🔹 Background Image
             Image(
-                painter = painterResource(R.drawable.bg),
+                painter = painterResource(R.drawable.bg1),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
