@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.ui.theme.AquaGreen
-import com.example.handmadeexpo.ui.theme.Blue
+import com.example.handmadeexpo.ui.theme.Blue1
 
 class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -136,7 +136,7 @@ fun SignInBody() {
                             Text("Email/Phone")
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedIndicatorColor = Blue,
+                            focusedIndicatorColor = Blue1,
                             unfocusedIndicatorColor = Color.Transparent
                         )
                     )
@@ -172,7 +172,7 @@ fun SignInBody() {
                             Text("*********")
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedIndicatorColor = Blue,
+                            focusedIndicatorColor = Blue1,
                             unfocusedIndicatorColor = Color.Transparent
                         )
                     )
@@ -219,7 +219,7 @@ fun SignInBody() {
                     Text(
                         "Sign Up", modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
-                        style = TextStyle(fontSize = 16.sp, color = Blue)
+                        style = TextStyle(fontSize = 16.sp, color = Blue1)
                     )
                 }
             }

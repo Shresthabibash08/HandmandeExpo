@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.ui.theme.AquaGreen
-import com.example.handmadeexpo.ui.theme.Blue
+import com.example.handmadeexpo.ui.theme.Blue1
 
 class ForgetPasswordActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -140,7 +140,7 @@ fun ForgetPasswordBody() {
                             Text("Email")
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedIndicatorColor = Blue,
+                            focusedIndicatorColor = Blue1,
                             unfocusedIndicatorColor = Color.Transparent
                         )
                     )
