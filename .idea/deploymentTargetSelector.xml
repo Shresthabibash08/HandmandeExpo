@@ -2,21 +2,45 @@
 <project version="4">
   <component name="deploymentTargetSelector">
     <selectionStates>
+
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
+
+      <!-- From development branch -->
+      <SelectionState runConfigName="SignInActivity">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="ForgetPasswordActivity">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="SellerRegistration">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="SellerRegistration (1)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <!-- From main branch -->
       <SelectionState runConfigName="SellerDashboard">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
+
       <SelectionState runConfigName="SellerDashboard (1)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
+
       <SelectionState runConfigName="SellerDashboard (2)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
+
       <SelectionState runConfigName="SellerDashboard (3)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
+
     </selectionStates>
   </component>
 </project>
