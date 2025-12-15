@@ -7,7 +7,30 @@
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
 
-      <!-- From development branch -->
+      <SelectionState runConfigName="SignupActivity">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="SignupActivity (4)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="SignupActivity (5)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="DashboardActivity">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="DashboardActivity (1)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="DashboardActivity (2)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
       <SelectionState runConfigName="SignInActivity">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
@@ -24,7 +47,6 @@
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
 
-      <!-- From main branch -->
       <SelectionState runConfigName="SellerDashboard">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
