@@ -20,10 +20,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,16 +28,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
-import com.example.handmadeexpo.ui.theme.LightPurple
-
+import com.example.handmadeexpo.ui.theme.Purple80
 
 @Composable
-fun ProfileScreen(){
-
+fun SellerProfileScreen(){
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -49,7 +42,7 @@ fun ProfileScreen(){
     ) {
 
         Spacer(modifier = Modifier
-            .padding(35.dp))
+            .padding(10.dp))
 
         Row(modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
@@ -66,7 +59,7 @@ fun ProfileScreen(){
                         fontWeight = FontWeight.Bold),
                     modifier = Modifier.padding(20.dp))
                 Image(
-                    painter = painterResource(R.drawable.profile),
+                    painter = painterResource(R.drawable.profilephoto),
                     contentDescription = null,
                     modifier = Modifier
                         .height(120.dp)
@@ -83,7 +76,7 @@ fun ProfileScreen(){
                 Button(
                     onClick = { },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = LightPurple,   // Background color
+                        containerColor = Purple80,   // Background color
                         contentColor = Color.White           // Text/Icon color
                     ),
                     modifier = Modifier
@@ -106,7 +99,9 @@ fun ProfileScreen(){
                     Column(modifier = Modifier.padding(20.dp)) {
                         ProfileRow("Email", "username123@gmail.com")
                         ProfileRow("Phone", "984000000")
-                        ProfileRow("Address", "Kathmandu Nepal")
+                        ProfileRow("Address", "Kathmandu, Nepal")
+                        ProfileRow("Pan Number", "123456")
+
                     }
                 }
             }
@@ -114,8 +109,6 @@ fun ProfileScreen(){
         }
 
     }
-
-
 }
 
 @Composable
@@ -125,11 +118,4 @@ fun ProfileRow(title: String, value: String) {
         Text(text = value, color = Color.DarkGray)
         Divider(modifier = Modifier.padding(top = 8.dp))
     }
-}
-
-
-@Preview
-@Composable
-fun ProfilePreview(){
-    ProfileScreen()
 }

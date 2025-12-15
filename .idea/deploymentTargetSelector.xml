@@ -2,15 +2,67 @@
 <project version="4">
   <component name="deploymentTargetSelector">
     <selectionStates>
+
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
+
+      <SelectionState runConfigName="SignupActivity">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="SignupActivity (4)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="SignupActivity (5)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="DashboardActivity">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="DashboardActivity (1)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="DashboardActivity (2)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="SignInActivity">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="ForgetPasswordActivity">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
       <SelectionState runConfigName="SellerRegistration">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
+
       <SelectionState runConfigName="SellerRegistration (1)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
+
+      <SelectionState runConfigName="SellerDashboard">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="SellerDashboard (1)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="SellerDashboard (2)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
+      <SelectionState runConfigName="SellerDashboard (3)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+
     </selectionStates>
   </component>
 </project>
