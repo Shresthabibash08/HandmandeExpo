@@ -1,6 +1,14 @@
 <resources>
     <string name="app_name">HandmadeExpo</string>
+
+    <!-- Nirajan branch -->
     <string name="title_activity_signup">SignupActivity</string>
     <string name="title_activity_main_dashboard">MainActivityDashboard</string>
     <string name="title_activity_dashboard">DashboardActivity</string>
+
+    <!-- Development branch -->
+    <string name="title_activity_log_in">LogInActivity</string>
+    <string name="title_activity_sign_in">SignInActivity</string>
+    <string name="title_activity_forget_password">ForgetPasswordActivity</string>
+    <string name="title_activity_seller_registration">SellerRegistration</string>
 </resources>
