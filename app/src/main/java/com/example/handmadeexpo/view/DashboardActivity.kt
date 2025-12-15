@@ -1,4 +1,4 @@
-package com.example.handmadeexpo.ui.theme.view
+package com.example.handmadeexpo.view
 
 import android.app.Activity
 import android.os.Bundle

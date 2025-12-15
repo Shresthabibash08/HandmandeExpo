@@ -62,7 +62,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.theme.view.DashboardActivity"
+            android:name=".view.DashboardActivity"
             android:exported="true"
             android:label="@string/title_activity_dashboard"
             android:theme="@style/Theme.HandmadeExpo">
@@ -84,7 +84,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.theme.view.SignupActivity"
+            android:name=".view.SignupActivity"
             android:exported="true"
             android:label="@string/title_activity_signup"
             android:theme="@style/Theme.HandmadeExpo">

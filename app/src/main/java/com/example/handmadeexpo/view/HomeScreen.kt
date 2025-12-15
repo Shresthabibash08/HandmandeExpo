@@ -1,4 +1,4 @@
-package com.example.handmadeexpo.ui.theme.view
+package com.example.handmadeexpo.view
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -386,7 +386,7 @@ fun BannerSection() {
 
 @Composable
 fun CategoriesSection(
-    categories: List<com.example.handmadeexpo.ui.theme.view.Category>,
+    categories: List<Category>,
     selectedIndex: Int,
     onCategorySelected: (Int) -> Unit
 ) {
