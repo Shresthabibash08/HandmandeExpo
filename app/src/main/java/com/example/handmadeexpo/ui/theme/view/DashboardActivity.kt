@@ -28,8 +28,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
-import com.example.handmadeexpo.ui.theme.Blue
-import com.example.handmadeexpo.ui.theme.White
+import com.example.handmadeexpo.ui.theme.Blue12
+import com.example.handmadeexpo.ui.theme.White12
 
 class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,10 +62,10 @@ fun DashboardBody() {
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    titleContentColor = White,
-                    actionIconContentColor = White,
-                    navigationIconContentColor = White,
-                    containerColor = Blue
+                    titleContentColor = White12,
+                    actionIconContentColor = White12,
+                    navigationIconContentColor = White12,
+                    containerColor = Blue12
                 ),
                 navigationIcon = {
                     IconButton(onClick = {}) {

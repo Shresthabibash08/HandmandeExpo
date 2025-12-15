@@ -53,9 +53,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
-import com.example.handmadeexpo.ui.theme.Green
-import com.example.handmadeexpo.ui.theme.LightGreen
-import com.example.handmadeexpo.ui.theme.Offwhite
+import com.example.handmadeexpo.ui.theme.Green12
+import com.example.handmadeexpo.ui.theme.LightGreen12
+import com.example.handmadeexpo.ui.theme.Offwhite12
 
 class SignupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -121,7 +121,7 @@ fun SingUpBody(){
                     Text(
                         "Create Your Account",
                         fontSize = 28.sp,
-                        color = LightGreen,
+                        color = LightGreen12,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -178,7 +178,7 @@ fun SingUpBody(){
                             terms = data
                         },
                         colors = CheckboxDefaults.colors(
-                            checkedColor = Green,
+                            checkedColor = Green12,
                             checkmarkColor = Color.Companion.White
                         )
                     )
@@ -187,7 +187,7 @@ fun SingUpBody(){
                 Button(
                     onClick = { },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Green
+                        containerColor = Green12
                     ),
                     elevation = ButtonDefaults.buttonElevation(
                         defaultElevation = 6.dp
@@ -240,8 +240,8 @@ fun AppOutlinedTextField(
             .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(12.dp),
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = Offwhite,
-            unfocusedContainerColor = Offwhite,
+            focusedContainerColor = Offwhite12,
+            unfocusedContainerColor = Offwhite12,
             focusedIndicatorColor = Blue,
             unfocusedIndicatorColor = Color.LightGray
         )
@@ -278,8 +278,8 @@ fun PasswordTextField(
         shape = RoundedCornerShape(12.dp),
         placeholder = { Text("*********") },
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = Offwhite,
-            unfocusedContainerColor = Offwhite,
+            focusedContainerColor = Offwhite12,
+            unfocusedContainerColor = Offwhite12,
             focusedIndicatorColor = Blue,
             unfocusedIndicatorColor = Color.LightGray
         )
