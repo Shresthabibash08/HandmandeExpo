@@ -23,12 +23,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.colorspace.WhitePoint
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import com.example.handmadeexpo.R
-import com.example.handmadeexpo.view.ui.theme.HandmadeExpoTheme
-import com.example.handmadeexpo.view.ui.theme.SearchScreen
 
 class SellerDashboard : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -112,7 +108,7 @@ fun SellerDashboardBody(){
             .padding(padding)){
             when(selectedIndex){
                 0 -> HomeScreen()
-                1 -> SearchScreen()
+//                1 -> SearchScreen()
                 2 -> SellerProfileScreen()
             }
         }
