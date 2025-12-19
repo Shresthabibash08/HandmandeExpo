@@ -31,6 +31,8 @@ import com.example.handmadeexpo.R
 import com.example.handmadeexpo.ui.theme.Blue12
 import com.example.handmadeexpo.ui.theme.White12
 
+
+//
 class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
