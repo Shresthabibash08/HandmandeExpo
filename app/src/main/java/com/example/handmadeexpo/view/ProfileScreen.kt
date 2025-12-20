@@ -1,0 +1,128 @@
+package com.example.handmadeexpo.view
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.handmadeexpo.R
+import com.example.handmadeexpo.ui.theme.PurpleGrey40
+
+
+@Composable
+fun ProfileScreen(){
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+    ) {
+
+        Spacer(modifier = Modifier
+            .padding(35.dp))
+
+        Row(modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Column(verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+
+            ) {
+                Text(text = "Your Profile",
+                    style = TextStyle(
+                        fontSize = 25.sp,
+                        fontWeight = FontWeight.Bold),
+                    modifier = Modifier.padding(20.dp))
+                Image(
+                    painter = painterResource(R.drawable.profile),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .height(120.dp)
+                        .width(120.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+
+                )
+                Text(text = "@username123", style = TextStyle(
+                    fontSize = 20.sp),
+                    modifier = Modifier.padding(10.dp)
+                )
+
+                Button(
+                    onClick = { },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PurpleGrey40,   // Background color
+                        contentColor = Color.White           // Text/Icon color
+                    ),
+                    modifier = Modifier
+                        .width(120.dp)   // Button width
+                        .height(35.dp)   // Button height
+                ) {
+                    Text(text = "Edit Profile")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Details Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(all = 20.dp), // 10dp padding on all sides
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        ProfileRow("Email", "username123@gmail.com")
+                        ProfileRow("Phone", "984000000")
+                        ProfileRow("Address", "Kathmandu Nepal")
+                    }
+                }
+            }
+
+        }
+
+    }
+
+
+}
+
+
+
+
+@Preview
+@Composable
+fun ProfilePreview(){
+    ProfileScreen()
+}

@@ -54,7 +54,7 @@ fun DashboardBody() {
     val listItems = listOf(
         NavItem(icon = R.drawable.outline_home_24, label = "Home"),
         NavItem(icon = R.drawable.outline_search_24, label = "Search"),
-        NavItem(icon = R.drawable.outline_notifications_24, label = "Notification"),
+        NavItem(icon = R.drawable.baseline_shopping_cart_24, label = "Cart"),
         NavItem(icon = R.drawable.outline_contacts_product_24, label = "Profile"),
     )
 
@@ -130,8 +130,8 @@ fun DashboardBody() {
             when (selectedIndex) {
                 0 -> HomeScreen()
                 1 -> Text("Search Screen - Coming Soon!")
-                2 -> Text("Notification Screen - Coming Soon!")
-                3 -> Text("Profile Screen - Coming Soon!")
+                2 -> Text("Cart Screen - Coming Soon!")
+                3 -> ProfileScreen()
                 else -> HomeScreen()
             }
         }

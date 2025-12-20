@@ -12,5 +12,6 @@
 
     <string name="title_activity_seller_profile">SellerProfile</string>
     <string name="title_activity_seller_dashboard">SellerDashboard</string>
+    <string name="title_activity_profile_screen">ProfileScreen</string>
 </resources>
 
