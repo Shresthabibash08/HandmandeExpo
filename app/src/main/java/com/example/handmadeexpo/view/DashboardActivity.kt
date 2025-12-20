@@ -130,7 +130,7 @@ fun DashboardBody() {
             when (selectedIndex) {
                 0 -> HomeScreen()
                 1 -> Text("Search Screen - Coming Soon!")
-                2 -> Text("Cart Screen - Coming Soon!")
+                2 -> CartScreen()
                 3 -> ProfileScreen()
                 else -> HomeScreen()
             }
