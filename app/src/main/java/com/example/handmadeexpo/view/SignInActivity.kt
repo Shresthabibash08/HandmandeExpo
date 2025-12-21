@@ -216,9 +216,13 @@ fun SignInBody() {
                         style = TextStyle(fontSize = 16.sp)
                     )
                     Text(
-                        "Sign Up", modifier = Modifier.fillMaxWidth(),
+                        "Sign Up", modifier = Modifier.fillMaxWidth()
+                            .clickable {
+                                val intent = Intent(context, SignupActivity::class.java)
+                                activity?.startActivity(intent)
+                            },
                         textAlign = TextAlign.Center,
-                        style = TextStyle(fontSize = 16.sp, color = Blue1)
+                        style = TextStyle(fontSize = 16.sp, color = Blue1),
                     )
                 }
             }
