@@ -81,7 +81,7 @@ fun ForgetPasswordBody() {
                     .padding(padding)
             ) {
                 item {
-                    Spacer(modifier = Modifier.height(150.dp))
+                    Spacer(modifier = Modifier.height(130.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .padding(padding),
@@ -122,7 +122,7 @@ fun ForgetPasswordBody() {
                             fontSize = 25.sp
                         )
                     )
-                    Spacer(modifier = Modifier.height(30.dp))
+                    Spacer(modifier = Modifier.height(27.dp))
 
                     OutlinedTextField(
                         value = email,
@@ -159,7 +159,7 @@ fun ForgetPasswordBody() {
                             .fillMaxWidth().height(95.dp)
                             .padding(horizontal = 20.dp, vertical = 20.dp),
                     ) {
-                        Text("Send")
+                        Text("Send", style = TextStyle(fontSize = 20.sp))
                     }
                 }
             }
