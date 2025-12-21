@@ -20,3 +20,5 @@ val Offwhite12 = Color(0xFFD3CCCC)
 
 val Blue12 = Color(0xFF006198)
 val Cream12 = Color(0xFF006198)
+val AquaGreen = Color(0xFF4DDDC9)
+val Blue1 = Color(0xFF052DF1)
