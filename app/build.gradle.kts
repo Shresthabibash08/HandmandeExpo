@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.litert.support.api)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.database)
+    implementation(libs.androidx.compose.foundation)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

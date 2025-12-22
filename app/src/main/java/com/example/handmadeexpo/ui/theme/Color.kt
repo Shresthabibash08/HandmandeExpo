@@ -22,3 +22,8 @@ val Blue12 = Color(0xFF006198)
 val Cream12 = Color(0xFF006198)
 val AquaGreen = Color(0xFF4DDDC9)
 val Blue1 = Color(0xFF052DF1)
+
+val green1 = Color(0xFF5A8F4E)
+val lightGreen = Color(0xFFE6F0E6)
+val cream = Color(0xFFF9F6F1)
+val borderGray = Color(0xFFDDDDDD)
