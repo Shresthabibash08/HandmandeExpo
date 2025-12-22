@@ -58,7 +58,7 @@ fun SellerDashboardBody(){
                     titleContentColor = Color.White,
                     actionIconContentColor = Color.White,
                     navigationIconContentColor = Color.White,
-                    containerColor = Color.Blue // You can use Blue12 if defined
+                    containerColor = Color.Green // You can use Blue12 if defined
                 ),
                 navigationIcon = {
                     IconButton(onClick = {}) {
