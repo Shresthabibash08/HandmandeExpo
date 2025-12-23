@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -85,7 +86,7 @@ fun SellerInventoryScreen(onBackClick: () -> Unit) {
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    productToEdit = null // Reset for "Add" mode
+                    productToEdit = null
                     showDialog = true
                 },
                 containerColor = Color.Blue,

@@ -71,14 +71,14 @@ class SellerRegistration : ComponentActivity() {
 @Composable
 fun SellerRegisterScreen() {
     var name by remember { mutableStateOf("") }
-    var shopname by remember { mutableStateOf("") }
+    var shopName by remember { mutableStateOf("") }
     var contact by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var passwordvisibility by remember { mutableStateOf(false) }
-    var confirmPasswordvisibility by remember { mutableStateOf(false) }
-    var confirmpassword by remember { mutableStateOf("") }
-    var pannumber by remember { mutableStateOf("") }
+    var passwordVisibility by remember { mutableStateOf(false) }
+    var confirmPasswordVisibility by remember { mutableStateOf(false) }
+    var confirmPassword by remember { mutableStateOf("") }
+    var panNumber by remember { mutableStateOf("") }
 
     Scaffold { padding ->
         Box(
@@ -130,14 +130,14 @@ fun SellerRegisterScreen() {
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 CustomTextField(
-                    value = shopname,
-                    onValueChange = { shopname = it },
+                    value = shopName,
+                    onValueChange = { shopName = it },
                     placeholder = "Shop Name"
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 CustomTextField(
-                    value = pannumber,
-                    onValueChange = { pannumber = it },
+                    value = panNumber,
+                    onValueChange = { panNumber = it },
                     placeholder = "PAN NUMBER"
                 )
                 Spacer(modifier = Modifier.height(20.dp))
@@ -163,13 +163,13 @@ fun SellerRegisterScreen() {
                     onValueChange = { password = it },
                     placeholder = "Password",
                     keyboardType = KeyboardType.Password,
-                    visualTransformation = if (passwordvisibility) VisualTransformation.None else PasswordVisualTransformation(),
+                    visualTransformation = if (passwordVisibility) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = {
-                            passwordvisibility = !passwordvisibility
+                            passwordVisibility = !passwordVisibility
                         }) {
                             Icon(
-                                painter = if (passwordvisibility)
+                                painter = if (passwordVisibility)
                                     painterResource(R.drawable.baseline_visibility_off_24)
                                 else
                                     painterResource(
@@ -182,17 +182,17 @@ fun SellerRegisterScreen() {
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 CustomTextField(
-                    value = confirmpassword,
-                    onValueChange = { confirmpassword = it },
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
                     placeholder = "Confirm Password",
                     keyboardType = KeyboardType.Password,
-                    visualTransformation = if (confirmPasswordvisibility) VisualTransformation.None else PasswordVisualTransformation(),
+                    visualTransformation = if (confirmPasswordVisibility) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = {
-                            confirmPasswordvisibility = !confirmPasswordvisibility
+                            confirmPasswordVisibility = !confirmPasswordVisibility
                         }) {
                             Icon(
-                                painter = if (confirmPasswordvisibility)
+                                painter = if (confirmPasswordVisibility)
                                     painterResource(R.drawable.baseline_visibility_off_24)
                                 else
                                     painterResource(
