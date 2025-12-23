@@ -1,62 +1,33 @@
 package com.example.handmadeexpo.view
 
-
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color.Companion.Blue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
-import com.example.handmadeexpo.ui.theme.Blue12
-import com.example.handmadeexpo.ui.theme.Green
+import com.example.handmadeexpo.ui.theme.MainColor
+import com.example.handmadeexpo.ui.theme.Offwhite12
+import com.example.handmadeexpo.ui.theme.White12
 
 class SellerRegistration : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,252 +43,184 @@ class SellerRegistration : ComponentActivity() {
 fun SellerRegisterScreen() {
     var name by remember { mutableStateOf("") }
     var shopname by remember { mutableStateOf("") }
+    var pannumber by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var contact by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var passwordvisibility by remember { mutableStateOf(false) }
-    var confirmPasswordvisibility by remember { mutableStateOf(false) }
     var confirmpassword by remember { mutableStateOf("") }
-    var pannumber by remember { mutableStateOf("") }
+    var passwordVisibility by remember { mutableStateOf(false) }
+    var confirmPasswordVisibility by remember { mutableStateOf(false) }
 
     Scaffold { padding ->
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Background Image
             Image(
                 painter = painterResource(R.drawable.finalbackground),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
+
+            // Content Column
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding),
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .imePadding()
+                    ,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(10.dp))
+
                 Image(
                     painter = painterResource(R.drawable.finallogo),
                     contentDescription = null,
-                    modifier = Modifier.height(100.dp).width(100.dp).clip(CircleShape),
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
+
                 Text(
                     "Join As Artisan",
-                    modifier = Modifier.fillMaxWidth(),
-                    style = TextStyle(
-                        color = Green,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        fontSize = 30.sp
-                    )
+                    fontSize = 28.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    color = MainColor,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Text(
                     "Start selling your crafts to the world.",
-                    style = TextStyle(
-                        color = Color.Gray,
-                        textAlign = TextAlign.Center
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                CustomTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    placeholder = "Full Name"
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                CustomTextField(
-                    value = shopname,
-                    onValueChange = { shopname = it },
-                    placeholder = "Shop Name"
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                CustomTextField(
-                    value = pannumber,
-                    onValueChange = { pannumber = it },
-                    placeholder = "PAN NUMBER"
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                CustomTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    placeholder = "Email",
-                    keyboardType = KeyboardType.Email
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-                CustomTextField(
-                    value = contact,
-                    onValueChange = { contact = it },
-                    placeholder = "Phone",
-                    keyboardType = KeyboardType.Phone
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                CustomTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    placeholder = "Password",
-                    keyboardType = KeyboardType.Password,
-                    visualTransformation = if (passwordvisibility) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = {
-                            passwordvisibility = !passwordvisibility
-                        }) {
-                            Icon(
-                                painter = if (passwordvisibility)
-                                    painterResource(R.drawable.baseline_visibility_off_24)
-                                else
-                                    painterResource(
-                                        R.drawable.baseline_visibility_24
-                                    ),
-                                contentDescription = null
-                            )
-                        }
-                    }
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                CustomTextField(
-                    value = confirmpassword,
-                    onValueChange = { confirmpassword = it },
-                    placeholder = "Confirm Password",
-                    keyboardType = KeyboardType.Password,
-                    visualTransformation = if (confirmPasswordvisibility) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = {
-                            confirmPasswordvisibility = !confirmPasswordvisibility
-                        }) {
-                            Icon(
-                                painter = if (confirmPasswordvisibility)
-                                    painterResource(R.drawable.baseline_visibility_off_24)
-                                else
-                                    painterResource(
-                                        R.drawable.baseline_visibility_24
-                                    ),
-                                contentDescription = null
-                            )
-                        }
-                    }
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                SocialCard(
+                    fontSize = 16.sp,
+                    color = androidx.compose.ui.graphics.Color.Gray,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
-                        .padding(horizontal = 15.dp),
-                    label = "Upload Citizenship / ID"
+                        .padding(horizontal = 20.dp)
                 )
+
                 Spacer(modifier = Modifier.height(10.dp))
+
+                // Text Fields
+                CustomTextField("Full Name", name) { name = it }
+                Spacer(modifier = Modifier.height(15.dp))
+                CustomTextField("Shop Name", shopname) { shopname = it }
+                Spacer(modifier = Modifier.height(15.dp))
+                CustomTextField("PAN Number", pannumber) { pannumber = it }
+                Spacer(modifier = Modifier.height(15.dp))
+                CustomTextField("Email", email) { email = it }
+                Spacer(modifier = Modifier.height(15.dp))
+                CustomTextField("Phone Number", contact) { contact = it }
+                Spacer(modifier = Modifier.height(15.dp))
+                PasswordTextField(
+                    label = "Password",
+                    value = password,
+                    isVisible = passwordVisibility,
+                    onVisibilityChange = { passwordVisibility = !passwordVisibility },
+                    onValueChange = { password = it }
+                )
+                Spacer(modifier = Modifier.height(15.dp))
+                PasswordTextField(
+                    label = "Confirm Password",
+                    value = confirmpassword,
+                    isVisible = confirmPasswordVisibility,
+                    onVisibilityChange = { confirmPasswordVisibility = !confirmPasswordVisibility },
+                    onValueChange = { confirmpassword = it }
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
                 Button(
-                    onClick = {
-
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Blue12
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 6.dp
-                    ),
+                    onClick = { /* Register action */ },
+                    colors = ButtonDefaults.buttonColors(containerColor = MainColor),
                     shape = RoundedCornerShape(12.dp),
+                    elevation = ButtonDefaults.buttonElevation(6.dp),
                     modifier = Modifier
-                        .fillMaxWidth().height(55.dp)
-                        .padding(horizontal = 15.dp),
+                        .fillMaxWidth()
+                        .height(55.dp)
+                        .padding(horizontal = 16.dp)
                 ) {
-                    Text("Register", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Register", fontSize = 18.sp, color = androidx.compose.ui.graphics.Color.White)
                 }
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    buildAnnotatedString {
-                        append("Already have an account?")
 
-                        withStyle(style = SpanStyle(color = Blue12, fontWeight = FontWeight.Bold)) {
-                            append(" Sign In")
-                        }
-                    },
-                    fontSize = 16.sp,
-                    modifier = Modifier.padding(bottom = 30.dp)
-                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 50.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Text("Already have an account?", fontSize = 16.sp, color = MainColor)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Sign In",
+                        color = Blue,
+                        fontSize = 16.sp,
+                        modifier = Modifier
+                            .clickable { }
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun CustomTextField(
+fun CustomTextField(label: String, value: String, onValueChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MainColor,
+            unfocusedBorderColor = MainColor,
+            focusedLabelColor = MainColor,
+            cursorColor = MainColor,
+            focusedContainerColor = Offwhite12,
+            unfocusedContainerColor = Offwhite12
+        )
+    )
+}
+
+@Composable
+fun PasswordTextField(
+    label: String,
     value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    keyboardType: KeyboardType = KeyboardType.Text,
-    visualTransformation: VisualTransformation = VisualTransformation.None,
-    trailingIcon: @Composable (() -> Unit)? = null
+    isVisible: Boolean,
+    onVisibilityChange: () -> Unit,
+    onValueChange: (String) -> Unit
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        shape = RoundedCornerShape(15.dp),
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        visualTransformation = visualTransformation,
-        trailingIcon = trailingIcon,
-
+        label = { Text(label) },
+        visualTransformation = if (isVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        trailingIcon = {
+            IconButton(onClick = onVisibilityChange) {
+                Icon(
+                    painter = painterResource(
+                        if (isVisible) R.drawable.baseline_visibility_off_24
+                        else R.drawable.baseline_visibility_24
+                    ),
+                    contentDescription = null
+                )
+            }
+        },
         modifier = Modifier
             .fillMaxWidth()
-            .height(50.dp)
-            .padding(horizontal = 15.dp),
-        placeholder = {
-            Text(
-                text = placeholder,
-                style = TextStyle(
-                    color = Color.Black,
-                    textAlign = TextAlign.Center
-                )
-            )
-        },
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = Blue12,
-            unfocusedBorderColor = Color.Black,
-            focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent
+            focusedBorderColor = MainColor,
+            unfocusedBorderColor = MainColor,
+            focusedLabelColor = White12,
+            cursorColor = MainColor,
+            focusedContainerColor = Offwhite12,
+            unfocusedContainerColor = Offwhite12
+
         )
     )
 }
-@Composable
-fun SocialCard(modifier: Modifier, label: String,onClick: () -> Unit = {}) {
-    Card(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(15.dp),
-
-        border = BorderStroke(1.dp, Blue12),
-
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = Color.Transparent
-        )
-    ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "Sign In",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Blue12
-
-
-            )
-        }
-
-    }
-}
-
-
-@Preview
-@Composable
-fun RegisterPreview(){
-    SellerRegisterScreen()
-}
-

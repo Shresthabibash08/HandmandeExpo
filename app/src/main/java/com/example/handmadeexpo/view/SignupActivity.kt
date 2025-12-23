@@ -59,6 +59,7 @@ import com.example.handmadeexpo.ui.theme.Green12
 import com.example.handmadeexpo.ui.theme.LightGreen12
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.Offwhite12
+import com.example.handmadeexpo.ui.theme.White12
 
 class SignupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -109,7 +110,7 @@ fun SingUpBody(){
 
                     .imePadding()// ✅ VERTICAL SCROLL ADDED
             ) {
-                Spacer(modifier = Modifier.padding(top = 40.dp))
+                Spacer(modifier = Modifier.padding(top = 30.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
@@ -213,8 +214,11 @@ fun SingUpBody(){
 
                 Row(modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 75.dp)) {
-                    Text("Already have an account?", fontSize = 16.sp)
+                    .padding(start = 40.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Text("Already have an account?", fontSize = 16.sp, color = MainColor)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Sign In",
@@ -290,7 +294,7 @@ fun PasswordTextField(
             unfocusedContainerColor = Offwhite12,
             focusedIndicatorColor = MainColor,
             unfocusedIndicatorColor = MainColor,
-            focusedLabelColor = MainColor,
+            focusedLabelColor = White12,
             cursorColor = MainColor
         )
     )
