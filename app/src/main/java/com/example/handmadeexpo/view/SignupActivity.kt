@@ -195,6 +195,7 @@ fun SingUpBody(){
                         if(!terms){
                             Toast.makeText(context,"Please agree to terms and conditions",Toast.LENGTH_SHORT).show()
                         }else {
+                            Toast.makeText(context,"Registering",Toast.LENGTH_SHORT).show()
                             buyerViewModel.register(email, password) { success, msg, buyerId ->
                                 if (success) {
                                     var buyerModel = BuyerModel(
