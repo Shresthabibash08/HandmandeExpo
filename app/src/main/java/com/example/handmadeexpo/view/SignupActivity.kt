@@ -179,7 +179,7 @@ fun SingUpBody(){
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, top = 8.dp), // smaller start padding
+                        .padding(start = 10.dp,), // smaller start padding
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start // align children to start
                 ) {
@@ -214,7 +214,7 @@ fun SingUpBody(){
 
                 Row(modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 40.dp),
+                    .padding(start = 30.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start
                 ) {
