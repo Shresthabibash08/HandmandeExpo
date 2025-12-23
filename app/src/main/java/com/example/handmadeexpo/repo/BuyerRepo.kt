@@ -17,7 +17,7 @@ interface BuyerRepo {
 
     fun logout(callback:(Boolean,String)->Unit)
 
-    fun updateProfile(model: BuyerModel,callback:(Boolean,String)->Unit)
+    fun updateProfile(buyerId:String,model: BuyerModel,callback:(Boolean,String)->Unit)
 
     fun deleteAccount(buyerId:String,callback:(Boolean,String)->Unit)
 
@@ -26,6 +26,5 @@ interface BuyerRepo {
     fun addBuyerToDatabase(buyerId: String,buyerModel:BuyerModel,callback:(Boolean,String)->Unit)
 
     fun getCurrentUser (): FirebaseUser?
-
 
 }

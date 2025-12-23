@@ -55,6 +55,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.model.BuyerModel
 import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.ui.theme.Green12
 import com.example.handmadeexpo.ui.theme.LightGreen12
@@ -191,16 +192,31 @@ fun SingUpBody(){
                 }
                 Button(
                     onClick = {
-                        buyerViewModel.login(email,password){ success,msg ->
-                            if(success){
-                                val intent = Intent(context, DashboardActivity::class.java)
-                                context.startActivity(intent)
-                                activity.finish()
-                            }else{
-                                Toast.makeText(context,msg,Toast.LENGTH_SHORT).show()
+                        if(!terms){
+                            Toast.makeText(context,"Please agree to terms and conditions",Toast.LENGTH_SHORT).show()
+                        }else {
+                            buyerViewModel.register(email, password) { success, msg, buyerId ->
+                                if (success) {
+                                    var buyerModel = BuyerModel(
+                                        buyerId = buyerId,
+                                        buyerName = fullname,
+                                        buyerEmail = email,
+                                        buyerAddress = adress,
+                                        buyerPhoneNumber = phoneNumber
+                                    )
+                                    buyerViewModel.addBuyerToDatabase(
+                                        buyerId,
+                                        buyerModel
+                                    ) { success, msg ->
+                                        if (success) {
+                                            activity.finish()
+                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
                             }
-
-
                         }
                     },
                     colors = ButtonDefaults.buttonColors(

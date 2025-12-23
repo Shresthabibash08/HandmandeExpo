@@ -10,9 +10,9 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 
 class BuyerRepoImpl : BuyerRepo {
-    var database: FirebaseDatabase= FirebaseDatabase.getInstance()
-    var auth: FirebaseAuth= FirebaseAuth.getInstance()
-    var ref: DatabaseReference=database.getReference("Buyer")
+    val database: FirebaseDatabase= FirebaseDatabase.getInstance()
+    val auth: FirebaseAuth= FirebaseAuth.getInstance()
+    val ref: DatabaseReference=database.getReference("Buyer")
 
 
     override fun login(
@@ -37,7 +37,7 @@ class BuyerRepoImpl : BuyerRepo {
     ) {
         auth.sendPasswordResetEmail(email).addOnCompleteListener {
             if(it.isSuccessful){
-                callback(true,"Reset Email is sent to $email")
+                callback(true,"Reset link is sent to $email")
             }
             else{
                 callback(false,"${it.exception?.message}")
@@ -71,10 +71,11 @@ class BuyerRepoImpl : BuyerRepo {
     }
 
     override fun updateProfile(
+        buyerId:String,
         model: BuyerModel,
         callback: (Boolean, String) -> Unit
     ) {
-        ref.child(model.buyerId).updateChildren(model.toMap()).addOnCompleteListener {
+        ref.child(buyerId).updateChildren(model.toMap()).addOnCompleteListener {
             if(it.isSuccessful){
                 callback(true,"Profile Updated Successfully")
             }

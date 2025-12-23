@@ -59,10 +59,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.model.BuyerModel
+import com.example.handmadeexpo.model.SellerModel
 import com.example.handmadeexpo.repo.BuyerRepoImpl
+import com.example.handmadeexpo.repo.SellerRepoImpl
 import com.example.handmadeexpo.ui.theme.Blue12
 import com.example.handmadeexpo.ui.theme.Green
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
+import com.example.handmadeexpo.viewmodel.SellerViewModel
 
 class SellerRegistration : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,7 +90,7 @@ fun SellerRegisterScreen() {
     var panNumber by remember { mutableStateOf("") }
     val context = LocalContext.current
     val activity = context as Activity
-    var buyerViewModel = remember{ BuyerViewModel(BuyerRepoImpl()) }
+    var sellerViewModel = remember{ SellerViewModel(SellerRepoImpl()) }
 
 
     Scaffold { padding ->
@@ -110,7 +113,10 @@ fun SellerRegisterScreen() {
                 Image(
                     painter = painterResource(R.drawable.finallogo),
                     contentDescription = null,
-                    modifier = Modifier.height(100.dp).width(100.dp).clip(CircleShape),
+                    modifier = Modifier
+                        .height(100.dp)
+                        .width(100.dp)
+                        .clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
                 Text(
@@ -129,7 +135,8 @@ fun SellerRegisterScreen() {
                         color = Color.Gray,
                         textAlign = TextAlign.Center
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .padding(horizontal = 20.dp)
                 )
                 Spacer(modifier = Modifier.height(20.dp))
@@ -224,20 +231,21 @@ fun SellerRegisterScreen() {
                 Spacer(modifier = Modifier.height(10.dp))
                 Button(
                     onClick = {
-                        Toast.makeText(context, "Registering...", Toast.LENGTH_SHORT).show()
-                        buyerViewModel.register(email,password){ success,msg,buyerId ->
+                        sellerViewModel.register(email,password){ success,msg,sellerId ->
                             if(success){
-                                var buyerModel= BuyerModel(
-                                    buyerId=buyerId,
-                                    buyerName=shopName,
-                                    buyerAddress = address,
-                                    buyerEmail = email,
-                                    buyerPhoneNumber = phoneNumber,
+                                Toast.makeText(context, "Processing1...", Toast.LENGTH_SHORT).show()
+                                var sellerModel= SellerModel(
+                                    sellerId = sellerId,
+                                    shopName = shopName,
+                                    sellerAddress = address,
+                                    sellerEmail = email,
+                                    sellerPhoneNumber = phoneNumber,
+                                    panNumber = panNumber
 
-                                )
-                                buyerViewModel.addBuyerToDatabase(buyerId,buyerModel){success,msg ->
+                                    )
+                                sellerViewModel.addSellerToDatabase(sellerId,sellerModel){success,msg ->
                                     if(success){
-                                        Toast.makeText(context, "Processing...", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Processing2...", Toast.LENGTH_SHORT).show()
                                         Toast.makeText(context,msg,Toast.LENGTH_SHORT).show()
                                         activity.finish()
                                     }
@@ -247,7 +255,6 @@ fun SellerRegisterScreen() {
                                 }
                             }
                         }
-                        Toast.makeText(context, "REGISTERED...", Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Blue12
@@ -257,7 +264,8 @@ fun SellerRegisterScreen() {
                     ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
-                        .fillMaxWidth().height(55.dp)
+                        .fillMaxWidth()
+                        .height(55.dp)
                         .padding(horizontal = 15.dp),
                 ) {
                     Text("Register", fontSize = 18.sp, fontWeight = FontWeight.Bold)

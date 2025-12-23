@@ -1,6 +1,7 @@
 package com.example.handmadeexpo.repo
 
 import com.example.handmadeexpo.model.BuyerModel
+import com.example.handmadeexpo.model.SellerModel
 import com.google.firebase.auth.FirebaseUser
 
 interface SellerRepo {
@@ -17,13 +18,13 @@ interface SellerRepo {
 
     fun logout(callback:(Boolean,String)->Unit)
 
-    fun updateProfile(model: BuyerModel,callback:(Boolean,String)->Unit)
+    fun updateProfile(sellerId:String,model: SellerModel, callback:(Boolean, String)->Unit)
 
-    fun deleteAccount(buyerId:String,callback:(Boolean,String)->Unit)
+    fun deleteAccount(sellerId:String,callback:(Boolean,String)->Unit)
 
-    fun getBuyerDetailsById(buyerId:String,callback:(Boolean,String,BuyerModel?)->Unit)
+    fun getSellerDetailsById(sellerId:String,callback:(Boolean,String,SellerModel?)->Unit)
 
-    fun addBuyerToDatabase(buyerId: String,buyerModel:BuyerModel,callback:(Boolean,String)->Unit)
+    fun addSellerToDatabase(sellerId: String,sellerModel:SellerModel,callback:(Boolean,String)->Unit)
 
     fun getCurrentUser (): FirebaseUser?
 }

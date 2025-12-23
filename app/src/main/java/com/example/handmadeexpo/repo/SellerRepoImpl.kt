@@ -1,6 +1,7 @@
 package com.example.handmadeexpo.repo
 
 import com.example.handmadeexpo.model.BuyerModel
+import com.example.handmadeexpo.model.SellerModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.database.DataSnapshot
@@ -12,7 +13,7 @@ import com.google.firebase.database.ValueEventListener
 class SellerRepoImpl :SellerRepo{
     var database: FirebaseDatabase= FirebaseDatabase.getInstance()
     var auth: FirebaseAuth= FirebaseAuth.getInstance()
-    var ref: DatabaseReference=database.getReference("Buyer")
+    var ref: DatabaseReference=database.getReference("Seller")
 
 
     override fun login(
@@ -71,10 +72,11 @@ class SellerRepoImpl :SellerRepo{
     }
 
     override fun updateProfile(
-        model: BuyerModel,
+        sellerId:String,
+        model: SellerModel,
         callback: (Boolean, String) -> Unit
     ) {
-        ref.child(model.buyerId).updateChildren(model.toMap()).addOnCompleteListener {
+        ref.child(sellerId).updateChildren(model.toMap()).addOnCompleteListener {
             if(it.isSuccessful){
                 callback(true,"Profile Updated Successfully")
             }
@@ -85,10 +87,10 @@ class SellerRepoImpl :SellerRepo{
     }
 
     override fun deleteAccount(
-        buyerId: String,
+        sellerId: String,
         callback: (Boolean, String) -> Unit
     ) {
-        ref.child(buyerId).removeValue().addOnCompleteListener {
+        ref.child(sellerId).removeValue().addOnCompleteListener {
             if(it.isSuccessful){
                 callback(true,"Account Deleted Successfully")
             }
@@ -100,16 +102,16 @@ class SellerRepoImpl :SellerRepo{
 
 
 
-    override fun getBuyerDetailsById(
-        buyerId: String,
-        callback: (Boolean, String, BuyerModel?) -> Unit
+    override fun getSellerDetailsById(
+        sellerId: String,
+        callback: (Boolean, String, SellerModel?) -> Unit
     ) {
-        ref.child(buyerId).addValueEventListener(object : ValueEventListener {
+        ref.child(sellerId).addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 if(snapshot.exists()){
-                    val buyer=snapshot.getValue(BuyerModel::class.java)
-                    if(buyer!=null){
-                        callback(true,"Buyer Details Fetched Successfully",buyer)
+                    val seller=snapshot.getValue(SellerModel::class.java)
+                    if(seller!=null){
+                        callback(true,"Buyer Details Fetched Successfully",seller)
                     }
                 }
             }
@@ -119,12 +121,12 @@ class SellerRepoImpl :SellerRepo{
         })
     }
 
-    override fun addBuyerToDatabase(
-        buyerId: String,
-        buyerModel: BuyerModel,
+    override fun addSellerToDatabase(
+        sellerId: String,
+        sellerModel: SellerModel,
         callback: (Boolean, String) -> Unit
     ) {
-        ref.child(buyerId).setValue(buyerModel).addOnCompleteListener {
+        ref.child(sellerId).setValue(sellerModel).addOnCompleteListener {
             if(it.isSuccessful){
                 callback(true,"Registration Successfully")
             }

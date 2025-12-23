@@ -28,8 +28,8 @@ class BuyerViewModel (val repo: BuyerRepo): ViewModel() {
         repo.logout(callback)
     }
 
-    fun updateProfile(model: BuyerModel,callback:(Boolean,String)->Unit){
-        repo.updateProfile(model,callback)
+    fun updateProfile(buyerId:String,model: BuyerModel,callback:(Boolean,String)->Unit){
+        repo.updateProfile(buyerId,model,callback)
     }
 
     fun deleteAccount(buyerId:String,callback:(Boolean,String)->Unit){
@@ -43,7 +43,7 @@ class BuyerViewModel (val repo: BuyerRepo): ViewModel() {
     val loading: MutableLiveData<Boolean>
         get() = loading
 
-    fun getBuyerDetailsById(buyerId:String,callback:(Boolean,String,BuyerModel?)->Unit){
+    fun getBuyerDetailsById(buyerId:String){
         _loading.postValue(true)
         repo.getBuyerDetailsById(buyerId){ success,msg,data ->
             if(success){
