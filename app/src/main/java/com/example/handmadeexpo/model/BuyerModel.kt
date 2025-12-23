@@ -1,6 +1,7 @@
 package com.example.handmadeexpo.model
 
-data class BuyerModel(val buyerId:String="",
+data class BuyerModel(
+    val buyerId:String="",
                       val buyerName:String="",
                       val buyerEmail:String="",
                       val buyerPhoneNumber:String="",
