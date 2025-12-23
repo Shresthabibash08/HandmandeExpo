@@ -124,9 +124,9 @@ fun ProfileScreen(){
                         elevation = CardDefaults.cardElevation(8.dp)
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
-                            ProfileRow("Email", "username123@gmail.com")
-                            ProfileRow("Phone", "984000000")
-                            ProfileRow("Address", "Kathmandu Nepal")
+                            ProfileRowDetails("Email", "username123@gmail.com")
+                            ProfileRowDetails("Phone", "984000000")
+                            ProfileRowDetails("Address", "Kathmandu Nepal")
                         }
                     }
                 }
@@ -137,6 +137,14 @@ fun ProfileScreen(){
     }
 
 
+}
+@Composable
+fun ProfileRowDetails(title: String, value: String) {
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Text(text = title, fontWeight = FontWeight.Bold)
+        Text(text = value, color = Color.DarkGray)
+        Divider(modifier = Modifier.padding(top = 8.dp))
+    }
 }
 
 
