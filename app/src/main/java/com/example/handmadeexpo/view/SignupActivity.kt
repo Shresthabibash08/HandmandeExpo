@@ -2,7 +2,9 @@ package com.example.handmadeexpo.view
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -53,9 +55,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.ui.theme.Green12
 import com.example.handmadeexpo.ui.theme.LightGreen12
 import com.example.handmadeexpo.ui.theme.Offwhite12
+import com.example.handmadeexpo.viewmodel.BuyerViewModel
 
 class SignupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,6 +73,7 @@ class SignupActivity : ComponentActivity() {
 
 @Composable
 fun SingUpBody(){
+    var buyerViewModel=remember { BuyerViewModel(BuyerRepoImpl()) }
     var fullname by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -80,7 +85,7 @@ fun SingUpBody(){
     var phoneNumber by remember { mutableStateOf("") }
 
     val context=LocalContext.current
-    val activity=(context as? Activity)
+    val activity=context as Activity
     val SharedPreferences=context.getSharedPreferences("User", Context.MODE_PRIVATE)
     val LocalEmail :String?=SharedPreferences.getString("Email","")
     val LocalPassword :String?=SharedPreferences.getString("Password","")
@@ -185,7 +190,19 @@ fun SingUpBody(){
                     Text("I agree to terms & Conditions")
                 }
                 Button(
-                    onClick = { },
+                    onClick = {
+                        buyerViewModel.login(email,password){ success,msg ->
+                            if(success){
+                                val intent = Intent(context, DashboardActivity::class.java)
+                                context.startActivity(intent)
+                                activity.finish()
+                            }else{
+                                Toast.makeText(context,msg,Toast.LENGTH_SHORT).show()
+                            }
+
+
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Green12
                     ),

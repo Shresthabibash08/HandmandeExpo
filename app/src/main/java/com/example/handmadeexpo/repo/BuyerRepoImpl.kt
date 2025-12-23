@@ -14,43 +14,20 @@ class BuyerRepoImpl : BuyerRepo {
     var auth: FirebaseAuth= FirebaseAuth.getInstance()
     var ref: DatabaseReference=database.getReference("Buyer")
 
+
     override fun login(
         email: String,
         password: String,
-        callback: (Boolean, String, String?) -> Unit
+        callback: (Boolean, String) -> Unit
     ) {
-        auth.signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-
-                    val uid = auth.currentUser!!.uid
-
-                    // Check Buyer node
-                    database.getReference("Buyer")
-                        .child(uid)
-                        .get()
-                        .addOnSuccessListener { buyerSnapshot ->
-                            if (buyerSnapshot.exists()) {
-                                callback(true, "Buyer Login Successful", "buyer")
-                            } else {
-                                // Check Seller node
-                                database.getReference("Seller")
-                                    .child(uid)
-                                    .get()
-                                    .addOnSuccessListener { sellerSnapshot ->
-                                        if (sellerSnapshot.exists()) {
-                                            callback(true, "Seller Login Successful", "seller")
-                                        } else {
-                                            callback(false, "User role not found", null)
-                                        }
-                                    }
-                            }
-                        }
-
-                } else {
-                    callback(false, task.exception?.message ?: "Login Failed", null)
-                }
+        auth.signInWithEmailAndPassword(email,password).addOnCompleteListener {
+            if(it.isSuccessful){
+                callback(true,"Login Successfully")
             }
+            else{
+                callback(false,"${it.exception?.message}")
+            }
+        }
     }
 
 

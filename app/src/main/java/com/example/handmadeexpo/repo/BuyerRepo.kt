@@ -7,7 +7,7 @@ interface BuyerRepo {
     fun login(
         email: String,
         password: String,
-        callback: (Boolean, String, String?) -> Unit
+        callback: (Boolean, String) -> Unit
     )
 
 
@@ -26,5 +26,6 @@ interface BuyerRepo {
     fun addBuyerToDatabase(buyerId: String,buyerModel:BuyerModel,callback:(Boolean,String)->Unit)
 
     fun getCurrentUser (): FirebaseUser?
+
 
 }

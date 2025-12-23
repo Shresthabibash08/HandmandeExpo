@@ -1,7 +1,9 @@
 package com.example.handmadeexpo.view
 
 
+import android.app.Activity
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -41,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -55,8 +58,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.model.BuyerModel
+import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.ui.theme.Blue12
 import com.example.handmadeexpo.ui.theme.Green
+import com.example.handmadeexpo.viewmodel.BuyerViewModel
 
 class SellerRegistration : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,15 +76,19 @@ class SellerRegistration : ComponentActivity() {
 
 @Composable
 fun SellerRegisterScreen() {
-    var name by remember { mutableStateOf("") }
-    var shopname by remember { mutableStateOf("") }
-    var contact by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var shopName by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var passwordvisibility by remember { mutableStateOf(false) }
-    var confirmPasswordvisibility by remember { mutableStateOf(false) }
-    var confirmpassword by remember { mutableStateOf("") }
-    var pannumber by remember { mutableStateOf("") }
+    var passwordVisibility by remember { mutableStateOf(false) }
+    var confirmPasswordVisibility by remember { mutableStateOf(false) }
+    var confirmPassword by remember { mutableStateOf("") }
+    var panNumber by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val activity = context as Activity
+    var buyerViewModel = remember{ BuyerViewModel(BuyerRepoImpl()) }
+
 
     Scaffold { padding ->
         Box(
@@ -124,20 +134,20 @@ fun SellerRegisterScreen() {
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 CustomTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    placeholder = "Full Name"
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                CustomTextField(
-                    value = shopname,
-                    onValueChange = { shopname = it },
+                    value = shopName,
+                    onValueChange = { shopName = it },
                     placeholder = "Shop Name"
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 CustomTextField(
-                    value = pannumber,
-                    onValueChange = { pannumber = it },
+                    value = address,
+                    onValueChange = { address = it },
+                    placeholder = "Address"
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                CustomTextField(
+                    value = panNumber,
+                    onValueChange = { panNumber = it },
                     placeholder = "PAN NUMBER"
                 )
                 Spacer(modifier = Modifier.height(20.dp))
@@ -150,8 +160,8 @@ fun SellerRegisterScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
                 CustomTextField(
-                    value = contact,
-                    onValueChange = { contact = it },
+                    value = phoneNumber,
+                    onValueChange = { phoneNumber = it },
                     placeholder = "Phone",
                     keyboardType = KeyboardType.Phone
                 )
@@ -163,13 +173,13 @@ fun SellerRegisterScreen() {
                     onValueChange = { password = it },
                     placeholder = "Password",
                     keyboardType = KeyboardType.Password,
-                    visualTransformation = if (passwordvisibility) VisualTransformation.None else PasswordVisualTransformation(),
+                    visualTransformation = if (passwordVisibility) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = {
-                            passwordvisibility = !passwordvisibility
+                            passwordVisibility = !passwordVisibility
                         }) {
                             Icon(
-                                painter = if (passwordvisibility)
+                                painter = if (passwordVisibility)
                                     painterResource(R.drawable.baseline_visibility_off_24)
                                 else
                                     painterResource(
@@ -182,17 +192,17 @@ fun SellerRegisterScreen() {
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 CustomTextField(
-                    value = confirmpassword,
-                    onValueChange = { confirmpassword = it },
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
                     placeholder = "Confirm Password",
                     keyboardType = KeyboardType.Password,
-                    visualTransformation = if (confirmPasswordvisibility) VisualTransformation.None else PasswordVisualTransformation(),
+                    visualTransformation = if (confirmPasswordVisibility) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         IconButton(onClick = {
-                            confirmPasswordvisibility = !confirmPasswordvisibility
+                            confirmPasswordVisibility = !confirmPasswordVisibility
                         }) {
                             Icon(
-                                painter = if (confirmPasswordvisibility)
+                                painter = if (confirmPasswordVisibility)
                                     painterResource(R.drawable.baseline_visibility_off_24)
                                 else
                                     painterResource(
@@ -214,7 +224,30 @@ fun SellerRegisterScreen() {
                 Spacer(modifier = Modifier.height(10.dp))
                 Button(
                     onClick = {
+                        Toast.makeText(context, "Registering...", Toast.LENGTH_SHORT).show()
+                        buyerViewModel.register(email,password){ success,msg,buyerId ->
+                            if(success){
+                                var buyerModel= BuyerModel(
+                                    buyerId=buyerId,
+                                    buyerName=shopName,
+                                    buyerAddress = address,
+                                    buyerEmail = email,
+                                    buyerPhoneNumber = phoneNumber,
 
+                                )
+                                buyerViewModel.addBuyerToDatabase(buyerId,buyerModel){success,msg ->
+                                    if(success){
+                                        Toast.makeText(context, "Processing...", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context,msg,Toast.LENGTH_SHORT).show()
+                                        activity.finish()
+                                    }
+                                    else{
+                                        Toast.makeText(context,msg,Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        }
+                        Toast.makeText(context, "REGISTERED...", Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Blue12
