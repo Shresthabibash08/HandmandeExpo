@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.ui.theme.Blue12
+import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.White12
 
 
@@ -67,7 +68,7 @@ fun DashboardBody() {
                     titleContentColor = White12,
                     actionIconContentColor = White12,
                     navigationIconContentColor = White12,
-                    containerColor = Blue12
+                    containerColor = MainColor
                 ),
                 navigationIcon = {
                     IconButton(onClick = {}) {

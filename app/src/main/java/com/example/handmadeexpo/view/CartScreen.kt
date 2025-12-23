@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
 import androidx.compose.material3.Text
+import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.Purple801
 
 
@@ -89,7 +90,7 @@ fun CartScreen() {
                         text = "My Cart",
                         fontWeight = FontWeight.Bold,
                         fontSize = 35.sp,
-                        color = Purple801,
+                        color = MainColor,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                 }
@@ -183,12 +184,14 @@ fun BottomBar(total: Double) {
                 text = "Total: Rs ${"%.2f".format(total)}",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = Purple801
+                color = MainColor
             )
 
             Button(
                 onClick = {},
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(MainColor)
+
             ) {
                 Text(
                     text = "Checkout",
