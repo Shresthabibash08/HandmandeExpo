@@ -87,6 +87,7 @@
         <!-- </intent-filter> -->
         <!-- </activity> -->
         <activity
+            android:windowSoftInputMode="adjustResize|stateHidden"
             android:name=".view.SignupActivity"
             android:exported="true"
             android:label="@string/title_activity_signup"
@@ -98,6 +99,7 @@
             </intent-filter>
         </activity>
         <activity
+            android:windowSoftInputMode="adjustResize|stateHidden"
             android:name=".view.SellerDashboard"
             android:exported="true"
             android:label="@string/title_activity_seller_dashboard"

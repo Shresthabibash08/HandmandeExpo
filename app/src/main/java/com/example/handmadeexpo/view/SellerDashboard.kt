@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.ui.theme.MainColor
 
 class SellerDashboard : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,7 +54,7 @@ fun SellerDashboardBody(){
                 titleContentColor = Color.White,
                 actionIconContentColor = Color.White,
                 navigationIconContentColor = Color.White,
-                containerColor = Color.Blue
+                containerColor = MainColor
             ),
             navigationIcon={
                 IconButton(onClick = {}) {

@@ -46,10 +46,10 @@ fun ProfileScreen(){
     Box(modifier = Modifier.fillMaxSize()) {
         // Background image
         Image(
-            painter = painterResource(R.drawable.bg7), // Replace with your image
+            painter = painterResource(R.drawable.bg10), // Replace with your image
             contentDescription = null,
-            contentScale = ContentScale.Crop, // Make it cover the entire screen
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
         )
 
         Column(

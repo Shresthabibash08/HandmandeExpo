@@ -73,7 +73,8 @@ fun CartScreen() {
         ) {
 
             Image(
-                painter = painterResource(R.drawable.bg7),
+                painter = painterResource(R.drawable.bg4
+                ),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop

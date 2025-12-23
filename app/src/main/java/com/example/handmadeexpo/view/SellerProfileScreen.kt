@@ -3,6 +3,7 @@ package com.example.handmadeexpo.view
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,83 +32,97 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.Purple80
 
 @Composable
 fun SellerProfileScreen(){
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Background image
+        Image(
+            painter = painterResource(R.drawable.bg10), // Replace with your image
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
 
-        Spacer(modifier = Modifier
-            .padding(10.dp))
-
-        Row(modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
         ) {
 
-            Column(verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+            Spacer(modifier = Modifier
+                .padding(10.dp))
 
+            Row(modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Your Profile",
-                    style = TextStyle(
-                        fontSize = 25.sp,
-                        fontWeight = FontWeight.Bold),
-                    modifier = Modifier.padding(20.dp))
-                Image(
-                    painter = painterResource(R.drawable.profilephoto),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .height(120.dp)
-                        .width(120.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
 
-                )
-                Text(text = "@username123", style = TextStyle(
-                    fontSize = 20.sp),
-                    modifier = Modifier.padding(10.dp)
-                )
+                Column(verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
 
-                Button(
-                    onClick = { },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Purple80,   // Background color
-                        contentColor = Color.White           // Text/Icon color
-                    ),
-                    modifier = Modifier
-                        .width(120.dp)   // Button width
-                        .height(35.dp)   // Button height
                 ) {
-                    Text(text = "Edit Profile")
-                }
+                    Text(
+                        text = "Your Profile",
+                        style = TextStyle(
+                            fontSize = 35.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MainColor
+                        ),
+                        modifier = Modifier.padding(20.dp)
+                    )
+                    Image(
+                        painter = painterResource(R.drawable.profilephoto),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .height(120.dp)
+                            .width(120.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    )
+                    Text(text = "@username123", style = TextStyle(
+                        fontSize = 20.sp),
+                        modifier = Modifier.padding(10.dp)
+                    )
 
-                // Details Card
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(all = 20.dp), // 10dp padding on all sides
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(8.dp)
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        ProfileRow("Email", "username123@gmail.com")
-                        ProfileRow("Phone", "984000000")
-                        ProfileRow("Address", "Kathmandu, Nepal")
-                        ProfileRow("Pan Number", "123456")
+                    Button(
+                        onClick = { },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MainColor,   // Background color
+                            contentColor = Color.White           // Text/Icon color
+                        ),
+                        modifier = Modifier
+                            .width(120.dp)   // Button width
+                            .height(35.dp)   // Button height
+                    ) {
+                        Text(text = "Edit Profile")
+                    }
 
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Details Card
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(all = 20.dp), // 10dp padding on all sides
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(8.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(20.dp)) {
+                            ProfileRow("Email", "username123@gmail.com")
+                            ProfileRow("Phone", "984000000")
+                            ProfileRow("Address", "Kathmandu, Nepal")
+                            ProfileRow("Pan Number", "123456")
+
+                        }
                     }
                 }
+
             }
 
         }
-
     }
 }
 

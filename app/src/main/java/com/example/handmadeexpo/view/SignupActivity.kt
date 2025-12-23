@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -55,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.ui.theme.Green12
 import com.example.handmadeexpo.ui.theme.LightGreen12
+import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.Offwhite12
 
 class SignupActivity : ComponentActivity() {
@@ -87,20 +90,26 @@ fun SingUpBody(){
 
     Scaffold {
             padding->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()
+            .wrapContentSize()
+//            .verticalScroll(rememberScrollState())
+        ) {
             Image(
                 painter = painterResource(R.drawable.img_1),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
+
             )
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .verticalScroll(rememberScrollState()) // ✅ VERTICAL SCROLL ADDED
+                    .verticalScroll(rememberScrollState())
+
+                    .imePadding()// ✅ VERTICAL SCROLL ADDED
             ) {
-                Spacer(modifier = Modifier.padding(top = 75.dp))
+                Spacer(modifier = Modifier.padding(top = 40.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
@@ -110,10 +119,10 @@ fun SingUpBody(){
                         contentDescription = null,
                         modifier = Modifier
                             .clip(CircleShape)
-                            .size(100.dp)
+                            .size(150.dp)
                     )
                 }
-                Spacer(modifier = Modifier.padding(vertical = 10.dp))
+//                Spacer(modifier = Modifier.padding(vertical = 10.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
@@ -121,7 +130,7 @@ fun SingUpBody(){
                     Text(
                         "Create Your Account",
                         fontSize = 28.sp,
-                        color = LightGreen12,
+                        color = MainColor,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -169,8 +178,9 @@ fun SingUpBody(){
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 60.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(start = 16.dp, top = 8.dp), // smaller start padding
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start // align children to start
                 ) {
                     Checkbox(
                         checked = terms,
@@ -178,7 +188,7 @@ fun SingUpBody(){
                             terms = data
                         },
                         colors = CheckboxDefaults.colors(
-                            checkedColor = Green12,
+                            checkedColor = MainColor,
                             checkmarkColor = Color.Companion.White
                         )
                     )
@@ -187,7 +197,7 @@ fun SingUpBody(){
                 Button(
                     onClick = { },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Green12
+                        containerColor = MainColor
                     ),
                     elevation = ButtonDefaults.buttonElevation(
                         defaultElevation = 6.dp
@@ -196,11 +206,11 @@ fun SingUpBody(){
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(100.dp)
-                        .padding(horizontal = 15.dp, vertical = 20.dp),
+                        .padding(horizontal = 16.dp, vertical = 19.dp),
                 ) {
                     Text("Sign Up")
                 }
-                Spacer(modifier = Modifier.padding(vertical = 5.dp))
+
                 Row(modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 75.dp)) {
@@ -219,11 +229,7 @@ fun SingUpBody(){
     }
 }
 
-@Preview
-@Composable
-fun SingUpPreview(){
-    SingUpBody()
-}
+
 
 @Composable
 fun AppOutlinedTextField(
@@ -242,8 +248,10 @@ fun AppOutlinedTextField(
         colors = TextFieldDefaults.colors(
             focusedContainerColor = Offwhite12,
             unfocusedContainerColor = Offwhite12,
-            focusedIndicatorColor = Blue,
-            unfocusedIndicatorColor = Color.LightGray
+            focusedIndicatorColor = MainColor,
+            unfocusedIndicatorColor = MainColor,
+            focusedLabelColor = MainColor,
+            cursorColor = MainColor
         )
     )
 }
@@ -280,8 +288,16 @@ fun PasswordTextField(
         colors = TextFieldDefaults.colors(
             focusedContainerColor = Offwhite12,
             unfocusedContainerColor = Offwhite12,
-            focusedIndicatorColor = Blue,
-            unfocusedIndicatorColor = Color.LightGray
+            focusedIndicatorColor = MainColor,
+            unfocusedIndicatorColor = MainColor,
+            focusedLabelColor = MainColor,
+            cursorColor = MainColor
         )
     )
+}
+
+@Preview
+@Composable
+fun SingUpPreview(){
+    SingUpBody()
 }
