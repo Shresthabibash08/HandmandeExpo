@@ -8,32 +8,27 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 
-
-data class SellerProductItem(
-    val id: Int,
-    var name: String,
-    var price: Int,
-    var stock: Int,
-    var category: String
+data class UiProductModel(
+    val name: String,
+    val price: String,
+    val stock: String,
+    val category: String,
+    val isLowStock: Boolean
 )
 
 class SellerInventoryActivity : ComponentActivity() {
@@ -41,54 +36,52 @@ class SellerInventoryActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            Surface(modifier = Modifier.fillMaxSize(), color = Color.White) {
-                SellerInventoryScreen(onBackClick = { finish() })
+
+                SellerInventoryScreen()
             }
         }
-    }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
-fun SellerInventoryScreen(onBackClick: () -> Unit) {
-    // --- 1. STATE ---
-    val inventory = remember {
-        mutableStateListOf(
-            SellerProductItem(1, "Dhaka Topi", 500, 45, "Clothing"),
-            SellerProductItem(2, "Hemp Bag", 1500, 12, "Accessories"),
-            SellerProductItem(3, "Clay Water Pot", 300, 5, "Pottery"),
-            SellerProductItem(4, "Yak Wool Blanket", 4500, 8, "Bedding")
-        )
-    }
-
-    var showDialog by remember { mutableStateOf(false) }
-    var productToEdit by remember { mutableStateOf<SellerProductItem?>(null) }
-
-    val totalValue = inventory.sumOf { it.price * it.stock }
-    val totalItems = inventory.sumOf { it.stock }
+fun SellerInventoryScreen(onBackClick: () -> Unit = {}) {
+    val uiList = listOf(
+        UiProductModel("Dhaka Topi", "Rs. 500", "45", "Clothing", false),
+        UiProductModel("Hemp Bag", "Rs. 1500", "12", "Accessories", false),
+        UiProductModel("Clay Water Pot", "Rs. 300", "5", "Pottery", true),
+        UiProductModel("Yak Wool Blanket", "Rs. 4500", "8", "Bedding", true)
+    )
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Inventory Manager", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Blue,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                ),
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .background(Color.Blue)
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.White
+                    )
                 }
-            )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Inventory Manager",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = Color.White
+                )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = {
-                    productToEdit = null
-                    showDialog = true
-                },
+                onClick = { },
                 containerColor = Color.Blue,
                 contentColor = Color.White
             ) {
@@ -100,20 +93,19 @@ fun SellerInventoryScreen(onBackClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFFF5F5DC)) // Cream Background
+                .background(Color(0xFFF5F5DC))
                 .padding(16.dp)
         ) {
-            // --- 2. SUMMARY CARDS ---
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 InventoryStatCard(
                     title = "Total Asset Value",
-                    value = "Rs. $totalValue",
+                    value = "Rs. 25,400",
                     color = Color(0xFF36A806),
                     modifier = Modifier.weight(1f)
                 )
                 InventoryStatCard(
                     title = "Total Stock",
-                    value = "$totalItems Units",
+                    value = "120 Units",
                     color = Color(0xFFE65100),
                     modifier = Modifier.weight(1f)
                 )
@@ -123,55 +115,17 @@ fun SellerInventoryScreen(onBackClick: () -> Unit) {
             Text("Product List", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(10.dp))
 
-            // --- 3. INVENTORY LIST ---
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.weight(1f)
             ) {
-                items(inventory, key = { it.id }) { product ->
-                    InventoryRow(
-                        product = product,
-                        onEdit = {
-                            productToEdit = product
-                            showDialog = true
-                        },
-                        onDelete = {
-                            inventory.remove(product)
-                        }
-                    )
+                items(uiList) { product ->
+                    InventoryRow(product = product)
                 }
             }
         }
     }
-
-    // --- 4. POPUP DIALOG ---
-    if (showDialog) {
-        InventoryEntryDialog(
-            productToEdit = productToEdit,
-            onDismiss = { showDialog = false },
-            onSave = { name, price, stock, cat ->
-                if (productToEdit == null) {
-                    val newId = (inventory.maxOfOrNull { it.id } ?: 0) + 1
-                    inventory.add(SellerProductItem(newId, name, price, stock, cat))
-                } else {
-
-                    val index = inventory.indexOf(productToEdit)
-                    if (index != -1) {
-                        inventory[index] = inventory[index].copy(
-                            name = name,
-                            price = price,
-                            stock = stock,
-                            category = cat
-                        )
-                    }
-                }
-                showDialog = false
-            }
-        )
-    }
 }
-
-
 
 @Composable
 fun InventoryStatCard(title: String, value: String, color: Color, modifier: Modifier) {
@@ -191,13 +145,7 @@ fun InventoryStatCard(title: String, value: String, color: Color, modifier: Modi
 }
 
 @Composable
-fun InventoryRow(
-    product: SellerProductItem,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-    val isLowStock = product.stock < 10
-
+fun InventoryRow(product: UiProductModel) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp),
@@ -209,112 +157,29 @@ fun InventoryRow(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(product.name, fontWeight = FontWeight.Bold)
-                Text("Rs. ${product.price}  •  ${product.category}", fontSize = 12.sp, color = Color.Gray)
+                Text("${product.price}  •  ${product.category}", fontSize = 12.sp, color = Color.Gray)
             }
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     "Stock: ${product.stock}",
                     fontWeight = FontWeight.Bold,
-                    color = if (isLowStock) Color.Red else Color.Black
+                    color = if (product.isLowStock) Color.Red else Color.Black
                 )
-                if (isLowStock) Text("Low Stock!", fontSize = 10.sp, color = Color.Red)
+                if (product.isLowStock) Text("Low Stock!", fontSize = 10.sp, color = Color.Red)
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Actions
-            IconButton(onClick = onEdit, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.Gray)
-            }
+            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.Gray, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.width(16.dp))
-            IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
-            }
+            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red, modifier = Modifier.size(24.dp))
         }
     }
 }
 
+@Preview(showBackground = true)
 @Composable
-fun InventoryEntryDialog(
-    productToEdit: SellerProductItem?,
-    onDismiss: () -> Unit,
-    onSave: (String, Int, Int, String) -> Unit
-) {
-    var name by remember { mutableStateOf(productToEdit?.name ?: "") }
-    var price by remember { mutableStateOf(productToEdit?.price?.toString() ?: "") }
-    var stock by remember { mutableStateOf(productToEdit?.stock?.toString() ?: "") }
-    var category by remember { mutableStateOf(productToEdit?.category ?: "") }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = if (productToEdit == null) "Add New Product" else "Edit Product",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Product Name") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = price,
-                        onValueChange = { if (it.all { c -> c.isDigit() }) price = it },
-                        label = { Text("Price") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = stock,
-                        onValueChange = { if (it.all { c -> c.isDigit() }) stock = it },
-                        label = { Text("Stock") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                OutlinedTextField(
-                    value = category,
-                    onValueChange = { category = it },
-                    label = { Text("Category") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
-                    Button(
-                        onClick = {
-                            if (name.isNotEmpty()) {
-                                onSave(
-                                    name,
-                                    price.toIntOrNull() ?: 0,
-                                    stock.toIntOrNull() ?: 0,
-                                    category
-                                )
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Blue)
-                    ) {
-                        Text("Save")
-                    }
-                }
-            }
-        }
-    }
+fun PreviewInventoryUI() {
+    SellerInventoryScreen()
 }
