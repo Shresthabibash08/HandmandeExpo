@@ -192,34 +192,56 @@ fun SingUpBody(){
                 }
                 Button(
                     onClick = {
-                        if(!terms){
-                            Toast.makeText(context,"Please agree to terms and conditions",Toast.LENGTH_SHORT).show()
-                        }else {
-                            Toast.makeText(context,"Registering",Toast.LENGTH_SHORT).show()
-                            buyerViewModel.register(email, password) { success, msg, buyerId ->
-                                if (success) {
-                                    var buyerModel = BuyerModel(
-                                        buyerId = buyerId,
-                                        buyerName = fullname,
-                                        buyerEmail = email,
-                                        buyerAddress = adress,
-                                        buyerPhoneNumber = phoneNumber
-                                    )
-                                    buyerViewModel.addBuyerToDatabase(
-                                        buyerId,
-                                        buyerModel
-                                    ) { success, msg ->
-                                        if (success) {
-                                            activity.finish()
-                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+
+                        when {
+                            fullname.isBlank() ->
+                                Toast.makeText(context, "Full name is required", Toast.LENGTH_SHORT).show()
+
+                            email.isBlank() ->
+                                Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
+
+                            phoneNumber.isBlank() ->
+                                Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
+
+                            adress.isBlank() ->
+                                Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
+
+                            password.isBlank() ->
+                                Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
+
+                            confirmPassword.isBlank() ->
+                                Toast.makeText(context, "Confirm password is required", Toast.LENGTH_SHORT).show()
+
+                            password != confirmPassword ->
+                                Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+
+                            !terms ->
+                                Toast.makeText(context, "Please agree to terms & conditions", Toast.LENGTH_SHORT).show()
+
+                            else -> {
+                                // ✅ Only now call Firebase
+                                buyerViewModel.register(email, password) { success, msg, buyerId ->
+                                    if (success) {
+                                        val buyerModel = BuyerModel(
+                                            buyerId = buyerId,
+                                            buyerName = fullname,
+                                            buyerEmail = email,
+                                            buyerAddress = adress,
+                                            buyerPhoneNumber = phoneNumber
+                                        )
+
+                                        buyerViewModel.addBuyerToDatabase(buyerId, buyerModel) { dbSuccess, dbMsg ->
+                                            Toast.makeText(context, dbMsg, Toast.LENGTH_SHORT).show()
+                                            if (dbSuccess) activity.finish()
                                         }
+                                    } else {
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }
                         }
-                    },
+                    }
+                    ,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Green12
                     ),

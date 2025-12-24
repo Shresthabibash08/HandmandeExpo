@@ -231,45 +231,68 @@ fun SellerRegisterScreen() {
                 Spacer(modifier = Modifier.height(10.dp))
                 Button(
                     onClick = {
-                        sellerViewModel.register(email,password){ success,msg,sellerId ->
-                            if(success){
-                                Toast.makeText(context, "Processing1...", Toast.LENGTH_SHORT).show()
-                                var sellerModel= SellerModel(
-                                    sellerId = sellerId,
-                                    shopName = shopName,
-                                    sellerAddress = address,
-                                    sellerEmail = email,
-                                    sellerPhoneNumber = phoneNumber,
-                                    panNumber = panNumber
 
-                                    )
-                                sellerViewModel.addSellerToDatabase(sellerId,sellerModel){success,msg ->
-                                    if(success){
-                                        Toast.makeText(context, "Processing2...", Toast.LENGTH_SHORT).show()
-                                        Toast.makeText(context,msg,Toast.LENGTH_SHORT).show()
-                                        activity.finish()
-                                    }
-                                    else{
-                                        Toast.makeText(context,msg,Toast.LENGTH_SHORT).show()
+                        when {
+                            shopName.isBlank() ->
+                                Toast.makeText(context, "Shop name is required", Toast.LENGTH_SHORT).show()
+
+                            address.isBlank() ->
+                                Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
+
+                            panNumber.isBlank() ->
+                                Toast.makeText(context, "PAN number is required", Toast.LENGTH_SHORT).show()
+
+                            email.isBlank() ->
+                                Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
+
+                            phoneNumber.isBlank() ->
+                                Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
+
+                            password.isBlank() ->
+                                Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
+
+                            confirmPassword.isBlank() ->
+                                Toast.makeText(context, "Confirm password is required", Toast.LENGTH_SHORT).show()
+
+                            password != confirmPassword ->
+                                Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+
+                            else -> {
+                                // ✅ All validations passed
+                                sellerViewModel.register(email, password) { success, msg, sellerId ->
+                                    if (success) {
+                                        val sellerModel = SellerModel(
+                                            sellerId = sellerId,
+                                            shopName = shopName,
+                                            sellerAddress = address,
+                                            sellerEmail = email,
+                                            sellerPhoneNumber = phoneNumber,
+                                            panNumber = panNumber
+                                        )
+
+                                        sellerViewModel.addSellerToDatabase(
+                                            sellerId,
+                                            sellerModel
+                                        ) { dbSuccess, dbMsg ->
+                                            Toast.makeText(context, dbMsg, Toast.LENGTH_SHORT).show()
+                                            if (dbSuccess) activity.finish()
+                                        }
+                                    } else {
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Blue12
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 6.dp
-                    ),
-                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue12),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(55.dp)
-                        .padding(horizontal = 15.dp),
+                        .padding(horizontal = 15.dp)
                 ) {
                     Text("Register", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
+
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     buildAnnotatedString {
