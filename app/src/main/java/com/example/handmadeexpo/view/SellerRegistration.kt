@@ -1,7 +1,9 @@
 package com.example.handmadeexpo.view
 
 
+import android.app.Activity
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -41,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -55,8 +58,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.model.BuyerModel
+import com.example.handmadeexpo.model.SellerModel
+import com.example.handmadeexpo.repo.BuyerRepoImpl
+import com.example.handmadeexpo.repo.SellerRepoImpl
 import com.example.handmadeexpo.ui.theme.Blue12
 import com.example.handmadeexpo.ui.theme.Green
+import com.example.handmadeexpo.viewmodel.BuyerViewModel
+import com.example.handmadeexpo.viewmodel.SellerViewModel
 
 class SellerRegistration : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,15 +79,19 @@ class SellerRegistration : ComponentActivity() {
 
 @Composable
 fun SellerRegisterScreen() {
-    var name by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
     var shopName by remember { mutableStateOf("") }
-    var contact by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var passwordVisibility by remember { mutableStateOf(false) }
     var confirmPasswordVisibility by remember { mutableStateOf(false) }
     var confirmPassword by remember { mutableStateOf("") }
     var panNumber by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val activity = context as Activity
+    var sellerViewModel = remember{ SellerViewModel(SellerRepoImpl()) }
+
 
     Scaffold { padding ->
         Box(
@@ -100,7 +113,10 @@ fun SellerRegisterScreen() {
                 Image(
                     painter = painterResource(R.drawable.finallogo),
                     contentDescription = null,
-                    modifier = Modifier.height(100.dp).width(100.dp).clip(CircleShape),
+                    modifier = Modifier
+                        .height(100.dp)
+                        .width(100.dp)
+                        .clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
                 Text(
@@ -119,20 +135,21 @@ fun SellerRegisterScreen() {
                         color = Color.Gray,
                         textAlign = TextAlign.Center
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .padding(horizontal = 20.dp)
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                CustomTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    placeholder = "Full Name"
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 CustomTextField(
                     value = shopName,
                     onValueChange = { shopName = it },
                     placeholder = "Shop Name"
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                CustomTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    placeholder = "Address"
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 CustomTextField(
@@ -150,8 +167,8 @@ fun SellerRegisterScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
                 CustomTextField(
-                    value = contact,
-                    onValueChange = { contact = it },
+                    value = phoneNumber,
+                    onValueChange = { phoneNumber = it },
                     placeholder = "Phone",
                     keyboardType = KeyboardType.Phone
                 )
@@ -215,20 +232,67 @@ fun SellerRegisterScreen() {
                 Button(
                     onClick = {
 
+                        when {
+                            shopName.isBlank() ->
+                                Toast.makeText(context, "Shop name is required", Toast.LENGTH_SHORT).show()
+
+                            address.isBlank() ->
+                                Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
+
+                            panNumber.isBlank() ->
+                                Toast.makeText(context, "PAN number is required", Toast.LENGTH_SHORT).show()
+
+                            email.isBlank() ->
+                                Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
+
+                            phoneNumber.isBlank() ->
+                                Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
+
+                            password.isBlank() ->
+                                Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
+
+                            confirmPassword.isBlank() ->
+                                Toast.makeText(context, "Confirm password is required", Toast.LENGTH_SHORT).show()
+
+                            password != confirmPassword ->
+                                Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+
+                            else -> {
+                                // ✅ All validations passed
+                                sellerViewModel.register(email, password) { success, msg, sellerId ->
+                                    if (success) {
+                                        val sellerModel = SellerModel(
+                                            sellerId = sellerId,
+                                            shopName = shopName,
+                                            sellerAddress = address,
+                                            sellerEmail = email,
+                                            sellerPhoneNumber = phoneNumber,
+                                            panNumber = panNumber
+                                        )
+
+                                        sellerViewModel.addSellerToDatabase(
+                                            sellerId,
+                                            sellerModel
+                                        ) { dbSuccess, dbMsg ->
+                                            Toast.makeText(context, dbMsg, Toast.LENGTH_SHORT).show()
+                                            if (dbSuccess) activity.finish()
+                                        }
+                                    } else {
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        }
                     },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Blue12
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 6.dp
-                    ),
-                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue12),
                     modifier = Modifier
-                        .fillMaxWidth().height(55.dp)
-                        .padding(horizontal = 15.dp),
+                        .fillMaxWidth()
+                        .height(55.dp)
+                        .padding(horizontal = 15.dp)
                 ) {
                     Text("Register", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
+
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     buildAnnotatedString {
