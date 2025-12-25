@@ -63,6 +63,7 @@ dependencies {
     // Merged dependencies
     implementation(libs.litert.support.api)
     implementation(libs.firebase.database)
+    implementation(libs.androidx.compose.foundation)
     implementation(libs.firebase.auth)
 
     testImplementation(libs.junit)
