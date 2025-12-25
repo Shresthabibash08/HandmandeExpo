@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -40,13 +41,14 @@ class SellerDashboard : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SellerDashboardBody(){
-    data class NavItem(val icon:Int,val label:String)
-    val listItems=listOf(
-        NavItem(icon=R.drawable.baseline_home_24,label="Home"),
-        NavItem(icon=R.drawable.baseline_search_24,label="Search"),
-        NavItem(icon=R.drawable.baseline_settings_24,label="Setting")
+    data class NavItem(val icon:Int, val label:String)
+
+    // Make sure these drawables exist in your resources
+    val listItems = listOf(
+        NavItem(icon = R.drawable.outline_home_24, label = "Home"), // Changed to match your naming convention
+        NavItem(icon = R.drawable.outline_search_24, label = "Search"),
+        NavItem(icon = R.drawable.outline_contacts_product_24, label = "Profile")
     )
-    var selectedIndex by remember{ mutableStateOf(0) }
 
     Scaffold(topBar = {
         CenterAlignedTopAppBar(
@@ -80,39 +82,40 @@ fun SellerDashboardBody(){
                         contentDescription = null
                     )
                 }
-            }
-        )
-    },
+            )
+        },
         bottomBar = {
             NavigationBar {
-                listItems.forEachIndexed { index,item ->
+                listItems.forEachIndexed { index, item ->
                     NavigationBarItem(
                         icon = {
                             Icon(
-                            painter=painterResource(item.icon),
-                            contentDescription = null
+                                painter = painterResource(item.icon),
+                                contentDescription = item.label
                             )
                         },
-                        label= {
+                        label = {
                             Text(item.label)
                         },
                         onClick = {
-                            selectedIndex=index
+                            selectedIndex = index
                         },
                         selected = selectedIndex == index
                     )
                 }
             }
         }
-    ){ padding ->
-        Column(modifier=Modifier.fillMaxSize()
-            .padding(padding)){
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
             when(selectedIndex){
-                0 -> HomeScreen()
-//                1 -> SearchScreen()
-                2 -> SellerProfileScreen()
+                0 -> SellerHomeScreen()
+                1 -> Box(Modifier.fillMaxSize()) { Text("Search Orders") }
+                2 -> Box(Modifier.fillMaxSize()) { Text("Seller Profile") }
             }
         }
-
     }
 }

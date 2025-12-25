@@ -15,6 +15,9 @@
             android:name=".view.ProfileScreen"
             android:exported="true"
             android:label="@string/title_activity_profile_screen"
+            android:name=".view.SellerInventoryActivity"
+            android:exported="true"
+            android:label="@string/title_activity_seller_inventory"
             android:theme="@style/Theme.HandmadeExpo">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

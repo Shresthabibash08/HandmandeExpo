@@ -2,7 +2,9 @@ package com.example.handmadeexpo.view
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -55,6 +57,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.model.BuyerModel
+import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.ui.theme.Green12
 import com.example.handmadeexpo.ui.theme.LightGreen12
 import com.example.handmadeexpo.ui.theme.MainColor
@@ -73,6 +77,7 @@ class SignupActivity : ComponentActivity() {
 
 @Composable
 fun SingUpBody(){
+    var buyerViewModel=remember { BuyerViewModel(BuyerRepoImpl()) }
     var fullname by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -84,7 +89,7 @@ fun SingUpBody(){
     var phoneNumber by remember { mutableStateOf("") }
 
     val context=LocalContext.current
-    val activity=(context as? Activity)
+    val activity=context as Activity
     val SharedPreferences=context.getSharedPreferences("User", Context.MODE_PRIVATE)
     val LocalEmail :String?=SharedPreferences.getString("Email","")
     val LocalPassword :String?=SharedPreferences.getString("Password","")
@@ -196,7 +201,57 @@ fun SingUpBody(){
                     Text("I agree to terms & Conditions")
                 }
                 Button(
-                    onClick = { },
+                    onClick = {
+
+                        when {
+                            fullname.isBlank() ->
+                                Toast.makeText(context, "Full name is required", Toast.LENGTH_SHORT).show()
+
+                            email.isBlank() ->
+                                Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
+
+                            phoneNumber.isBlank() ->
+                                Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
+
+                            adress.isBlank() ->
+                                Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
+
+                            password.isBlank() ->
+                                Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
+
+                            confirmPassword.isBlank() ->
+                                Toast.makeText(context, "Confirm password is required", Toast.LENGTH_SHORT).show()
+
+                            password != confirmPassword ->
+                                Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+
+                            !terms ->
+                                Toast.makeText(context, "Please agree to terms & conditions", Toast.LENGTH_SHORT).show()
+
+                            else -> {
+                                // ✅ Only now call Firebase
+                                buyerViewModel.register(email, password) { success, msg, buyerId ->
+                                    if (success) {
+                                        val buyerModel = BuyerModel(
+                                            buyerId = buyerId,
+                                            buyerName = fullname,
+                                            buyerEmail = email,
+                                            buyerAddress = adress,
+                                            buyerPhoneNumber = phoneNumber
+                                        )
+
+                                        buyerViewModel.addBuyerToDatabase(buyerId, buyerModel) { dbSuccess, dbMsg ->
+                                            Toast.makeText(context, dbMsg, Toast.LENGTH_SHORT).show()
+                                            if (dbSuccess) activity.finish()
+                                        }
+                                    } else {
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    ,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MainColor
                     ),
