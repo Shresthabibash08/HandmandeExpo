@@ -17,8 +17,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -53,63 +57,79 @@ fun SellerHomeScreen() {
         mapOf("name" to "Painting", "price" to "NRP 5000", "stock" to 5, "sold" to 1, "img" to R.drawable.img_17)
     )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
-            .padding(16.dp)
-    ) {
-        // --- Categories Section ---
-        Text(
-            text = "Categories",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black
-        )
+    // Used Box to overlay the Floating Action Button on top of the list
+    Box(modifier = Modifier.fillMaxSize()) {
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF5F5F5))
+                .padding(16.dp)
         ) {
-            items(categories) { (name, imageRes) ->
-                SellerCategoryItem(name, imageRes)
+            // --- Categories Section ---
+            Text(
+                text = "Categories",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(categories) { (name, imageRes) ->
+                    SellerCategoryItem(name, imageRes)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- Inventory Section ---
+            Text(
+                text = "Your Inventory",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // --- Scrollable Product List ---
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(sellerProducts) { product ->
+                    // Extracting data from the Map
+                    SellerProductItem(
+                        name = product["name"] as String,
+                        price = product["price"] as String,
+                        stock = product["stock"] as Int,
+                        sold = product["sold"] as Int,
+                        imageRes = product["img"] as Int
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // --- Inventory Section ---
-        Text(
-            text = "Your Inventory",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // --- Scrollable Product List ---
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        // --- Floating Action Button ---
+        FloatingActionButton(
+            onClick = { /* No navigation for now */ },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp), // Padding from the edges
+            containerColor = Color(0xFFE65100), // Matching the Orange Theme
+            contentColor = Color.White
         ) {
-            items(sellerProducts) { product ->
-                // Extracting data from the Map
-                SellerProductItem(
-                    name = product["name"] as String,
-                    price = product["price"] as String,
-                    stock = product["stock"] as Int,
-                    sold = product["sold"] as Int,
-                    imageRes = product["img"] as Int
-                )
-            }
+            Icon(Icons.Default.Add, contentDescription = "Add Product")
         }
     }
 }
 
-
+// --- Helper Composables ---
 
 @Composable
 fun SellerCategoryItem(name: String, imageRes: Int) {
