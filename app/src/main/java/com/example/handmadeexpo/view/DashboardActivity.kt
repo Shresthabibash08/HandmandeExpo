@@ -29,8 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.ui.theme.Blue12
-import com.example.handmadeexpo.ui.theme.Green12
-import com.example.handmadeexpo.ui.theme.LightGreen12
+import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.White12
 
 
@@ -56,7 +55,7 @@ fun DashboardBody() {
     val listItems = listOf(
         NavItem(icon = R.drawable.outline_home_24, label = "Home"),
         NavItem(icon = R.drawable.outline_search_24, label = "Search"),
-        NavItem(icon = R.drawable.outline_shopping_cart_24, label = "Cart"),
+        NavItem(icon = R.drawable.baseline_shopping_cart_24, label = "Cart"),
         NavItem(icon = R.drawable.outline_contacts_product_24, label = "Profile"),
     )
 
@@ -69,7 +68,7 @@ fun DashboardBody() {
                     titleContentColor = White12,
                     actionIconContentColor = White12,
                     navigationIconContentColor = White12,
-                    containerColor = LightGreen12
+                    containerColor = MainColor
                 ),
                 navigationIcon = {
                     IconButton(onClick = {}) {
@@ -132,8 +131,8 @@ fun DashboardBody() {
             when (selectedIndex) {
                 0 -> HomeScreen()
                 1 -> Text("Search Screen - Coming Soon!")
-                2 -> Text("Notification Screen - Coming Soon!")
-                3 -> Text("Profile Screen - Coming Soon!")
+                2 -> CartScreen()
+                3 -> ProfileScreen()
                 else -> HomeScreen()
             }
         }

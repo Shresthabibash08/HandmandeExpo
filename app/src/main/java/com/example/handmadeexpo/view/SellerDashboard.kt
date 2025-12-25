@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.ui.theme.MainColor
 
 class SellerDashboard : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,35 +50,37 @@ fun SellerDashboardBody(){
         NavItem(icon = R.drawable.outline_contacts_product_24, label = "Profile")
     )
 
-    var selectedIndex by remember { mutableStateOf(0) }
-
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    titleContentColor = Color.White,
-                    actionIconContentColor = Color.White,
-                    navigationIconContentColor = Color.White,
-                    containerColor = Color.Green // You can use Blue12 if defined
-                ),
-                navigationIcon = {
-                    IconButton(onClick = {}) {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_arrow_back_ios_24),
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                title = {
-                    Text("HandMade Expo Seller")
-                },
-                actions = {
-                    IconButton(onClick = {}) {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_notifications_24), // Changed to notification icon
-                            contentDescription = "Notifications"
-                        )
-                    }
+    Scaffold(topBar = {
+        CenterAlignedTopAppBar(
+            colors= TopAppBarDefaults.topAppBarColors(
+                titleContentColor = Color.White,
+                actionIconContentColor = Color.White,
+                navigationIconContentColor = Color.White,
+                containerColor = MainColor
+            ),
+            navigationIcon={
+                IconButton(onClick = {}) {
+                    Icon(
+                        painter= painterResource(R.drawable.outline_arrow_back_ios_24),
+                        contentDescription = null
+                    )
+                }
+            },
+            title={
+                Text("HandMade Expo")
+            },
+            actions = {
+                IconButton(onClick = {}) {
+                    Icon(
+                        painter = painterResource(R.drawable.outline_arrow_back_ios_24),
+                        contentDescription = null
+                    )
+                }
+                IconButton(onClick = {}) {
+                    Icon(
+                        painter = painterResource(R.drawable.outline_arrow_back_ios_24),
+                        contentDescription = null
+                    )
                 }
             )
         },

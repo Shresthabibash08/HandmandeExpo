@@ -12,6 +12,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.HandmadeExpo">
         <activity
+            android:name=".view.ProfileScreen"
+            android:exported="true"
+            android:label="@string/title_activity_profile_screen"
             android:name=".view.SellerInventoryActivity"
             android:exported="true"
             android:label="@string/title_activity_seller_inventory"
@@ -87,6 +90,7 @@
         <!-- </intent-filter> -->
         <!-- </activity> -->
         <activity
+            android:windowSoftInputMode="adjustResize|stateHidden"
             android:name=".view.SignupActivity"
             android:exported="true"
             android:label="@string/title_activity_signup"
@@ -98,6 +102,7 @@
             </intent-filter>
         </activity>
         <activity
+            android:windowSoftInputMode="adjustResize|stateHidden"
             android:name=".view.SellerDashboard"
             android:exported="true"
             android:label="@string/title_activity_seller_dashboard"
