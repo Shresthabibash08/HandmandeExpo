@@ -45,43 +45,48 @@ fun SellerDashboardBody(){
 
     // Make sure these drawables exist in your resources
     val listItems = listOf(
-        NavItem(icon = R.drawable.outline_home_24, label = "Home"), // Changed to match your naming convention
+        NavItem(icon = R.drawable.outline_home_24, label = "Home"),
         NavItem(icon = R.drawable.outline_search_24, label = "Search"),
         NavItem(icon = R.drawable.outline_contacts_product_24, label = "Profile")
     )
 
-    Scaffold(topBar = {
-        CenterAlignedTopAppBar(
-            colors= TopAppBarDefaults.topAppBarColors(
-                titleContentColor = Color.White,
-                actionIconContentColor = Color.White,
-                navigationIconContentColor = Color.White,
-                containerColor = MainColor
-            ),
-            navigationIcon={
-                IconButton(onClick = {}) {
-                    Icon(
-                        painter= painterResource(R.drawable.outline_arrow_back_ios_24),
-                        contentDescription = null
-                    )
-                }
-            },
-            title={
-                Text("HandMade Expo")
-            },
-            actions = {
-                IconButton(onClick = {}) {
-                    Icon(
-                        painter = painterResource(R.drawable.outline_arrow_back_ios_24),
-                        contentDescription = null
-                    )
-                }
-                IconButton(onClick = {}) {
-                    Icon(
-                        painter = painterResource(R.drawable.outline_arrow_back_ios_24),
-                        contentDescription = null
-                    )
-                }
+    // ✅ FIXED: Added the missing state variable for navigation
+    var selectedIndex by remember { mutableStateOf(0) }
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    titleContentColor = Color.White,
+                    actionIconContentColor = Color.White,
+                    navigationIconContentColor = Color.White,
+                    containerColor = MainColor
+                ),
+                navigationIcon = {
+                    IconButton(onClick = {}) {
+                        Icon(
+                            painter = painterResource(R.drawable.outline_arrow_back_ios_24),
+                            contentDescription = null
+                        )
+                    }
+                },
+                title = {
+                    Text("HandMade Expo")
+                },
+                actions = {
+                    IconButton(onClick = {}) {
+                        Icon(
+                            painter = painterResource(R.drawable.outline_arrow_back_ios_24), // Ideally a Notification Icon
+                            contentDescription = null
+                        )
+                    }
+                    IconButton(onClick = {}) {
+                        Icon(
+                            painter = painterResource(R.drawable.outline_arrow_back_ios_24), // Ideally a Cart Icon
+                            contentDescription = null
+                        )
+                    }
+                } // ✅ FIXED: Changed ')' to '}' here
             )
         },
         bottomBar = {

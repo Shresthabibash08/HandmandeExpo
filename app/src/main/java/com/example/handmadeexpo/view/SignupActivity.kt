@@ -64,6 +64,7 @@ import com.example.handmadeexpo.ui.theme.LightGreen12
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.Offwhite12
 import com.example.handmadeexpo.ui.theme.White12
+import com.example.handmadeexpo.viewmodel.BuyerViewModel
 
 class SignupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
