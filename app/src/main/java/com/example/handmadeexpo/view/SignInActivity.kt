@@ -2,6 +2,7 @@ package com.example.handmadeexpo.view
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -51,8 +52,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.ui.theme.AquaGreen
 import com.example.handmadeexpo.ui.theme.Blue1
+import com.example.handmadeexpo.viewmodel.BuyerViewModel
 
 class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,6 +70,7 @@ class SignInActivity : ComponentActivity() {
 @Composable
 fun SignInBody() {
 
+    var buyerViewModel=remember { BuyerViewModel(BuyerRepoImpl()) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var visibility by remember { mutableStateOf(false) }
@@ -195,6 +199,42 @@ fun SignInBody() {
 
                     Button(
                         onClick = {
+                            buyerViewModel.login(email, password) { success, msg ->
+                                if (success) {
+                                    val userId = buyerViewModel.getCurrentUser()?.uid
+
+                                    if (userId != null) {
+                                        buyerViewModel.checkUserRole(userId) { role ->
+                                            when (role) {
+                                                "buyer" -> {
+                                                    context.startActivity(
+                                                        Intent(context, DashboardActivity::class.java)
+                                                    )
+                                                    activity?.finish()
+                                                }
+
+                                                "seller" -> {
+                                                    context.startActivity(
+                                                        Intent(context, SellerDashboard::class.java)
+                                                    )
+                                                    activity?.finish()
+                                                }
+
+                                                else -> {
+                                                    Toast.makeText(
+                                                        context,
+                                                        "User role not found",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = AquaGreen

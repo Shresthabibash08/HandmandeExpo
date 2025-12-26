@@ -208,14 +208,26 @@ fun SingUpBody(){
                             fullname.isBlank() ->
                                 Toast.makeText(context, "Full name is required", Toast.LENGTH_SHORT).show()
 
+                            !fullname.matches(Regex("^[A-Za-z ]+$")) ->
+                                Toast.makeText(context, "Name should contain only letters and spaces", Toast.LENGTH_SHORT).show()
+
+                            fullname.length < 2 ->
+                                Toast.makeText(context, "Name must be at least 2 characters", Toast.LENGTH_SHORT).show()
+
                             email.isBlank() ->
                                 Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
 
                             phoneNumber.isBlank() ->
                                 Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
 
+                            !phoneNumber.matches(Regex("^[0-9]{10}$")) ->
+                                Toast.makeText(context, "Phone number must be exactly 10 digits", Toast.LENGTH_SHORT).show()
+
                             adress.isBlank() ->
                                 Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
+
+                            !adress.matches(Regex("^[A-Za-z0-9 ,.-]{5,}$")) ->
+                                Toast.makeText(context, "Please enter a valid address", Toast.LENGTH_SHORT).show()
 
                             password.isBlank() ->
                                 Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
@@ -230,7 +242,7 @@ fun SingUpBody(){
                                 Toast.makeText(context, "Please agree to terms & conditions", Toast.LENGTH_SHORT).show()
 
                             else -> {
-                                // ✅ Only now call Firebase
+                                // ✅ Firebase call (UNCHANGED)
                                 buyerViewModel.register(email, password) { success, msg, buyerId ->
                                     if (success) {
                                         val buyerModel = BuyerModel(
@@ -251,6 +263,7 @@ fun SingUpBody(){
                                 }
                             }
                         }
+
                     }
                     ,
                     colors = ButtonDefaults.buttonColors(
@@ -281,7 +294,10 @@ fun SingUpBody(){
                         color = Blue,
                         fontSize = 16.sp,
                         modifier = Modifier
-                            .clickable { }
+                            .clickable {
+                                val intent = Intent(context, SignInActivity::class.java)
+                                activity.startActivity(intent)
+                            }
                     )
                 }
             }

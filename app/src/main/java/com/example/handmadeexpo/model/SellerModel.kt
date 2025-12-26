@@ -6,8 +6,8 @@ data class SellerModel(
     val sellerEmail:String="",
     val sellerPhoneNumber:String="",
     val sellerAddress:String="",
-    val sellerPassword:String="",
-    val panNumber:String=""
+    val panNumber:String="",
+    var role: String = "seller"
 ){
     fun toMap() : Map<String,Any?>{
         return mapOf(
