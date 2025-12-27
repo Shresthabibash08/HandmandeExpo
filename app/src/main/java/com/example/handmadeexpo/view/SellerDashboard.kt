@@ -118,8 +118,8 @@ fun SellerDashboardBody(){
         ) {
             when(selectedIndex){
                 0 -> SellerHomeScreen()
-                1 -> Box(Modifier.fillMaxSize()) { Text("Search Orders") }
-                2 -> Box(Modifier.fillMaxSize()) { Text("Seller Profile") }
+                1 -> SellerInventoryScreen()
+                2 -> SellerProfileScreen()
             }
         }
     }

@@ -116,16 +116,16 @@ fun SellerHomeScreen() {
         }
 
         // --- Floating Action Button ---
-        FloatingActionButton(
-            onClick = { /* No navigation for now */ },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(24.dp), // Padding from the edges
-            containerColor = Color(0xFFE65100), // Matching the Orange Theme
-            contentColor = Color.White
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "Add Product")
-        }
+//        FloatingActionButton(
+//            onClick = { /* No navigation for now */ },
+//            modifier = Modifier
+//                .align(Alignment.BottomEnd)
+//                .padding(24.dp), // Padding from the edges
+//            containerColor = Color(0xFFE65100), // Matching the Orange Theme
+//            contentColor = Color.White
+//        ) {
+//            Icon(Icons.Default.Add, contentDescription = "Add Product")
+//        }
     }
 }
 

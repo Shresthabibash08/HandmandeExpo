@@ -1,5 +1,6 @@
 package com.example.handmadeexpo.view
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,10 +19,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.handmadeexpo.ui.theme.MainColor
 
 data class UiProductModel(
     val name: String,
@@ -45,6 +48,11 @@ class SellerInventoryActivity : ComponentActivity() {
 
 @Composable
 fun SellerInventoryScreen(onBackClick: () -> Unit = {}) {
+
+    val context = LocalContext.current
+    val activity = LocalContext.current as ComponentActivity
+
+
     val uiList = listOf(
         UiProductModel("Dhaka Topi", "Rs. 500", "45", "Clothing", false),
         UiProductModel("Hemp Bag", "Rs. 1500", "12", "Accessories", false),
@@ -59,30 +67,27 @@ fun SellerInventoryScreen(onBackClick: () -> Unit = {}) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp)
-                    .background(Color.Blue)
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White
-                    )
-                }
+
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Inventory Manager",
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp,
-                    color = Color.White
+                    color = MainColor
                 )
             }
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { },
-                containerColor = Color.Blue,
+                onClick = {
+                    val intent = Intent(context, AddProductActivity::class.java)
+                    context.startActivity(intent)
+
+                },
+                containerColor = MainColor,
                 contentColor = Color.White
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Product")
