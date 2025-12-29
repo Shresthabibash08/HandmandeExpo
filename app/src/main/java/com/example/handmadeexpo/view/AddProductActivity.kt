@@ -1,51 +1,83 @@
 package com.example.handmadeexpo.view
 
+import android.app.Activity
+import android.net.Uri
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.handmadeexpo.ui.theme.MainColor
-import com.example.handmadeexpo.ui.theme.White12
-import com.example.handmadeexpo.ui.theme.borderGray
-import com.example.handmadeexpo.ui.theme.cream
-import com.example.handmadeexpo.ui.theme.green1
-import com.example.handmadeexpo.ui.theme.lightGreen
+import coil.compose.AsyncImage
+import com.example.handmadeexpo.model.ProductModel
+import com.example.handmadeexpo.repo.ProductRepoImpl
+import com.example.handmadeexpo.ui.theme.*
+import com.example.handmadeexpo.utils.ImageUtils
+import com.example.handmadeexpo.viewmodel.ProductViewModel
 
 class AddProductActivity : ComponentActivity() {
+
+    lateinit var imageUtils: ImageUtils
+    var selectedImageUri by mutableStateOf<Uri?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        imageUtils = ImageUtils(this, this)
+        imageUtils.registerLaunchers { uri ->
+            selectedImageUri = uri
+        }
+
         setContent {
-            AddProductBody()
+            AddProductBody(
+                selectedImageUri = selectedImageUri,
+                onPickImage = { imageUtils.launchImagePicker() }
+            )
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddProductBody() {
+fun AddProductBody(
+    selectedImageUri: Uri?,
+    onPickImage: () -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
-    var selectedCategory by remember { mutableStateOf("Choose category") }
 
-    var productName by remember { mutableStateOf("") }
-    var price by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var stockQuantity by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("Choose category") }
+    var pProductName by remember { mutableStateOf("") }
+    var pPrice by remember { mutableStateOf("") }
+    var dDescription by remember { mutableStateOf("") }
+    var sStockQuantity by remember { mutableStateOf("") }
+
+    var isLoading by remember { mutableStateOf(false) } // Loading state
+
+    val context = LocalContext.current
+    val activity = context as? Activity
+
+    val repo = remember { ProductRepoImpl() }
+    val viewModel = remember { ProductViewModel(repo) }
 
     Scaffold(
         topBar = {
@@ -58,12 +90,13 @@ fun AddProductBody() {
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Medium
                     )
-                },
-
-                )
+                }
+            )
         },
-        containerColor = cream,
-        content = { paddingValues ->
+        containerColor = cream
+    ) { paddingValues ->
+
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .padding(paddingValues)
@@ -71,46 +104,46 @@ fun AddProductBody() {
                     .verticalScroll(rememberScrollState())
                     .imePadding()
             ) {
-                // Image Section
+
+                // IMAGE SECTION
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(lightGreen, RoundedCornerShape(16.dp))
                         .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(80.dp)
-                            .border(1.dp, borderGray, RoundedCornerShape(12.dp)),
+                            .size(110.dp)
+                            .border(1.dp, borderGray, RoundedCornerShape(12.dp))
+                            .clickable { onPickImage() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Add, null, tint = green1)
-                            Text("Upload Image", fontSize = 12.sp)
-                        }
-                    }
-
-                    repeat(3) {
-                        Box(
-                            modifier = Modifier
-                                .size(80.dp)
-                                .background(Color.White, RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.ArrowForward, null, tint = Color.LightGray)
+                        if (selectedImageUri != null) {
+                            AsyncImage(
+                                model = selectedImageUri,
+                                contentDescription = "Selected Image",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Add, null, tint = green1)
+                                Text("Upload Image", fontSize = 12.sp)
+                            }
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Product Name
+                // PRODUCT NAME
                 Text("Product Name", fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(6.dp))
                 OutlinedTextField(
-                    value = productName,
-                    onValueChange = { productName = it },
+                    value = pProductName,
+                    onValueChange = { pProductName = it },
                     placeholder = { Text("Enter product name") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -118,12 +151,12 @@ fun AddProductBody() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Price
+                // PRICE
                 Text("Price (in NPR)", fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(6.dp))
                 OutlinedTextField(
-                    value = price,
-                    onValueChange = { price = it },
+                    value = pPrice,
+                    onValueChange = { pPrice = it },
                     placeholder = { Text("Enter price") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -131,7 +164,7 @@ fun AddProductBody() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Category
+                // CATEGORY
                 Text("Category", fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(6.dp))
 
@@ -157,11 +190,13 @@ fun AddProductBody() {
                         onDismissRequest = { expanded = false }
                     ) {
                         listOf(
-                            "Handicrafts",
-                            "Wooden Items",
-                            "Pottery",
-                            "Textiles",
-                            "Jewelry"
+                            "Statue",
+                            "Wooden Mask",
+                            "Singing Bowl",
+                            "Painting",
+                            "Thanka",
+                            "Wall Decor",
+                            "Others"
                         ).forEach { category ->
                             DropdownMenuItem(
                                 text = { Text(category) },
@@ -176,12 +211,12 @@ fun AddProductBody() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Description
+                // DESCRIPTION
                 Text("Description", fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(6.dp))
                 OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
+                    value = dDescription,
+                    onValueChange = { dDescription = it },
                     placeholder = { Text("Describe your product") },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -191,12 +226,12 @@ fun AddProductBody() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Stock Quantity
+                // STOCK
                 Text("Stock Quantity", fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(6.dp))
                 OutlinedTextField(
-                    value = stockQuantity,
-                    onValueChange = { stockQuantity = it },
+                    value = sStockQuantity,
+                    onValueChange = { sStockQuantity = it },
                     placeholder = { Text("Enter stock quantity") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -204,30 +239,87 @@ fun AddProductBody() {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Add Product Button
+                // ADD PRODUCT BUTTON
                 Button(
-                    onClick = { /* Handle Add Product */ },
+                    onClick = {
+                        // Validation
+                        when {
+                            selectedImageUri == null -> {
+                                Toast.makeText(context, "Please select an image", Toast.LENGTH_SHORT).show()
+                            }
+                            pProductName.isBlank() -> {
+                                Toast.makeText(context, "Please enter product name", Toast.LENGTH_SHORT).show()
+                            }
+                            pPrice.isBlank() -> {
+                                Toast.makeText(context, "Please enter price", Toast.LENGTH_SHORT).show()
+                            }
+                            pPrice.toDoubleOrNull() == null -> {
+                                Toast.makeText(context, "Price must be a number", Toast.LENGTH_SHORT).show()
+                            }
+                            selectedCategory == "Choose category" -> {
+                                Toast.makeText(context, "Please select a category", Toast.LENGTH_SHORT).show()
+                            }
+                            dDescription.isBlank() -> {
+                                Toast.makeText(context, "Please enter description", Toast.LENGTH_SHORT).show()
+                            }
+                            sStockQuantity.isBlank() -> {
+                                Toast.makeText(context, "Please enter stock quantity", Toast.LENGTH_SHORT).show()
+                            }
+                            sStockQuantity.toIntOrNull() == null -> {
+                                Toast.makeText(context, "Stock quantity must be a number", Toast.LENGTH_SHORT).show()
+                            }
+                            else -> {
+                                // All validations passed
+                                isLoading = true
+                                viewModel.uploadImage(context, selectedImageUri) { imageUrl ->
+                                    if (imageUrl != null) {
+                                        val product = ProductModel(
+                                            productId = "",
+                                            name = pProductName,
+                                            price = pPrice.toDouble(),
+                                            description = dDescription,
+                                            image = imageUrl,
+                                            categoryId = selectedCategory,
+                                            stock = sStockQuantity.toInt()
+                                        )
+
+                                        viewModel.addProduct(product) { success, message ->
+                                            isLoading = false
+                                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                            if (success) activity?.finish()
+                                        }
+                                    } else {
+                                        isLoading = false
+                                        Log.e("UPLOAD_ERROR", "Image upload failed")
+                                        Toast.makeText(context, "Image upload failed", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(28.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = green1)
                 ) {
-                    Text(
-                        "Add Product",
-                        color = Color.White,
-                        fontSize = 16.sp
-                    )
+                    Text("Add Product", color = Color.White, fontSize = 16.sp)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
-        }
-    )
-}
 
-@Preview(showBackground = true)
-@Composable
-fun AddProductPreview() {
-    AddProductBody()
+            // Loading Overlay
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = green1)
+                }
+            }
+        }
+    }
 }

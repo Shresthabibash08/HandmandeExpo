@@ -118,7 +118,7 @@ fun SellerDashboardBody(){
         ) {
             when(selectedIndex){
                 0 -> SellerHomeScreen()
-                1 -> SellerInventoryScreen()
+                1 -> InvetoryScreen()
                 2 -> SellerProfileScreen()
             }
         }
