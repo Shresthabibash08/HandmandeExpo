@@ -46,7 +46,7 @@ fun SellerDashboardBody(){
     // Make sure these drawables exist in your resources
     val listItems = listOf(
         NavItem(icon = R.drawable.outline_home_24, label = "Home"),
-        NavItem(icon = R.drawable.outline_search_24, label = "Search"),
+        NavItem(icon = R.drawable.baseline_inventory_24, label = "Inventory"),
         NavItem(icon = R.drawable.outline_contacts_product_24, label = "Profile")
     )
 
@@ -118,8 +118,8 @@ fun SellerDashboardBody(){
         ) {
             when(selectedIndex){
                 0 -> SellerHomeScreen()
-                1 -> Box(Modifier.fillMaxSize()) { Text("Search Orders") }
-                2 -> Box(Modifier.fillMaxSize()) { Text("Seller Profile") }
+                1 -> InvetoryScreen()
+                2 -> SellerProfileScreen()
             }
         }
     }
