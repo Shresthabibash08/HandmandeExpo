@@ -80,17 +80,14 @@ fun SellerVerificationUI(onBackClick: () -> Unit = {}) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
-                // Removed background color here to let it blend or keep transparent
-                // If you want the button area to have a distinct background, keep .background(borderGray)
+
             ) {
                 Button(
                     onClick = {
                         Toast.makeText(context, "Verification Submitted!", Toast.LENGTH_SHORT).show()
 
                         // Navigate to Seller Dashboard
-                        val intent = Intent(context, SellerDashboard::class.java)
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        context.startActivity(intent)
+
                     },
                     modifier = Modifier
                         .fillMaxWidth()
