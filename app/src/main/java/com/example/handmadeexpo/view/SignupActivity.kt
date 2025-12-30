@@ -92,9 +92,6 @@ fun SingUpBody(){
 
     val context=LocalContext.current
     val activity=context as Activity
-    val SharedPreferences=context.getSharedPreferences("User", Context.MODE_PRIVATE)
-    val LocalEmail :String?=SharedPreferences.getString("Email","")
-    val LocalPassword :String?=SharedPreferences.getString("Password","")
 
     Scaffold {
             padding->
@@ -265,7 +262,16 @@ fun SingUpBody(){
                         .fillMaxWidth().height(95.dp)
                         .padding(horizontal = 20.dp, vertical = 20.dp),
                 ) {
-                    Text("Sign Up", style = TextStyle(fontSize = 15.sp))
+                    Text("Sign Up", style = TextStyle(fontSize = 15.sp),
+                        modifier = Modifier.clickable{
+
+//                            if(){
+//                                val intent = Intent(context, SignInActivity::class.java)
+//                                activity.startActivity(intent)
+//                                activity.finish()
+//                            }
+
+                        })
                 }
 
                 Row(modifier = Modifier

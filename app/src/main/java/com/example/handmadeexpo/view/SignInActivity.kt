@@ -1,7 +1,9 @@
 package com.example.handmadeexpo.view
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -56,6 +58,7 @@ import com.example.handmadeexpo.R
 import com.example.handmadeexpo.ui.theme.AquaGreen
 import com.example.handmadeexpo.ui.theme.Blue1
 import com.example.handmadeexpo.ui.theme.MainColor
+import com.google.firebase.auth.FirebaseAuth
 
 class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,6 +79,12 @@ fun SignInBody() {
 
     val context = LocalContext.current
     val activity = context as? Activity
+
+    val sharedPreferences =  context.getSharedPreferences("Buyer", Context.MODE_PRIVATE)
+
+
+
+
     Scaffold { padding ->
         Box(
             modifier = Modifier.fillMaxSize()
@@ -93,30 +102,43 @@ fun SignInBody() {
                     .padding(padding)
             ) {
                 item {
-                    Spacer(modifier = Modifier.height(60.dp))
+                    Spacer(modifier = Modifier.height(50.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .padding(padding),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
+
                         Image(
                             painter = painterResource(R.drawable.logo),
                             contentDescription = null,
                             modifier = Modifier
-                                .size(180.dp)
+                                .size(177.dp)
                                 .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
                     }
                     Text(
-                        "Welcome Back!",
+                        "Handmade Expo",
                         modifier = Modifier.fillMaxWidth(),
                         style = TextStyle(
                             color = Black,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.ExtraBold,
                             textAlign = TextAlign.Center,
-                            fontSize = 40.sp
+                            fontSize = 32.sp
+                        )
+                    )
+
+                    Text(
+                        "Welcome Back!",
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(top=12.dp),
+                        style = TextStyle(
+                            color = Black,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                            fontSize = 20.sp
                         )
                     )
 
@@ -198,19 +220,57 @@ fun SignInBody() {
 
                     Button(
                         onClick = {
+
+                            // ✅ VALIDATION
+                            if (email.isBlank() || password.isBlank()) {
+                                Toast.makeText(
+                                    context,
+                                    "Please fill all fields",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@Button
+                            }
+
+                            // ✅ FIREBASE LOGIN
+                            FirebaseAuth.getInstance()
+                                .signInWithEmailAndPassword(email, password)
+                                .addOnSuccessListener {
+
+                                    val uid = FirebaseAuth
+                                        .getInstance()
+                                        .currentUser
+                                        ?.uid
+
+                                    // ✅ SAVE SESSION ONLY
+                                    sharedPreferences.edit()
+                                        .putBoolean("isLoggedIn", true)
+                                        .putString("buyerId", uid)
+                                        .putString("role", "Buyer")
+                                        .apply()
+
+                                    val intent = Intent(
+                                        context,
+                                        DashboardActivity::class.java
+                                    )
+                                    activity?.startActivity(intent)
+                                    activity?.finish()
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(
+                                        context,
+                                        "Invalid email or password",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
                         },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MainColor
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(
-                            defaultElevation = 6.dp
-                        ),
-                        shape = RoundedCornerShape(20.dp),
                         modifier = Modifier
-                            .fillMaxWidth().height(95.dp)
+                            .fillMaxWidth()
+                            .height(95.dp)
                             .padding(horizontal = 20.dp, vertical = 20.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MainColor)
                     ) {
-                        Text("Sign In", style = TextStyle(fontSize = 15.sp))
+                        Text("Sign In", fontSize = 15.sp)
                     }
 
                     Row(modifier = Modifier
