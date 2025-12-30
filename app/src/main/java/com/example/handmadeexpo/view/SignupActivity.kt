@@ -274,14 +274,17 @@ fun SingUpBody(){
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start
                 ) {
-                    Text("Already have an account?", fontSize = 16.sp, color = MainColor)
+                    Text("Already have an account?", fontSize = 16.sp, color =Color.Black)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Sign In",
                         color = Blue,
                         fontSize = 16.sp,
                         modifier = Modifier
-                            .clickable { }
+                            .clickable {val intent = Intent(context, SignInActivity::class.java)
+                                activity?.startActivity(intent)
+                                activity.finish()
+                            }
                     )
                 }
             }
