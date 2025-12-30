@@ -5,6 +5,7 @@
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
+<<<<<<< HEAD
       <SelectionState runConfigName="SignupActivity (2)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
@@ -18,6 +19,21 @@
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
       <SelectionState runConfigName="SellerDashboard">
+=======
+      <SelectionState runConfigName="SellerDashboard (1)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="SellerVerificationActivity">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="SellerVerificationActivity (1)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="SellerVerificationActivity (2)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="SellerVerificationActivity (3)">
+>>>>>>> 4516638e28822c353cdfec02faf8e5a2d3215991
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
