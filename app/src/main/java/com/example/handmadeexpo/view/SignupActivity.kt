@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.Color.Companion.Blue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -259,13 +260,12 @@ fun SingUpBody(){
                     elevation = ButtonDefaults.buttonElevation(
                         defaultElevation = 6.dp
                     ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .padding(horizontal = 16.dp, vertical = 19.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier =Modifier
+                        .fillMaxWidth().height(95.dp)
+                        .padding(horizontal = 20.dp, vertical = 20.dp),
                 ) {
-                    Text("Sign Up")
+                    Text("Sign Up", style = TextStyle(fontSize = 15.sp))
                 }
 
                 Row(modifier = Modifier

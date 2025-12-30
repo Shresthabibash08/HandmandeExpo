@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Black
+import androidx.compose.ui.graphics.Color.Companion.Blue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -53,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.ui.theme.AquaGreen
 import com.example.handmadeexpo.ui.theme.Blue1
+import com.example.handmadeexpo.ui.theme.MainColor
 
 class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,7 +82,7 @@ fun SignInBody() {
         ) {
 
             Image(
-                painter = painterResource(R.drawable.bg1),
+                painter = painterResource(R.drawable.img_1),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
@@ -184,7 +187,7 @@ fun SignInBody() {
                         horizontalArrangement = Arrangement.End
                     ) {
                         Text(
-                            "Forgot password?",
+                            "Forgot password?",fontSize = 16.sp,
                             modifier = Modifier.clickable {
                                 val intent = Intent(context, ForgetPasswordActivity::class.java)
                                 activity?.startActivity(intent)
@@ -197,7 +200,7 @@ fun SignInBody() {
                         onClick = {
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = AquaGreen
+                            containerColor = MainColor
                         ),
                         elevation = ButtonDefaults.buttonElevation(
                             defaultElevation = 6.dp
@@ -207,23 +210,30 @@ fun SignInBody() {
                             .fillMaxWidth().height(95.dp)
                             .padding(horizontal = 20.dp, vertical = 20.dp),
                     ) {
-                        Text("Sign In", style = TextStyle(fontSize = 20.sp))
+                        Text("Sign In", style = TextStyle(fontSize = 15.sp))
                     }
 
-                    Text(
-                        "Don't have an account?", modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        style = TextStyle(fontSize = 16.sp)
-                    )
-                    Text(
-                        "Sign Up", modifier = Modifier.fillMaxWidth()
-                            .clickable {
-                                val intent = Intent(context, SignupActivity::class.java)
-                                activity?.startActivity(intent)
-                            },
-                        textAlign = TextAlign.Center,
-                        style = TextStyle(fontSize = 16.sp, color = Blue1),
-                    )
+                    Row(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 30.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Text("Already have an account?", fontSize = 16.sp, color =Color.Black)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Sign Up",
+                            color = Blue,
+                            fontSize = 16.sp,
+                            modifier = Modifier
+                                .clickable {val intent = Intent(context, SignupActivity::class.java)
+                                    activity?.startActivity(intent)
+                                    activity?.finish()
+
+
+                                }
+                        )
+                    }
                 }
             }
         }
