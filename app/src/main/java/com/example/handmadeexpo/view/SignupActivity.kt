@@ -79,7 +79,7 @@ class SignupActivity : ComponentActivity() {
 
 @Composable
 fun SingUpBody(){
-    var buyerViewModel=remember { BuyerViewModel(BuyerRepoImpl()) }
+    val buyerViewModel = remember { BuyerViewModel(BuyerRepoImpl()) }
     var fullname by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -241,7 +241,12 @@ fun SingUpBody(){
 
                                         buyerViewModel.addBuyerToDatabase(buyerId, buyerModel) { dbSuccess, dbMsg ->
                                             Toast.makeText(context, dbMsg, Toast.LENGTH_SHORT).show()
-                                            if (dbSuccess) activity.finish()
+                                            if (dbSuccess){
+                                                val intent = Intent(context, SignInActivity::class.java)
+                                                context.startActivity(intent)
+                                                activity.finish()
+                                                activity.finish()
+                                            }
                                         }
                                     } else {
                                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
@@ -264,12 +269,6 @@ fun SingUpBody(){
                 ) {
                     Text("Sign Up", style = TextStyle(fontSize = 15.sp),
                         modifier = Modifier.clickable{
-
-//                            if(){
-//                                val intent = Intent(context, SignInActivity::class.java)
-//                                activity.startActivity(intent)
-//                                activity.finish()
-//                            }
 
                         })
                 }
