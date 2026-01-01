@@ -32,22 +32,28 @@ class ProductRepoImpl : ProductRepo {
 
     override fun addProduct(
         model: ProductModel,
-        callback: (Boolean, String) -> Unit
+        callback: (Boolean, String,String?) -> Unit
     ) {
-        var id = ref.push().key.toString()
-        model.productId = id
+        val newRef=ref.push()
+        val productId=newRef.key
 
-        ref.child(id).setValue(model).addOnCompleteListener {
-            if(it.isSuccessful){
-                callback(true,"Product added successfully")
-            }else{
-                callback(false,"${it.exception?.message}")
-            }
+        if(productId==null){
+            callback(false,"Failed to create a new product ID",null)
+            return
         }
 
+        newRef.setValue(model.copy(productId=productId)).addOnCompleteListener{ task ->
+            if(task.isSuccessful){
+                callback(true,"Product added successfully",productId)
+            }
+            else{
+                callback(false,task.exception?.message ?:"Unknown error while adding product",null)
+            }
+        }
     }
 
     override fun updateProduct(
+        productId: String,
         model: ProductModel,
         callback: (Boolean, String) -> Unit
     ) {
@@ -59,6 +65,7 @@ class ProductRepoImpl : ProductRepo {
             }
         }
     }
+
 
     override fun deleteProduct(
         productID: String,
@@ -93,26 +100,61 @@ class ProductRepoImpl : ProductRepo {
         })
     }
 
+    override fun getAllProductByCategory(
+        category: String,
+        callback: (Boolean, String, List<ProductModel?>) -> Unit
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override fun getAvailableProducts(callback: (Boolean, String, List<ProductModel>?) -> Unit) {
+        TODO("Not yet implemented")
+    }
+
+    override fun getAllProductByUser(
+        userId: String,
+        callback: (List<ProductModel>) -> Unit
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override fun updateAvailability(
+        productId: String,
+        available: Boolean,
+        callback: (Boolean, String) -> Unit
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override fun updateRating(
+        productId: String,
+        available: Boolean,
+        callback: (Boolean, String) -> Unit
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    // In ProductRepoImpl.kt, update the getAllProduct function
     override fun getAllProduct(callback: (Boolean, String, List<ProductModel>?) -> Unit) {
-        ref.addValueEventListener(object : ValueEventListener{
+        ref.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                if(snapshot.exists()){
-                    var allProducts = mutableListOf<ProductModel>()
-                    for(data in snapshot.children){
-                        var product = data.getValue(ProductModel::class.java)
-                        if(product != null){
+                if (snapshot.exists()) {
+                    val allProducts = mutableListOf<ProductModel>()
+                    for (data in snapshot.children) {
+                        val product = data.getValue(ProductModel::class.java)
+                        if (product != null) {
                             allProducts.add(product)
                         }
                     }
-
-                    callback(true,"product fetched",allProducts)
+                    callback(true, "Products fetched", allProducts)
+                } else {
+                    callback(true, "No products found", emptyList())
                 }
             }
 
             override fun onCancelled(error: DatabaseError) {
-                callback(false,error.message,emptyList())
+                callback(false, error.message, emptyList())
             }
-
         })
     }
 
