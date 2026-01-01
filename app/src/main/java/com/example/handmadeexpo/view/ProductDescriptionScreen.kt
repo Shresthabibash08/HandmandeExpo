@@ -1,6 +1,5 @@
 package com.example.handmadeexpo.view
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,20 +15,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.handmadeexpo.model.ProductModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDescription(
+    product: ProductModel,  // Change from separate parameters to ProductModel
+    onBackClick: () -> Unit,
     name: String,
     price: String,
-    imageRes: Int,
-    onBackClick: () -> Unit
+    imageRes: Int
 ) {
-    // Define the colors within the file to ensure it works
     val OrangeBrand = Color(0xFFE65100)
     val CreamBackground = Color(0xFFFFF8E1)
     val TextGray = Color(0xFF757575)
@@ -46,7 +46,6 @@ fun ProductDescription(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = CreamBackground)
             )
         },
-        // Floating bottom bar for the buttons so they are always accessible
         bottomBar = {
             BottomAppBar(
                 containerColor = Color.White,
@@ -60,9 +59,8 @@ fun ProductDescription(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // ADD TO CART BUTTON
                     OutlinedButton(
-                        onClick = { /* Logic */ },
+                        onClick = { /* Add to cart logic */ },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
@@ -70,9 +68,8 @@ fun ProductDescription(
                         Text("Add to Cart", color = OrangeBrand, fontWeight = FontWeight.Bold)
                     }
 
-                    // BUY NOW BUTTON
                     Button(
-                        onClick = { /* Logic */ },
+                        onClick = { /* Buy now logic */ },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = OrangeBrand)
@@ -83,33 +80,43 @@ fun ProductDescription(
             }
         }
     ) { paddingValues ->
-        // This Column is now scrollable
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(Color.White)
-                .verticalScroll(rememberScrollState()) // <--- ENABLE SCROLLING HERE
+                .verticalScroll(rememberScrollState())
         ) {
-            // 1. ENLARGED PRODUCT IMAGE
+            // Product Image
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(380.dp) // Large height
+                    .height(380.dp)
                     .background(CreamBackground),
                 contentAlignment = Alignment.Center
             ) {
-                Image(
-                    painter = painterResource(id = imageRes),
-                    contentDescription = name,
-                    modifier = Modifier
-                        .fillMaxSize(0.85f) // Makes it look larger
-                        .clip(RoundedCornerShape(16.dp)),
-                    contentScale = ContentScale.Fit
-                )
+                if (product.image.isNotEmpty()) {
+                    AsyncImage(
+                        model = product.image,
+                        contentDescription = product.name,
+                        modifier = Modifier
+                            .fillMaxSize(0.85f)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize(0.85f)
+                            .background(Color.LightGray, RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No Image", color = Color.White)
+                    }
+                }
             }
 
-            // 2. PRODUCT INFO SECTION
+            // Product Info Section
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -121,14 +128,14 @@ fun ProductDescription(
                     verticalAlignment = Alignment.Top
                 ) {
                     Text(
-                        text = name,
+                        text = product.name,
                         fontSize = 26.sp,
                         fontWeight = FontWeight.ExtraBold,
                         modifier = Modifier.weight(1f),
                         lineHeight = 32.sp
                     )
                     Text(
-                        text = price,
+                        text = "NRP ${product.price}",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = OrangeBrand
@@ -137,7 +144,7 @@ fun ProductDescription(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 3. RATING BAR
+                // Rating Bar
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     repeat(5) { index ->
                         Icon(
@@ -157,7 +164,7 @@ fun ProductDescription(
 
                 Divider(modifier = Modifier.padding(vertical = 20.dp), thickness = 0.5.dp)
 
-                // 4. DESCRIPTION SECTION
+                // Description Section
                 Text(
                     text = "Description",
                     fontSize = 18.sp,
@@ -168,18 +175,32 @@ fun ProductDescription(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = "This premium handmade product is part of our exclusive Expo collection. " +
-                            "It is designed with high-quality materials to ensure durability and style. " +
-                            "Whether you are buying this for yourself or as a gift, it represents the " +
-                            "finest craftsmanship available.\n\n" +
-                            "Key Features:\n" +
-                            "• Handmade with precision\n" +
-                            "• Eco-friendly materials\n" +
-                            "• Unique design not found in stores\n" +
-                            "• Limited edition collection.",
+                    text = product.description,
                     fontSize = 16.sp,
                     color = TextGray,
                     lineHeight = 24.sp
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Stock Information
+                Text(
+                    text = "Stock Information",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = if (product.stock > 0)
+                        "Available: ${product.stock} items in stock"
+                    else
+                        "Currently out of stock",
+                    fontSize = 16.sp,
+                    color = if (product.stock > 0) Color.Green else Color.Red,
+                    fontWeight = FontWeight.Medium
                 )
 
                 // Extra spacer to ensure content doesn't get hidden behind the BottomAppBar

@@ -53,7 +53,6 @@ class ProductRepoImpl : ProductRepo {
     }
 
     override fun updateProduct(
-        productId: String,
         model: ProductModel,
         callback: (Boolean, String) -> Unit
     ) {
@@ -104,7 +103,18 @@ class ProductRepoImpl : ProductRepo {
         category: String,
         callback: (Boolean, String, List<ProductModel?>) -> Unit
     ) {
-        TODO("Not yet implemented")
+        ref.orderByChild("category").equalTo(category).addListenerForSingleValueEvent(object : ValueEventListener{
+            override fun onDataChange(snapshot: DataSnapshot){
+                val  products=mutableListOf<ProductModel>()
+                for (data in snapshot.children){
+                    data.getValue(ProductModel::class.java)?.let{products.add(it)}
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                callback(false,error.message,emptyList())
+            }
+        })
     }
 
     override fun getAvailableProducts(callback: (Boolean, String, List<ProductModel>?) -> Unit) {
@@ -138,18 +148,11 @@ class ProductRepoImpl : ProductRepo {
     override fun getAllProduct(callback: (Boolean, String, List<ProductModel>?) -> Unit) {
         ref.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                if (snapshot.exists()) {
-                    val allProducts = mutableListOf<ProductModel>()
-                    for (data in snapshot.children) {
-                        val product = data.getValue(ProductModel::class.java)
-                        if (product != null) {
-                            allProducts.add(product)
-                        }
-                    }
-                    callback(true, "Products fetched", allProducts)
-                } else {
-                    callback(true, "No products found", emptyList())
+                val products = mutableListOf<ProductModel>()
+                for (data in snapshot.children) {
+                    data.getValue(ProductModel::class.java)?.let { products.add(it) }
                 }
+                callback(true, "Products fetched", products)
             }
 
             override fun onCancelled(error: DatabaseError) {

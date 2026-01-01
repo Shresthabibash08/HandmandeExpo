@@ -283,7 +283,7 @@ fun AddProductBody(
                                             stock = sStockQuantity.toInt()
                                         )
 
-                                        viewModel.addProduct(product) { success, message ->
+                                        viewModel.addProduct(product) { success, message,data ->
                                             isLoading = false
                                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                                             if (success) activity?.finish()
