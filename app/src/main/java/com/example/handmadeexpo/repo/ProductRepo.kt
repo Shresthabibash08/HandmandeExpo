@@ -11,14 +11,23 @@ interface ProductRepo {
 //        message : "product fetched succesfully"
 //    }
 
-    fun addProduct(model: ProductModel, callback:(Boolean, String)->Unit)
+    fun addProduct(model: ProductModel, callback:(Boolean, String,String?)->Unit)
 
-    fun updateProduct(model: ProductModel,callback: (Boolean, String) -> Unit)
+    fun updateProduct(productId:String,model: ProductModel,callback: (Boolean, String) -> Unit)
 
     fun deleteProduct(productID:String,callback: (Boolean, String) -> Unit)
 
     fun getProductById(productID:String,callback: (Boolean, String, ProductModel?) -> Unit)
 
+    fun getAllProductByCategory(category:String,callback:(Boolean,String,List<ProductModel?>)->Unit)
+
+    fun getAvailableProducts(callback:(Boolean,String,List<ProductModel>?)->Unit)
+
+    fun getAllProductByUser(userId:String,callback:(List<ProductModel>)->Unit)
+
+    fun updateAvailability(productId:String,available:Boolean,callback:(Boolean,String)->Unit)
+
+    fun updateRating(productId:String,available:Boolean,callback:(Boolean,String)->Unit)
     fun getAllProduct(callback: (Boolean, String, List<ProductModel>?) -> Unit)
 
     fun getProductByCategory(categoryId:String,callback: (Boolean, String, List<ProductModel>?) -> Unit)
