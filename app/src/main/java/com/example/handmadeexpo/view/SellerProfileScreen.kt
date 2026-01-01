@@ -2,126 +2,247 @@ package com.example.handmadeexpo.view
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.repo.SellerRepoImpl
 import com.example.handmadeexpo.ui.theme.MainColor
-import com.example.handmadeexpo.ui.theme.Purple80
+import com.example.handmadeexpo.viewmodel.SellerViewModel
+import com.example.handmadeexpo.viewmodel.SellerViewModelFactory
 
 @Composable
-fun SellerProfileScreen(){
+fun SellerProfileScreen() {
+    // 1. Initialize Context
+    val context = LocalContext.current
+
+    // 2. Initialize ViewModel CORRECTLY using Factory
+    val viewModel: SellerViewModel = viewModel(
+        factory = SellerViewModelFactory(SellerRepoImpl())
+    )
+
+    // 3. Observe Data
+    val seller by viewModel.seller.observeAsState()
+    val loading by viewModel.loading.observeAsState(initial = true)
+
+    // 4. State for Full Screen Image
+    var showFullDocument by remember { mutableStateOf(false) }
+
+    // 5. Fetch Data Automatically on Open
+    LaunchedEffect(Unit) {
+        val currentUser = viewModel.getCurrentUser()
+        if (currentUser != null) {
+            viewModel.getSellerDetailsById(currentUser.uid)
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Background image
         Image(
-            painter = painterResource(R.drawable.bg10), // Replace with your image
+            painter = painterResource(R.drawable.bg10),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
 
-        ) {
-
-            Spacer(modifier = Modifier
-                .padding(10.dp))
-
-            Row(modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+        // --- LOADING STATE ---
+        if (loading == true) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = MainColor)
+            }
+        } else {
+            // Main Content (Scrollable)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
             ) {
+                Spacer(modifier = Modifier.padding(10.dp))
 
-                Column(verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Your Profile",
-                        style = TextStyle(
-                            fontSize = 35.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MainColor
-                        ),
-                        modifier = Modifier.padding(20.dp)
-                    )
-                    Image(
-                        painter = painterResource(R.drawable.profilephoto),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .height(120.dp)
-                            .width(120.dp)
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
-
-                    )
-                    Text(text = "@username123", style = TextStyle(
-                        fontSize = 20.sp),
-                        modifier = Modifier.padding(10.dp)
-                    )
-
-                    Button(
-                        onClick = { },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MainColor,   // Background color
-                            contentColor = Color.White           // Text/Icon color
-                        ),
-                        modifier = Modifier
-                            .width(120.dp)   // Button width
-                            .height(35.dp)   // Button height
+                    Column(
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(text = "Edit Profile")
-                    }
+                        // Title
+                        Text(
+                            text = "Your Profile",
+                            style = TextStyle(
+                                fontSize = 35.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MainColor
+                            ),
+                            modifier = Modifier.padding(20.dp)
+                        )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                        // Profile Picture (Placeholder)
+                        Image(
+                            painter = painterResource(R.drawable.profilephoto),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .height(120.dp)
+                                .width(120.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
 
-                    // Details Card
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(all = 20.dp), // 10dp padding on all sides
-                        shape = RoundedCornerShape(16.dp),
-                        elevation = CardDefaults.cardElevation(8.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(20.dp)) {
-                            ProfileRow("Email", "username123@gmail.com")
-                            ProfileRow("Phone", "984000000")
-                            ProfileRow("Address", "Kathmandu, Nepal")
-                            ProfileRow("Pan Number", "123456")
+                        // Username (Shop Name)
+                        Text(
+                            text = "@${seller?.shopName ?: "username"}",
+                            style = TextStyle(fontSize = 20.sp),
+                            modifier = Modifier.padding(10.dp)
+                        )
 
+                        // Edit Button
+                        Button(
+                            onClick = { },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MainColor,
+                                contentColor = Color.White
+                            ),
+                            modifier = Modifier.width(120.dp).height(35.dp)
+                        ) {
+                            Text(text = "Edit Profile")
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        // --- DETAILS CARD ---
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            elevation = CardDefaults.cardElevation(8.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White)
+                        ) {
+                            Column(modifier = Modifier.padding(20.dp)) {
+
+                                // Dynamic Rows
+                                ProfileRow("Full Name", seller?.fullName ?: "N/A")
+                                ProfileRow("Email", seller?.sellerEmail ?: "N/A")
+                                ProfileRow("Phone", seller?.sellerPhoneNumber ?: "N/A")
+                                ProfileRow("Address", seller?.sellerAddress?.ifEmpty { "Not set" } ?: "Not set")
+                                ProfileRow("Pan Number", seller?.panNumber ?: "N/A")
+
+                                // --- VERIFICATION IMAGE SECTION ---
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "Verification Document (Tap to view)",
+                                    fontWeight = FontWeight.Bold,
+                                    color = MainColor
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Document Image Container
+                                Card(
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(180.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F0F0))
+                                ) {
+                                    if (!seller?.documentUrl.isNullOrEmpty()) {
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(context)
+                                                .data(seller!!.documentUrl)
+                                                .crossfade(true)
+                                                .build(),
+                                            contentDescription = "Uploaded Doc",
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clickable { showFullDocument = true }, // Make clickable
+                                            contentScale = ContentScale.Crop,
+                                            error = painterResource(R.drawable.baseline_cloud_upload_24)
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("No Document Uploaded", color = Color.Gray)
+                                        }
+                                    }
+                                }
+
+                                // Status Text
+                                Spacer(modifier = Modifier.height(8.dp))
+                                val status = seller?.verificationStatus ?: "Unverified"
+                                val statusColor = when (status) {
+                                    "Approved" -> Color(0xFF4CAF50) // Green
+                                    "Pending" -> Color(0xFFFF9800)  // Orange
+                                    else -> Color.Red
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Status: ", fontWeight = FontWeight.Bold)
+                                    Text(text = status, color = statusColor, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
                 }
-
+                Spacer(modifier = Modifier.height(50.dp))
             }
+        }
 
+        // --- FULL SCREEN IMAGE DIALOG ---
+        if (showFullDocument && !seller?.documentUrl.isNullOrEmpty()) {
+            Dialog(
+                onDismissRequest = { showFullDocument = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                        .clickable { showFullDocument = false }, // Click background to close
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(seller!!.documentUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Full Screen Document",
+                        modifier = Modifier.fillMaxWidth(),
+                        contentScale = ContentScale.Fit
+                    )
+
+                    Text(
+                        text = "Tap anywhere to close",
+                        color = Color.White,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(20.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -129,8 +250,8 @@ fun SellerProfileScreen(){
 @Composable
 fun ProfileRow(title: String, value: String) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        Text(text = title, fontWeight = FontWeight.Bold)
+        Text(text = title, fontWeight = FontWeight.Bold, color = Color.Black)
         Text(text = value, color = Color.DarkGray)
-        Divider(modifier = Modifier.padding(top = 8.dp))
+        HorizontalDivider(modifier = Modifier.padding(top = 8.dp), color = Color.LightGray)
     }
 }
