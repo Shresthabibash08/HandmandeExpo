@@ -1,5 +1,7 @@
 package com.example.handmadeexpo.view
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -27,9 +29,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.model.SellerModel
+import com.example.handmadeexpo.repo.SellerRepoImpl
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.Offwhite12
 import com.example.handmadeexpo.ui.theme.White12
+import com.example.handmadeexpo.viewmodel.SellerViewModel
 
 class SellerRegistration : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,15 +48,18 @@ class SellerRegistration : ComponentActivity() {
 
 @Composable
 fun SellerRegisterScreen() {
-    var name by remember { mutableStateOf("") }
-    var shopname by remember { mutableStateOf("") }
-    var pannumber by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var contact by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var shopName by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var confirmpassword by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var passwordVisibility by remember { mutableStateOf(false) }
     var confirmPasswordVisibility by remember { mutableStateOf(false) }
+    var confirmPassword by remember { mutableStateOf("") }
+    var panNumber by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val activity = context as Activity
+    var sellerViewModel = remember{ SellerViewModel(SellerRepoImpl()) }
 
     Scaffold { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
@@ -70,7 +78,7 @@ fun SellerRegisterScreen() {
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
                     .imePadding()
-                    ,
+                ,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
@@ -104,15 +112,15 @@ fun SellerRegisterScreen() {
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // Text Fields
-                CustomTextField("Full Name", name) { name = it }
+                CustomTextField("Shop Name", shopName) { shopName = it }
                 Spacer(modifier = Modifier.height(15.dp))
-                CustomTextField("Shop Name", shopname) { shopname = it }
+                CustomTextField("Address", address) { address = it }
                 Spacer(modifier = Modifier.height(15.dp))
-                CustomTextField("PAN Number", pannumber) { pannumber = it }
+                CustomTextField("PAN Number", panNumber) { panNumber = it }
                 Spacer(modifier = Modifier.height(15.dp))
                 CustomTextField("Email", email) { email = it }
                 Spacer(modifier = Modifier.height(15.dp))
-                CustomTextField("Phone Number", contact) { contact = it }
+                CustomTextField("Phone Number", phoneNumber) { phoneNumber = it }
                 Spacer(modifier = Modifier.height(15.dp))
                 PasswordTextField(
                     label = "Password",
@@ -124,15 +132,74 @@ fun SellerRegisterScreen() {
                 Spacer(modifier = Modifier.height(15.dp))
                 PasswordTextField(
                     label = "Confirm Password",
-                    value = confirmpassword,
+                    value = confirmPassword,
                     isVisible = confirmPasswordVisibility,
                     onVisibilityChange = { confirmPasswordVisibility = !confirmPasswordVisibility },
-                    onValueChange = { confirmpassword = it }
+                    onValueChange = { confirmPassword = it }
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
                 Button(
-                    onClick = { /* Register action */ },
+                    onClick = {
+
+                        when {
+                            shopName.isBlank() ->
+                                Toast.makeText(context, "Shop name is required", Toast.LENGTH_SHORT).show()
+
+                            address.isBlank() ->
+                                Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
+
+                            panNumber.isBlank() ->
+                                Toast.makeText(context, "PAN number is required", Toast.LENGTH_SHORT).show()
+
+                            !panNumber.matches(Regex("^[0-9]+$")) ->
+                                Toast.makeText(context, "PAN number must contain only digits", Toast.LENGTH_SHORT).show()
+
+                            email.isBlank() ->
+                                Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
+
+                            phoneNumber.isBlank() ->
+                                Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
+
+                            !phoneNumber.matches(Regex("^[0-9]{10}$")) ->
+                                Toast.makeText(context, "Phone number must be exactly 10 digits", Toast.LENGTH_SHORT).show()
+
+                            password.isBlank() ->
+                                Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
+
+                            confirmPassword.isBlank() ->
+                                Toast.makeText(context, "Confirm password is required", Toast.LENGTH_SHORT).show()
+
+                            password != confirmPassword ->
+                                Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+
+                            else -> {
+                                // ✅ All validations passed (UNCHANGED)
+                                sellerViewModel.register(email, password) { success, msg, sellerId ->
+                                    if (success) {
+                                        val sellerModel = SellerModel(
+                                            sellerId = sellerId,
+                                            shopName = shopName,
+                                            sellerAddress = address,
+                                            sellerEmail = email,
+                                            sellerPhoneNumber = phoneNumber,
+                                            panNumber = panNumber
+                                        )
+
+                                        sellerViewModel.addSellerToDatabase(
+                                            sellerId,
+                                            sellerModel
+                                        ) { dbSuccess, dbMsg ->
+                                            Toast.makeText(context, dbMsg, Toast.LENGTH_SHORT).show()
+                                            if (dbSuccess) activity.finish()
+                                        }
+                                    } else {
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = MainColor),
                     shape = RoundedCornerShape(12.dp),
                     elevation = ButtonDefaults.buttonElevation(6.dp),
@@ -158,7 +225,10 @@ fun SellerRegisterScreen() {
                         color = Blue,
                         fontSize = 16.sp,
                         modifier = Modifier
-                            .clickable { }
+                            .clickable {
+                                val intent = Intent(context, SignInActivity::class.java)
+                                activity.startActivity(intent)
+                            }
                     )
                 }
             }

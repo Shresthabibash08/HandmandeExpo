@@ -5,6 +5,10 @@ import androidx.lifecycle.ViewModel
 import com.example.handmadeexpo.model.BuyerModel
 import com.example.handmadeexpo.repo.BuyerRepo
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 class BuyerViewModel (val repo: BuyerRepo): ViewModel() {
     fun login(
@@ -63,6 +67,43 @@ class BuyerViewModel (val repo: BuyerRepo): ViewModel() {
 
     fun getCurrentUser (): FirebaseUser?{
         return repo.getCurrentUser()
+    }
+
+    fun checkUserRole(
+        userId: String,
+        callback: (String?) -> Unit
+    ) {
+        val db = FirebaseDatabase.getInstance()
+
+        // First check Buyer
+        db.getReference("Buyer").child(userId)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    if (snapshot.exists()) {
+                        callback("buyer")
+                    } else {
+                        // If not buyer, check seller
+                        db.getReference("Seller").child(userId)
+                            .addListenerForSingleValueEvent(object : ValueEventListener {
+                                override fun onDataChange(snapshot: DataSnapshot) {
+                                    if (snapshot.exists()) {
+                                        callback("seller")
+                                    } else {
+                                        callback(null)
+                                    }
+                                }
+
+                                override fun onCancelled(error: DatabaseError) {
+                                    callback(null)
+                                }
+                            })
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    callback(null)
+                }
+            })
     }
 
 }
