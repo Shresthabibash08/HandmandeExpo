@@ -78,7 +78,7 @@ fun SellerRegisterScreen() {
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
                     .imePadding()
-                    ,
+                ,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
@@ -139,67 +139,67 @@ fun SellerRegisterScreen() {
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
-                    Button(
-                        onClick = {
+                Button(
+                    onClick = {
 
-                            when {
-                                shopName.isBlank() ->
-                                    Toast.makeText(context, "Shop name is required", Toast.LENGTH_SHORT).show()
+                        when {
+                            shopName.isBlank() ->
+                                Toast.makeText(context, "Shop name is required", Toast.LENGTH_SHORT).show()
 
-                                address.isBlank() ->
-                                    Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
+                            address.isBlank() ->
+                                Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
 
-                                panNumber.isBlank() ->
-                                    Toast.makeText(context, "PAN number is required", Toast.LENGTH_SHORT).show()
+                            panNumber.isBlank() ->
+                                Toast.makeText(context, "PAN number is required", Toast.LENGTH_SHORT).show()
 
-                                !panNumber.matches(Regex("^[0-9]+$")) ->
-                                    Toast.makeText(context, "PAN number must contain only digits", Toast.LENGTH_SHORT).show()
+                            !panNumber.matches(Regex("^[0-9]+$")) ->
+                                Toast.makeText(context, "PAN number must contain only digits", Toast.LENGTH_SHORT).show()
 
-                                email.isBlank() ->
-                                    Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
+                            email.isBlank() ->
+                                Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
 
-                                phoneNumber.isBlank() ->
-                                    Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
+                            phoneNumber.isBlank() ->
+                                Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
 
-                                !phoneNumber.matches(Regex("^[0-9]{10}$")) ->
-                                    Toast.makeText(context, "Phone number must be exactly 10 digits", Toast.LENGTH_SHORT).show()
+                            !phoneNumber.matches(Regex("^[0-9]{10}$")) ->
+                                Toast.makeText(context, "Phone number must be exactly 10 digits", Toast.LENGTH_SHORT).show()
 
-                                password.isBlank() ->
-                                    Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
+                            password.isBlank() ->
+                                Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
 
-                                confirmPassword.isBlank() ->
-                                    Toast.makeText(context, "Confirm password is required", Toast.LENGTH_SHORT).show()
+                            confirmPassword.isBlank() ->
+                                Toast.makeText(context, "Confirm password is required", Toast.LENGTH_SHORT).show()
 
-                                password != confirmPassword ->
-                                    Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+                            password != confirmPassword ->
+                                Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
 
-                                else -> {
-                                    // ✅ All validations passed (UNCHANGED)
-                                    sellerViewModel.register(email, password) { success, msg, sellerId ->
-                                        if (success) {
-                                            val sellerModel = SellerModel(
-                                                sellerId = sellerId,
-                                                shopName = shopName,
-                                                sellerAddress = address,
-                                                sellerEmail = email,
-                                                sellerPhoneNumber = phoneNumber,
-                                                panNumber = panNumber
-                                            )
+                            else -> {
+                                // ✅ All validations passed (UNCHANGED)
+                                sellerViewModel.register(email, password) { success, msg, sellerId ->
+                                    if (success) {
+                                        val sellerModel = SellerModel(
+                                            sellerId = sellerId,
+                                            shopName = shopName,
+                                            sellerAddress = address,
+                                            sellerEmail = email,
+                                            sellerPhoneNumber = phoneNumber,
+                                            panNumber = panNumber
+                                        )
 
-                                            sellerViewModel.addSellerToDatabase(
-                                                sellerId,
-                                                sellerModel
-                                            ) { dbSuccess, dbMsg ->
-                                                Toast.makeText(context, dbMsg, Toast.LENGTH_SHORT).show()
-                                                if (dbSuccess) activity.finish()
-                                            }
-                                        } else {
-                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                        sellerViewModel.addSellerToDatabase(
+                                            sellerId,
+                                            sellerModel
+                                        ) { dbSuccess, dbMsg ->
+                                            Toast.makeText(context, dbMsg, Toast.LENGTH_SHORT).show()
+                                            if (dbSuccess) activity.finish()
                                         }
+                                    } else {
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }
-                        },
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = MainColor),
                     shape = RoundedCornerShape(12.dp),
                     elevation = ButtonDefaults.buttonElevation(6.dp),
