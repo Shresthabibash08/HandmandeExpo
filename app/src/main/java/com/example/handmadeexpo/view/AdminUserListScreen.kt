@@ -30,26 +30,57 @@ fun AdminUserListScreen(viewModel: AdminViewModel) {
             Tab(selected = tabIndex == 1, onClick = { tabIndex = 1 }, text = { Text("Buyers") })
         }
 
-        LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (tabIndex == 0) {
-                items(viewModel.sellers.filter { it.shopName.contains(viewModel.searchQuery, true) }) { seller ->
-                    UserRow(seller.shopName, seller.sellerEmail, onDelete = { viewModel.deleteUser(seller.sellerId, "seller") }) {
-                        selectedSeller = seller
+        // Check if data is still loading
+        if (viewModel.isSellersLoading || viewModel.isBuyersLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color(0xFF6200EE))
+            }
+        } else {
+            LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (tabIndex == 0) {
+                    items(viewModel.sellers.filter { it.shopName.contains(viewModel.searchQuery, true) }) { seller ->
+                        UserRow(seller.shopName, seller.sellerEmail, onDelete = { viewModel.deleteUser(seller.sellerId, "seller") }) {
+                            selectedSeller = seller
+                        }
                     }
-                }
-            } else {
-                items(viewModel.buyers.filter { it.buyerName.contains(viewModel.searchQuery, true) }) { buyer ->
-                    UserRow(buyer.buyerName, buyer.buyerEmail, onDelete = { viewModel.deleteUser(buyer.buyerId, "buyer") }) {
-                        selectedBuyer = buyer
+                } else {
+                    items(viewModel.buyers.filter { it.buyerName.contains(viewModel.searchQuery, true) }) { buyer ->
+                        UserRow(buyer.buyerName, buyer.buyerEmail, onDelete = { viewModel.deleteUser(buyer.buyerId, "buyer") }) {
+                            selectedBuyer = buyer
+                        }
                     }
                 }
             }
         }
     }
 
-    // Detail Popups
-    selectedSeller?.let { UserDetailPopup(it.shopName, mapOf("Email" to it.sellerEmail, "Phone" to it.sellerPhoneNumber, "Address" to it.sellerAddress, "PAN" to it.panNumber)) { selectedSeller = null } }
-    selectedBuyer?.let { UserDetailPopup(it.buyerName, mapOf("Email" to it.buyerEmail, "Phone" to it.buyerPhoneNumber, "Address" to it.buyerAddress)) { selectedBuyer = null } }
+    // Detail Popups showing ALL data
+    selectedSeller?.let { seller ->
+        UserDetailPopup(
+            title = "Seller Details",
+            details = mapOf(
+                "Shop Name" to seller.shopName,
+                "Seller ID" to seller.sellerId,
+                "Email" to seller.sellerEmail,
+                "Phone" to seller.sellerPhoneNumber,
+                "Address" to seller.sellerAddress,
+                "PAN Number" to seller.panNumber
+            )
+        ) { selectedSeller = null }
+    }
+
+    selectedBuyer?.let { buyer ->
+        UserDetailPopup(
+            title = "Buyer Details",
+            details = mapOf(
+                "Name" to buyer.buyerName,
+                "Buyer ID" to buyer.buyerId,
+                "Email" to buyer.buyerEmail,
+                "Phone" to buyer.buyerPhoneNumber,
+                "Address" to buyer.buyerAddress
+            )
+        ) { selectedBuyer = null }
+    }
 }
 
 @Composable
@@ -66,18 +97,23 @@ fun UserRow(name: String, email: String, onDelete: () -> Unit, onClick: () -> Un
 }
 
 @Composable
-fun UserDetailPopup(name: String, details: Map<String, String>, onDismiss: () -> Unit) {
+fun UserDetailPopup(title: String, details: Map<String, String>, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(name, fontWeight = FontWeight.Bold) },
+        title = { Text(title, fontWeight = FontWeight.Bold) },
         text = {
-            Column {
-                details.forEach { (k, v) ->
-                    Text("$k:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.Gray)
-                    Text(v.ifEmpty { "N/A" }, modifier = Modifier.padding(bottom = 8.dp))
+            Column(modifier = Modifier.fillMaxWidth()) {
+                details.forEach { (label, value) ->
+                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                        Text(label, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.Gray)
+                        Text(value.ifEmpty { "Not Provided" }, fontSize = 16.sp)
+                        HorizontalDivider(modifier = Modifier.padding(top = 4.dp), thickness = 0.5.dp)
+                    }
                 }
             }
         },
-        confirmButton = { Button(onClick = onDismiss) { Text("Close") } }
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
     )
 }

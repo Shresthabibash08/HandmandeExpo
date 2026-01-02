@@ -3,10 +3,7 @@ package com.example.handmadeexpo.view
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -36,7 +33,7 @@ fun AdminDashboardScreen(adminViewModel: AdminViewModel = viewModel()) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Admin Dashboard", color = Color.White) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color(0xFF6200EE)) // Change to your MainColor
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color(0xFF6200EE))
             )
         },
         bottomBar = {
@@ -50,7 +47,7 @@ fun AdminDashboardScreen(adminViewModel: AdminViewModel = viewModel()) {
         Column(modifier = Modifier.padding(padding)) {
             when (selectedTab) {
                 0 -> AdminOverview(adminViewModel) { selectedTab = 2 }
-                1 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Complaints: Coming Soon", color = Color.Gray) }
+                1 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Coming Soon") }
                 2 -> AdminUserListScreen(adminViewModel)
             }
         }
@@ -59,40 +56,33 @@ fun AdminDashboardScreen(adminViewModel: AdminViewModel = viewModel()) {
 
 @Composable
 fun AdminOverview(viewModel: AdminViewModel, onRedirect: () -> Unit) {
+    val totalUsers = viewModel.sellers.size + viewModel.buyers.size
+
     Column(modifier = Modifier.padding(16.dp)) {
         OutlinedTextField(
             value = viewModel.searchQuery,
             onValueChange = { viewModel.searchQuery = it },
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Search all users...") },
-            leadingIcon = { Icon(Icons.Default.Search, null) },
-            singleLine = true
+            placeholder = { Text("Search...") },
+            leadingIcon = { Icon(Icons.Default.Search, null) }
         )
+        Spacer(Modifier.height(20.dp))
+        Text("Statistics", fontWeight = FontWeight.Bold, fontSize = 20.sp)
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        if (viewModel.searchQuery.isEmpty()) {
-            Text("Quick Overview", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OverviewCard("Sellers", viewModel.sellers.size.toString(), Modifier.weight(1f), Color(0xFFFF9800))
-                OverviewCard("Buyers", viewModel.buyers.size.toString(), Modifier.weight(1f), Color(0xFF4CAF50))
-            }
+        if (viewModel.isSellersLoading || viewModel.isBuyersLoading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), color = Color(0xFF6200EE))
         } else {
-            Text("Search Results (Click to go to list)", fontWeight = FontWeight.Bold)
-            LazyColumn {
-                items(viewModel.sellers.filter { it.shopName.contains(viewModel.searchQuery, true) }) {
-                    ListItem(headlineContent = { Text(it.shopName) }, supportingContent = { Text("Seller") }, modifier = Modifier.clickable { onRedirect() })
-                }
-                items(viewModel.buyers.filter { it.buyerName.contains(viewModel.searchQuery, true) }) {
-                    ListItem(headlineContent = { Text(it.buyerName) }, supportingContent = { Text("Buyer") }, modifier = Modifier.clickable { onRedirect() })
-                }
+            StatCard("Total Users", totalUsers.toString(), Modifier.fillMaxWidth().padding(vertical = 8.dp), Color(0xFF6200EE))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatCard("Sellers", viewModel.sellers.size.toString(), Modifier.weight(1f), Color(0xFFFF9800))
+                StatCard("Buyers", viewModel.buyers.size.toString(), Modifier.weight(1f), Color(0xFF4CAF50))
             }
         }
     }
 }
 
 @Composable
-fun OverviewCard(label: String, count: String, modifier: Modifier, color: Color) {
+fun StatCard(label: String, count: String, modifier: Modifier, color: Color) {
     Card(modifier = modifier.height(100.dp), colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))) {
         Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
             Text(count, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = color)
