@@ -38,7 +38,7 @@ fun SellerProfileScreen() {
     // 1. Initialize Context
     val context = LocalContext.current
 
-    // 2. Initialize ViewModel CORRECTLY using Factory
+    // 2. Initialize ViewModel using Factory
     val viewModel: SellerViewModel = viewModel(
         factory = SellerViewModelFactory(SellerRepoImpl())
     )
@@ -50,7 +50,7 @@ fun SellerProfileScreen() {
     // 4. State for Full Screen Image
     var showFullDocument by remember { mutableStateOf(false) }
 
-    // 5. Fetch Data Automatically on Open
+    // 5. Fetch Data Automatically
     LaunchedEffect(Unit) {
         val currentUser = viewModel.getCurrentUser()
         if (currentUser != null) {
@@ -191,18 +191,7 @@ fun SellerProfileScreen() {
                                     }
                                 }
 
-                                // Status Text
-                                Spacer(modifier = Modifier.height(8.dp))
-                                val status = seller?.verificationStatus ?: "Unverified"
-                                val statusColor = when (status) {
-                                    "Approved" -> Color(0xFF4CAF50) // Green
-                                    "Pending" -> Color(0xFFFF9800)  // Orange
-                                    else -> Color.Red
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Status: ", fontWeight = FontWeight.Bold)
-                                    Text(text = status, color = statusColor, fontWeight = FontWeight.Bold)
-                                }
+                                // Status Removed Here
                             }
                         }
                     }
