@@ -8,16 +8,16 @@
       <SelectionState runConfigName="SellerRegistration (3)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="SignInActivity">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
       <SelectionState runConfigName="DashboardActivity">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="CheckoutActivity">
+      <SelectionState runConfigName="SellerDashboard (1)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="SellerDashboard (1)">
+      <SelectionState runConfigName="AddProductActivity">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="SellerVerificationActivity">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
