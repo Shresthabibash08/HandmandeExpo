@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,64 +21,86 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.handmadeexpo.R
-
-// Colors
-val CreamBackground = Color(0xFFFFF8E1)
-val OrangeBrand = Color(0xFFE65100)
-val TextGray = Color(0xFF757575)
+import com.example.handmadeexpo.model.ProductModel
+import com.example.handmadeexpo.repo.ProductRepoImpl
+import com.example.handmadeexpo.ui.theme.Gray
+import com.example.handmadeexpo.ui.theme.Orange
+import com.example.handmadeexpo.ui.theme.White12
+import com.example.handmadeexpo.viewmodel.ProductViewModel
 
 @Composable
 fun HomeScreen() {
-    // --- NAVIGATION STATE ---
-    // This tracks which product is clicked. If null, show Home. If not null, show Details.
-    var selectedProduct by remember { mutableStateOf<Triple<String, String, Int>?>(null) }
 
-    if (selectedProduct == null) {
-        // SHOW MAIN HOME UI
-        MainHomeContent(onProductClick = { product ->
-            selectedProduct = product
-        })
-    } else {
-        // SHOW DETAIL UI (Directly directed here on click)
-        ProductDescription(
-            name = selectedProduct!!.first,
-            price = selectedProduct!!.second,
-            imageRes = selectedProduct!!.third,
-            onBackClick = { selectedProduct = null } // Returns to Home
+
+    var selectedProduct by remember { mutableStateOf<ProductModel?>(null) }
+
+
+    val viewModel: ProductViewModel = remember { ProductViewModel(ProductRepoImpl()) }
+
+
+    LaunchedEffect(Unit) {
+        viewModel.getAllProduct()
+    }
+
+    val products by viewModel.allProducts.observeAsState(emptyList())
+
+    Box(modifier = Modifier.fillMaxSize()) {
+
+
+        Image(
+            painter = painterResource(id = R.drawable.bg4), // Replace with your drawable
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
         )
+
+        // --- MAIN CONTENT ---
+        if (selectedProduct == null) {
+            MainHomeContent(
+                products = products ?: emptyList(),
+                onProductClick = { selectedProduct = it }
+            )
+        } else {
+            ProductDescription(
+                name = selectedProduct!!.name,
+                price = "NRP ${selectedProduct!!.price}",
+                imageUrl = selectedProduct!!.image,
+                onBackClick = { selectedProduct = null }
+            )
+        }
     }
 }
 
 @Composable
-fun MainHomeContent(onProductClick: (Triple<String, String, Int>) -> Unit) {
+fun MainHomeContent(
+    products: List<ProductModel>,
+    onProductClick: (ProductModel) -> Unit
+) {
     val categories = listOf(
-        "All" to R.drawable.img_2,
-        "Painting" to R.drawable.img_1,
-        "Bag" to R.drawable.img_3,
-        "Craft" to R.drawable.img_4,
-        "Insane Sticks" to R.drawable.img_5,
-        "Small Sclupture" to R.drawable.img_6
-    )
-
-    val products = listOf(
-        Triple("Sonic Headphones", "NRP 800", R.drawable.img_1),
-        Triple("Mini Clock", "NRP 500", R.drawable.img_6),
-        Triple("Wireless Earpods", "NRP 1200", R.drawable.img_12),
-        Triple("Smart Watch", "NRP 2500", R.drawable.img_10)
+        "All",
+        "Painting",
+        "Bag",
+        "Craft",
+        "Insane Sticks",
+        "Small Sculpture"
     )
 
     var searchQuery by remember { mutableStateOf("") }
 
-    LazyColumn(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    val filteredProducts = products.filter {
+        it.name.contains(searchQuery, ignoreCase = true)
+    }
+
+    LazyColumn(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
         item {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(color = CreamBackground, shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
+                    //.background(color = White12, shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
                     .padding(bottom = 24.dp)
             ) {
                 SearchBarInput(query = searchQuery, onQueryChange = { searchQuery = it })
@@ -88,29 +111,28 @@ fun MainHomeContent(onProductClick: (Triple<String, String, Int>) -> Unit) {
         }
 
         item {
-            SectionHeader(title = " Sale", subtitle = "20 items Left", showArrow = true)
-            ProductRow(products, onProductClick)
+            SectionHeader(title = "Sale", subtitle = "${filteredProducts.size} items Left", showArrow = true)
+            ProductRow(products = filteredProducts, onProductClick = onProductClick)
         }
 
         item {
             Spacer(modifier = Modifier.height(16.dp))
             SectionHeader(title = "Recommended for you", subtitle = "Buy them before it's too late!", showArrow = true)
-            ProductRow(products.reversed(), onProductClick)
+            ProductRow(products = filteredProducts.reversed(), onProductClick = onProductClick)
             Spacer(modifier = Modifier.height(80.dp))
         }
     }
 }
 
-// --- Helper UI Components ---
-
 @Composable
-fun ProductRow(products: List<Triple<String, String, Int>>, onProductClick: (Triple<String, String, Int>) -> Unit) {
+fun ProductRow(
+    products: List<ProductModel>,
+    onProductClick: (ProductModel) -> Unit
+) {
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         items(products) { product ->
             ProductCard(
-                name = product.first,
-                price = product.second,
-                imageRes = product.third,
+                product = product,
                 onClick = { onProductClick(product) }
             )
         }
@@ -118,15 +140,23 @@ fun ProductRow(products: List<Triple<String, String, Int>>, onProductClick: (Tri
 }
 
 @Composable
-fun ProductCard(name: String, price: String, imageRes: Int, onClick: () -> Unit) {
+fun ProductCard(
+    product: ProductModel,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier.width(140.dp).clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA))
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
-            Image(painter = painterResource(imageRes), contentDescription = null, modifier = Modifier.fillMaxWidth().height(100.dp), contentScale = ContentScale.Fit)
-            Text(name, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-            Text(price, fontSize = 14.sp, color = OrangeBrand, fontWeight = FontWeight.Bold)
+            AsyncImage(
+                model = product.image,
+                contentDescription = product.name,
+                modifier = Modifier.fillMaxWidth().height(100.dp),
+                contentScale = ContentScale.Crop
+            )
+            Text(product.name, fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
+            Text("NRP ${product.price}", fontSize = 14.sp, color = Orange, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
         }
     }
 }
@@ -135,10 +165,15 @@ fun ProductCard(name: String, price: String, imageRes: Int, onClick: () -> Unit)
 fun SearchBarInput(query: String, onQueryChange: (String) -> Unit) {
     TextField(
         value = query, onValueChange = onQueryChange,
-        placeholder = { Text("Search here", color = TextGray) },
+        placeholder = { Text("Search here", color = Gray) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp).clip(RoundedCornerShape(12.dp)),
-        colors = TextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent)
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent
+        )
     )
 }
 
@@ -147,20 +182,20 @@ fun PromoBanner() {
     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(140.dp), shape = RoundedCornerShape(16.dp)) {
         Box(modifier = Modifier.fillMaxSize().background(Brush.horizontalGradient(colors = listOf(Color(0xFFFFD54F), Color(0xFFFFB300))))) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("70% Off", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Button(onClick = {}, colors = ButtonDefaults.buttonColors(containerColor = OrangeBrand)) { Text("Shop Now") }
+                Text("70% Off", fontSize = 24.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Button(onClick = {}, colors = ButtonDefaults.buttonColors(containerColor = Orange)) { Text("Shop Now") }
             }
         }
     }
 }
 
 @Composable
-fun CategoryList(categories: List<Pair<String, Int>>) {
+fun CategoryList(categories: List<String>) {
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        items(categories) { (name, imageRes) ->
+        items(categories) { name ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(modifier = Modifier.size(50.dp).background(Color.White, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                    Image(painter = painterResource(id = imageRes), contentDescription = name, modifier = Modifier.size(32.dp))
+                    // You can add category image here if needed
                 }
                 Text(name, fontSize = 11.sp)
             }
@@ -172,9 +207,31 @@ fun CategoryList(categories: List<Pair<String, Int>>) {
 fun SectionHeader(title: String, subtitle: String?, showArrow: Boolean) {
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            subtitle?.let { Text(it, fontSize = 12.sp, color = TextGray) }
+            Text(title, fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+            subtitle?.let { Text(it, fontSize = 12.sp, color = Gray) }
         }
-        if (showArrow) Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = OrangeBrand)
+        if (showArrow) Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = Orange)
+    }
+}
+
+@Composable
+fun ProductDescription(
+    name: String,
+    price: String,
+    imageUrl: String,
+    onBackClick: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Button(onClick = onBackClick, modifier = Modifier.padding(16.dp)) { Text("Back") }
+
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = name,
+            modifier = Modifier.fillMaxWidth().height(250.dp),
+            contentScale = ContentScale.Crop
+        )
+
+        Text(name, fontSize = 24.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.padding(16.dp))
+        Text(price, fontSize = 20.sp, color = Orange, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp))
     }
 }
