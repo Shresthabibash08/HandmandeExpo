@@ -63,6 +63,14 @@ fun DashboardBody() {
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
+                },
+                actions = {
+                    IconButton(onClick = {}) {
+                        Icon(
+                            painter = painterResource(R.drawable.outline_more_horiz_24),
+                            contentDescription = null
+                        )
+                    }
                 }
             )
         },

@@ -1,5 +1,8 @@
 package com.example.handmadeexpo.repo
 
+import android.content.Context
+import android.net.Uri
+import com.example.handmadeexpo.model.BuyerModel
 import com.example.handmadeexpo.model.SellerModel
 import com.google.firebase.auth.FirebaseUser
 
@@ -48,5 +51,7 @@ interface SellerRepo {
         callback: (Boolean, String) -> Unit
     )
 
-    fun getCurrentUser(): FirebaseUser?
+    fun getCurrentUser (): FirebaseUser?
+
+    fun uploadImage(context: Context, imageUri: Uri, callback: (Boolean, String) -> Unit)
 }

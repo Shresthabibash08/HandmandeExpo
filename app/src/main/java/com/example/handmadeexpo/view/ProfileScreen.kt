@@ -20,6 +20,7 @@ import com.example.handmadeexpo.R
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
 import com.google.firebase.auth.FirebaseAuth
+import com.example.handmadeexpo.ui.theme.PurpleGrey40
 
 @Composable
 fun BuyerProfileScreen(
@@ -121,3 +122,7 @@ fun BuyerProfileRow(title: String, value: String) {
         Divider()
     }
 }
+
+
+
+

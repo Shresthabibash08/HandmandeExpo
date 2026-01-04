@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.Color.Companion.Blue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -78,7 +79,7 @@ class SignupActivity : ComponentActivity() {
 
 @Composable
 fun SingUpBody(){
-    var buyerViewModel=remember { BuyerViewModel(BuyerRepoImpl()) }
+    val buyerViewModel = remember { BuyerViewModel(BuyerRepoImpl()) }
     var fullname by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -91,9 +92,6 @@ fun SingUpBody(){
 
     val context=LocalContext.current
     val activity=context as Activity
-    val SharedPreferences=context.getSharedPreferences("User", Context.MODE_PRIVATE)
-    val LocalEmail :String?=SharedPreferences.getString("Email","")
-    val LocalPassword :String?=SharedPreferences.getString("Password","")
 
     Scaffold {
             padding->
@@ -243,7 +241,12 @@ fun SingUpBody(){
 
                                         buyerViewModel.addBuyerToDatabase(buyerId, buyerModel) { dbSuccess, dbMsg ->
                                             Toast.makeText(context, dbMsg, Toast.LENGTH_SHORT).show()
-                                            if (dbSuccess) activity.finish()
+                                            if (dbSuccess){
+                                                val intent = Intent(context, SignInActivity::class.java)
+                                                context.startActivity(intent)
+                                                activity.finish()
+                                                activity.finish()
+                                            }
                                         }
                                     } else {
                                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
@@ -259,13 +262,15 @@ fun SingUpBody(){
                     elevation = ButtonDefaults.buttonElevation(
                         defaultElevation = 6.dp
                     ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .padding(horizontal = 16.dp, vertical = 19.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier =Modifier
+                        .fillMaxWidth().height(95.dp)
+                        .padding(horizontal = 20.dp, vertical = 20.dp),
                 ) {
-                    Text("Sign Up")
+                    Text("Sign Up", style = TextStyle(fontSize = 15.sp),
+                        modifier = Modifier.clickable{
+
+                        })
                 }
 
                 Row(modifier = Modifier
@@ -274,14 +279,17 @@ fun SingUpBody(){
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start
                 ) {
-                    Text("Already have an account?", fontSize = 16.sp, color = MainColor)
+                    Text("Already have an account?", fontSize = 16.sp, color =Color.Black)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Sign In",
                         color = Blue,
                         fontSize = 16.sp,
                         modifier = Modifier
-                            .clickable { }
+                            .clickable {val intent = Intent(context, SignInActivity::class.java)
+                                activity?.startActivity(intent)
+                                activity.finish()
+                            }
                     )
                 }
             }
