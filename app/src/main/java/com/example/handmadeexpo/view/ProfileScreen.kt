@@ -40,7 +40,6 @@ import com.example.handmadeexpo.R
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.PurpleGrey40
 
-
 @Composable
 fun ProfileScreen(){
     Box(modifier = Modifier.fillMaxSize()) {
@@ -150,8 +149,3 @@ fun ProfileRowDetails(title: String, value: String) {
 
 
 
-@Preview
-@Composable
-fun ProfilePreview(){
-    ProfileScreen()
-}

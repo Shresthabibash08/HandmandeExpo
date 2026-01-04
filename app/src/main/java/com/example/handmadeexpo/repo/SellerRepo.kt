@@ -1,5 +1,7 @@
 package com.example.handmadeexpo.repo
 
+import android.content.Context
+import android.net.Uri
 import com.example.handmadeexpo.model.BuyerModel
 import com.example.handmadeexpo.model.SellerModel
 import com.google.firebase.auth.FirebaseUser
@@ -20,6 +22,8 @@ interface SellerRepo {
 
     fun updateProfile(sellerId:String,model: SellerModel, callback:(Boolean, String)->Unit)
 
+    fun updateProfileFields(sellerId: String, updates: Map<String, Any>, callback: (Boolean, String) -> Unit)
+
     fun deleteAccount(sellerId:String,callback:(Boolean,String)->Unit)
 
     fun getSellerDetailsById(sellerId:String,callback:(Boolean,String,SellerModel?)->Unit)
@@ -27,4 +31,6 @@ interface SellerRepo {
     fun addSellerToDatabase(sellerId: String,sellerModel:SellerModel,callback:(Boolean,String)->Unit)
 
     fun getCurrentUser (): FirebaseUser?
+
+    fun uploadImage(context: Context, imageUri: Uri, callback: (Boolean, String) -> Unit)
 }
