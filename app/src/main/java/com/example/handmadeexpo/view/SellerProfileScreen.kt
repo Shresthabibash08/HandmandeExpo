@@ -24,37 +24,31 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.handmadeexpo.R
-import com.example.handmadeexpo.repo.SellerRepoImpl
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.SellerViewModel
-import com.example.handmadeexpo.viewmodel.SellerViewModelFactory
 
 @Composable
 fun SellerProfileScreen(
+    sellerId: String,
     onEditProfileClick: () -> Unit,
     viewModel: SellerViewModel
 ) {
     val context = LocalContext.current
     
-    // Initialize ViewModel using the Factory pattern from development
-    val viewModel: SellerViewModel = viewModel(
-        factory = SellerViewModelFactory(SellerRepoImpl())
-    )
-
+    // Observe state from ViewModel
     val seller by viewModel.seller.observeAsState()
     val loading by viewModel.loading.observeAsState(initial = true)
     
     // State for Full Screen Document Viewer
     var showFullDocument by remember { mutableStateOf(false) }
 
-    // Fetch Data Automatically on screen launch
-    LaunchedEffect(Unit) {
-        viewModel.getCurrentUser()?.uid?.let { id ->
-            viewModel.getSellerDetailsById(id)
+    // Fetch Data automatically whenever the sellerId changes or screen launches
+    LaunchedEffect(sellerId) {
+        if (sellerId.isNotEmpty()) {
+            viewModel.getSellerDetailsById(sellerId)
         }
     }
 
@@ -97,14 +91,15 @@ fun SellerProfileScreen(
                     // Profile Picture
                     Image(
                         painter = painterResource(R.drawable.profilephoto),
-                        contentDescription = null,
+                        contentDescription = "Profile Photo",
                         modifier = Modifier
                             .size(120.dp)
-                            .clip(CircleShape),
+                            .clip(CircleShape)
+                            .background(Color.White),
                         contentScale = ContentScale.Crop
                     )
 
-                    // Shop Name / Username
+                    // Shop Name
                     Text(
                         text = seller?.shopName ?: "Unknown Shop",
                         style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Medium),
@@ -140,7 +135,7 @@ fun SellerProfileScreen(
                             ProfileRow("Full Name", seller?.fullName ?: "N/A")
                             ProfileRow("Email", seller?.sellerEmail ?: "N/A")
                             ProfileRow("Phone", seller?.sellerPhoneNumber ?: "N/A")
-                            ProfileRow("Address", seller?.sellerAddress?.ifEmpty { "Not set" } ?: "Not set")
+                            ProfileRow("Address", if (seller?.sellerAddress.isNullOrEmpty()) "Not set" else seller!!.sellerAddress)
                             ProfileRow("PAN Number", seller?.panNumber ?: "N/A")
 
                             // Verification Document Section

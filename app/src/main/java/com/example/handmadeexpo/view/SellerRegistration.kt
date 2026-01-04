@@ -35,7 +35,6 @@ import com.example.handmadeexpo.model.SellerModel
 import com.example.handmadeexpo.repo.SellerRepoImpl
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.Offwhite12
-import com.example.handmadeexpo.ui.theme.White12
 import com.example.handmadeexpo.viewmodel.SellerViewModel
 
 class SellerRegistration : ComponentActivity() {
@@ -54,7 +53,7 @@ fun SellerRegisterScreen() {
     val activity = context as Activity
     val viewModel = remember { SellerViewModel(SellerRepoImpl()) }
 
-    // State variables merged from both branches
+    // Merged state variables
     var fullName by remember { mutableStateOf("") }
     var shopName by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
@@ -89,7 +88,7 @@ fun SellerRegisterScreen() {
                 
                 Image(
                     painter = painterResource(R.drawable.finallogo),
-                    contentDescription = null,
+                    contentDescription = "Logo",
                     modifier = Modifier.size(100.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
@@ -113,7 +112,7 @@ fun SellerRegisterScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Input Fields
+                // Input Fields Grouped
                 CustomTextField("Full Name", fullName) { fullName = it }
                 Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField("Shop Name", shopName) { shopName = it }
@@ -148,7 +147,7 @@ fun SellerRegisterScreen() {
                 // --- REGISTER BUTTON ---
                 Button(
                     onClick = {
-                        // Extensive Validations from 'ansh' branch
+                        // Extensive Validations
                         when {
                             fullName.isBlank() -> Toast.makeText(context, "Full name is required", Toast.LENGTH_SHORT).show()
                             shopName.isBlank() -> Toast.makeText(context, "Shop name is required", Toast.LENGTH_SHORT).show()
@@ -157,7 +156,7 @@ fun SellerRegisterScreen() {
                             !panNumber.matches(Regex("^[0-9]+$")) -> Toast.makeText(context, "PAN number must contain only digits", Toast.LENGTH_SHORT).show()
                             email.isBlank() -> Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
                             phoneNumber.isBlank() -> Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
-                            !phoneNumber.matches(Regex("^[0-9]{10}$")) -> Toast.makeText(context, "Phone number must be exactly 10 digits", Toast.LENGTH_SHORT).show()
+                            !phoneNumber.matches(Regex("^[0-9]{10}$")) -> Toast.makeText(context, "Phone number must be 10 digits", Toast.LENGTH_SHORT).show()
                             password.isBlank() -> Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
                             password != confirmPassword -> Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
                             
@@ -180,7 +179,7 @@ fun SellerRegisterScreen() {
                                             isLoading = false
                                             Toast.makeText(context, dbMsg, Toast.LENGTH_SHORT).show()
                                             if (dbSuccess) {
-                                                // Navigation logic from 'development' branch
+                                                // Navigate to Verification
                                                 val intent = Intent(context, SellerVerificationActivity::class.java)
                                                 context.startActivity(intent)
                                                 activity.finish()
@@ -199,16 +198,13 @@ fun SellerRegisterScreen() {
                     colors = ButtonDefaults.buttonColors(containerColor = MainColor),
                     enabled = !isLoading
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                        } else {
-                            Text("Proceed to Verify Identity", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Icon(painter = painterResource(id = R.drawable.baseline_arrow_forward_24), contentDescription = null, tint = Color.White)
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Proceed to Verify Identity", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(painter = painterResource(R.drawable.baseline_arrow_forward_24), contentDescription = null)
                         }
                     }
                 }
@@ -252,7 +248,6 @@ fun CustomTextField(label: String, value: String, onValueChange: (String) -> Uni
             focusedBorderColor = MainColor,
             unfocusedBorderColor = MainColor,
             focusedLabelColor = MainColor,
-            cursorColor = MainColor,
             focusedContainerColor = Offwhite12,
             unfocusedContainerColor = Offwhite12
         )
@@ -282,8 +277,7 @@ fun PasswordTextField(
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MainColor,
             unfocusedBorderColor = MainColor,
-            focusedLabelColor = MainColor, // Updated from White12 to MainColor for better visibility
-            cursorColor = MainColor,
+            focusedLabelColor = MainColor,
             focusedContainerColor = Offwhite12,
             unfocusedContainerColor = Offwhite12
         )

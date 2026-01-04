@@ -26,10 +26,10 @@ import com.example.handmadeexpo.model.ProductModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDescriptionScreen(
-    product: ProductModel, // CHANGED: Now accepts the full ProductModel
+    product: ProductModel, 
     onBackClick: () -> Unit
 ) {
-    // Define the colors
+    // --- THEME COLORS ---
     val OrangeBrand = Color(0xFFE65100)
     val CreamBackground = Color(0xFFFFF8E1)
     val TextGray = Color(0xFF757575)
@@ -46,7 +46,6 @@ fun ProductDescriptionScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = CreamBackground)
             )
         },
-        // Floating bottom bar for the buttons
         bottomBar = {
             BottomAppBar(
                 containerColor = Color.White,
@@ -54,15 +53,12 @@ fun ProductDescriptionScreen(
                 modifier = Modifier.height(80.dp)
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // ADD TO CART BUTTON
                     OutlinedButton(
-                        onClick = { /* Logic */ },
+                        onClick = { /* TODO: Add to cart logic */ },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
@@ -70,9 +66,8 @@ fun ProductDescriptionScreen(
                         Text("Add to Cart", color = OrangeBrand, fontWeight = FontWeight.Bold)
                     }
 
-                    // BUY NOW BUTTON
                     Button(
-                        onClick = { /* Logic */ },
+                        onClick = { /* TODO: Buy now logic */ },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = OrangeBrand)
@@ -83,7 +78,6 @@ fun ProductDescriptionScreen(
             }
         }
     ) { paddingValues ->
-        // This Column is now scrollable
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -91,7 +85,7 @@ fun ProductDescriptionScreen(
                 .background(Color.White)
                 .verticalScroll(rememberScrollState())
         ) {
-            // 1. ENLARGED PRODUCT IMAGE (Using AsyncImage for URL)
+            // 1. PRODUCT IMAGE
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -99,7 +93,6 @@ fun ProductDescriptionScreen(
                     .background(CreamBackground),
                 contentAlignment = Alignment.Center
             ) {
-                // CHANGED: Use AsyncImage to load from URL
                 AsyncImage(
                     model = product.image,
                     contentDescription = product.name,
@@ -107,22 +100,19 @@ fun ProductDescriptionScreen(
                         .fillMaxSize(0.85f)
                         .clip(RoundedCornerShape(16.dp)),
                     contentScale = ContentScale.Fit,
-                    error = painterResource(R.drawable.img_1) // Placeholder if error
+                    error = painterResource(R.drawable.img_1) // Fallback placeholder
                 )
             }
 
             // 2. PRODUCT INFO SECTION
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp)
+                modifier = Modifier.fillMaxWidth().padding(20.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Top
                 ) {
-                    // CHANGED: Use real name
                     Text(
                         text = product.name,
                         fontSize = 26.sp,
@@ -130,7 +120,6 @@ fun ProductDescriptionScreen(
                         modifier = Modifier.weight(1f),
                         lineHeight = 32.sp
                     )
-                    // CHANGED: Use real price
                     Text(
                         text = "NRP ${product.price.toInt()}",
                         fontSize = 24.sp,
@@ -141,7 +130,7 @@ fun ProductDescriptionScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 3. RATING BAR (Kept static for now as per your design)
+                // 3. RATING BAR
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     repeat(5) { index ->
                         Icon(
@@ -161,7 +150,7 @@ fun ProductDescriptionScreen(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp), thickness = 0.5.dp)
 
-                // 4. DESCRIPTION SECTION
+                // 4. DESCRIPTION
                 Text(
                     text = "Description",
                     fontSize = 18.sp,
@@ -171,15 +160,34 @@ fun ProductDescriptionScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // CHANGED: Use real description or fallback text
                 Text(
-                    text = if (product.description.isNotEmpty()) product.description else "This premium handmade product is part of our exclusive Expo collection. Designed with high-quality materials to ensure durability and style.",
+                    text = if (product.description.isNotEmpty()) product.description 
+                           else "This premium handmade product is part of our exclusive Expo collection.",
                     fontSize = 16.sp,
                     color = TextGray,
                     lineHeight = 24.sp
                 )
 
-                // Extra spacer to ensure content doesn't get hidden behind the BottomAppBar
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // 5. STOCK STATUS
+                Text(
+                    text = "Stock Information",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = if (product.stock > 0) "Available: ${product.stock} items in stock"
+                           else "Currently out of stock",
+                    fontSize = 16.sp,
+                    color = if (product.stock > 0) Color(0xFF2E7D32) else Color.Red,
+                    fontWeight = FontWeight.Medium
+                )
+
                 Spacer(modifier = Modifier.height(40.dp))
             }
         }

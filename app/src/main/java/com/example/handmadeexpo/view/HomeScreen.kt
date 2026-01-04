@@ -12,9 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -58,26 +56,26 @@ fun HomeScreen() {
     val sliderValue by viewModel.sliderValue.observeAsState(100f)
     val maxPriceDisplay by viewModel.maxPriceDisplay.observeAsState(100000.0)
 
-    // 3. Navigation State (Holds the clicked product)
+    // 3. Navigation State
     var selectedProduct by remember { mutableStateOf<ProductModel?>(null) }
 
-    if (selectedProduct == null) {
-        // Show the Main Home List
-        MainHomeContent(
-            products = products,
-            sliderValue = sliderValue,
-            maxPrice = maxPriceDisplay,
-            onSliderChange = { viewModel.onSliderChange(it) },
-            onCategorySelect = { viewModel.onCategorySelect(it) },
-            onProductClick = { product -> selectedProduct = product } // Navigate to Detail
-        )
-    } else {
-        // Show the Product Detail Screen
-        // Ensure your ProductDescriptionScreen.kt file has the function name 'ProductDescriptionScreen'
-        ProductDescriptionScreen(
-            product = selectedProduct!!,
-            onBackClick = { selectedProduct = null } // Navigate back to Home
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (selectedProduct == null) {
+            MainHomeContent(
+                products = products,
+                sliderValue = sliderValue,
+                maxPrice = maxPriceDisplay,
+                onSliderChange = { viewModel.onSliderChange(it) },
+                onCategorySelect = { viewModel.onCategorySelect(it) },
+                onProductClick = { product -> selectedProduct = product }
+            )
+        } else {
+            // Updated to use the ProductDescriptionScreen from development
+            ProductDescriptionScreen(
+                product = selectedProduct!!,
+                onBackClick = { selectedProduct = null }
+            )
+        }
     }
 }
 
@@ -92,29 +90,25 @@ fun MainHomeContent(
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
-    // Static Categories
+    // Combined Category List with Images
     val categories = listOf(
         "All" to R.drawable.img_2, "Painting" to R.drawable.img_1,
         "Bag" to R.drawable.img_3, "Craft" to R.drawable.img_4,
         "Sticks" to R.drawable.img_5, "Small" to R.drawable.img_6
     )
 
+    val filteredList = products.filter {
+        it.name.contains(searchQuery, ignoreCase = true)
+    }
+
     LazyColumn(modifier = Modifier.fillMaxSize().background(Color.White)) {
         item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(color = CreamBackground, shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
-                    .padding(bottom = 24.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
                 SearchBarInput(query = searchQuery, onQueryChange = { searchQuery = it })
                 PromoBanner()
                 Spacer(modifier = Modifier.height(16.dp))
                 CategoryList(categories)
-
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // --- EXPANDABLE PRICE SLIDER ---
                 GradientPriceSliderSection(
                     currentSliderValue = sliderValue,
                     currentMaxPrice = maxPrice,
@@ -125,20 +119,20 @@ fun MainHomeContent(
         }
 
         item {
-            SectionHeader(title = " Sale", subtitle = "${products.size} items Found", showArrow = true)
-            if (products.isEmpty()) {
+            SectionHeader(title = "Sale", subtitle = "${filteredList.size} items Found", showArrow = true)
+            if (filteredList.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) {
-                    Text("No items under NRP ${maxPrice.toInt()}", color = Color.Gray)
+                    Text("No items found", color = Color.Gray)
                 }
             } else {
-                ProductRow(products, onProductClick)
+                ProductRow(filteredList, onProductClick)
             }
         }
 
         item {
             Spacer(modifier = Modifier.height(16.dp))
-            SectionHeader(title = "Recommended for you", subtitle = "Buy them before it's too late!", showArrow = true)
-            ProductRow(products.reversed(), onProductClick)
+            SectionHeader(title = "Recommended", subtitle = "Handpicked for you", showArrow = true)
+            ProductRow(products = filteredList.reversed(), onProductClick = onProductClick)
             Spacer(modifier = Modifier.height(80.dp))
         }
     }
@@ -152,143 +146,55 @@ fun GradientPriceSliderSection(
     onValueChange: (Float) -> Unit,
     onCategorySelect: (Double) -> Unit
 ) {
-    // State to handle Expand/Collapse
     var isExpanded by remember { mutableStateOf(false) }
-
-    val pricePoints = listOf(500, 1000, 2000, 5000, 10000, 20000, 50000, 100000)
+    val pricePoints = listOf(500, 1000, 5000, 10000, 50000, 100000)
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .shadow(elevation = 1.dp, shape = RoundedCornerShape(12.dp))
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).shadow(1.dp, RoundedCornerShape(12.dp))
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            // Header Row: Label + Toggle Icon + Current Value
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Clickable Label Area
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { isExpanded = !isExpanded }
-                        .padding(4.dp)
-                ) {
-                    Text(
-                        text = "Max Price",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = PriceTextViolet
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Expand",
-                        tint = TextGray,
-                        modifier = Modifier.size(20.dp)
-                    )
+                Row(modifier = Modifier.clickable { isExpanded = !isExpanded }) {
+                    Text("Max Price", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = PriceTextViolet)
+                    Icon(if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null)
                 }
-
-                // Price Display
-                Text(
-                    text = "NRP ${currentMaxPrice.toInt()}",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = OrangeBrand
-                )
+                Text("NRP ${currentMaxPrice.toInt()}", fontWeight = FontWeight.Bold, color = OrangeBrand)
             }
 
-            // Expandable List Content
             AnimatedVisibility(visible = isExpanded) {
-                Column {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("Quick Select:", fontSize = 11.sp, color = TextGray)
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        items(pricePoints) { price ->
-                            val isSelected = currentMaxPrice.toInt() == price
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(if (isSelected) OrangeBrand else Color(0xFFF5F5F5))
-                                    .clickable {
-                                        onCategorySelect(price.toDouble())
-                                        isExpanded = false // Close the list after selection
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    text = if (price >= 1000) "${price / 1000}k" else "$price",
-                                    fontSize = 13.sp,
-                                    color = if (isSelected) Color.White else TextGray,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    items(pricePoints) { price ->
+                        Box(modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(if (currentMaxPrice.toInt() == price) OrangeBrand else Color(0xFFF5F5F5))
+                            .clickable { onCategorySelect(price.toDouble()); isExpanded = false }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(text = if (price >= 1000) "${price/1000}k" else "$price", color = if (currentMaxPrice.toInt() == price) Color.White else TextGray)
                         }
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Slider Track
-            Box(
-                contentAlignment = Alignment.CenterStart,
-                modifier = Modifier.fillMaxWidth().height(30.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(brush = Brush.horizontalGradient(colors = listOf(GradientStart, GradientMiddle, GradientEnd)))
-                )
-                Slider(
-                    value = currentSliderValue,
-                    onValueChange = onValueChange,
-                    valueRange = 0f..100f,
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color.Transparent,
-                        activeTrackColor = Color.Transparent,
-                        inactiveTrackColor = Color.Transparent
-                    ),
-                    thumb = {
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .background(Color.White, CircleShape)
-                                .border(width = 2.dp, color = GradientStart, shape = CircleShape)
-                                .shadow(2.dp, CircleShape)
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            Slider(
+                value = currentSliderValue,
+                onValueChange = onValueChange,
+                valueRange = 0f..100f,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
 
-// --- HELPER COMPOSABLES ---
-
 @Composable
 fun ProductRow(products: List<ProductModel>, onProductClick: (ProductModel) -> Unit) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         items(products) { product ->
             ProductCard(product, onProductClick)
         }
@@ -298,19 +204,33 @@ fun ProductRow(products: List<ProductModel>, onProductClick: (ProductModel) -> U
 @Composable
 fun ProductCard(product: ProductModel, onClick: (ProductModel) -> Unit) {
     Card(
-        modifier = Modifier.width(140.dp).clickable { onClick(product) },
+        modifier = Modifier.width(150.dp).clickable { onClick(product) },
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA))
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
             AsyncImage(
                 model = product.image,
-                contentDescription = product.name,
-                modifier = Modifier.fillMaxWidth().height(100.dp),
+                contentDescription = null,
+                modifier = Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop,
                 error = painterResource(R.drawable.img_1)
             )
             Text(product.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-            Text("NRP ${product.price.toInt()}", fontSize = 14.sp, color = OrangeBrand, fontWeight = FontWeight.Bold)
+            Text("NRP ${product.price.toInt()}", color = OrangeBrand, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun CategoryList(categories: List<Pair<String, Int>>) {
+    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        items(categories) { (name, imageRes) ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(modifier = Modifier.size(55.dp).background(CreamBackground, CircleShape), contentAlignment = Alignment.Center) {
+                    Image(painter = painterResource(id = imageRes), contentDescription = name, modifier = Modifier.size(30.dp))
+                }
+                Text(name, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            }
         }
     }
 }
@@ -318,73 +238,21 @@ fun ProductCard(product: ProductModel, onClick: (ProductModel) -> Unit) {
 @Composable
 fun SearchBarInput(query: String, onQueryChange: (String) -> Unit) {
     TextField(
-        value = query,
-        onValueChange = onQueryChange,
-        placeholder = { Text("Search here", color = TextGray) },
+        value = query, onValueChange = onQueryChange,
+        placeholder = { Text("Search unique handmade items...") },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-        modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp).clip(RoundedCornerShape(12.dp)),
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color.White,
-            unfocusedContainerColor = Color.White,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent
-        )
+        modifier = Modifier.fillMaxWidth().padding(16.dp).clip(RoundedCornerShape(12.dp)),
+        colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent)
     )
 }
 
 @Composable
-fun PromoBanner() {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(140.dp),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize()
-                .background(Brush.horizontalGradient(colors = listOf(Color(0xFFFFD54F), Color(0xFFFFB300))))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("70% Off", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Button(onClick = {}, colors = ButtonDefaults.buttonColors(containerColor = OrangeBrand)) {
-                    Text("Shop Now")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CategoryList(categories: List<Pair<String, Int>>) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        items(categories) { (name, imageRes) ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier.size(50.dp).background(Color.White, RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = imageRes),
-                        contentDescription = name,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-                Text(name, fontSize = 11.sp)
-            }
-        }
-    }
-}
-
-@Composable
 fun SectionHeader(title: String, subtitle: String?, showArrow: Boolean) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
             Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            subtitle?.let { Text(it, fontSize = 12.sp, color = TextGray) }
+            subtitle?.let { Text(it, fontSize = 12.sp, color = Color.Gray) }
         }
+        if (showArrow) Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = OrangeBrand)
     }
 }

@@ -46,7 +46,22 @@ class SellerRepoImpl : SellerRepo {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    callback(true, "Registration Successful", auth.currentUser?.uid ?: "")
+                    val userId = auth.currentUser?.uid ?: ""
+                    
+                    // Combined logic: Initialize basic role/email in DB immediately upon registration
+                    ref.child(userId).setValue(
+                        mapOf(
+                            "sellerEmail" to email,
+                            "role" to "seller",
+                            "verificationStatus" to "Unverified"
+                        )
+                    ).addOnCompleteListener { dbTask ->
+                        if (dbTask.isSuccessful) {
+                            callback(true, "Registration Successful", userId)
+                        } else {
+                            callback(false, "Auth successful but DB init failed: ${dbTask.exception?.message}", userId)
+                        }
+                    }
                 } else {
                     callback(false, task.exception?.message ?: "Registration failed", "")
                 }
@@ -87,7 +102,6 @@ class SellerRepoImpl : SellerRepo {
     }
 
     override fun getSellerDetailsById(sellerId: String, callback: (Boolean, String, SellerModel?) -> Unit) {
-        // Using addValueEventListener for real-time updates as seen in the development branch
         ref.child(sellerId).addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 if (snapshot.exists()) {
@@ -109,16 +123,13 @@ class SellerRepoImpl : SellerRepo {
     }
 
     override fun updateProfile(sellerId: String, model: SellerModel, callback: (Boolean, String) -> Unit) {
-        // Uses toMap() for partial updates if available, otherwise sets the whole object
         ref.child(sellerId).updateChildren(model.toMap()).addOnCompleteListener { task ->
             if (task.isSuccessful) callback(true, "Profile Updated Successfully")
             else callback(false, task.exception?.message ?: "Update failed")
         }
     }
 
-    override fun updateProfileFields(sellerId: String, updates: Map<String, Any>,
-                                     callback: (Boolean, String) -> Unit
-    ) {
+    override fun updateProfileFields(sellerId: String, updates: Map<String, Any>, callback: (Boolean, String) -> Unit) {
         ref.child(sellerId).updateChildren(updates).addOnCompleteListener { task ->
             if (task.isSuccessful) callback(true, "Fields Updated")
             else callback(false, task.exception?.message ?: "Update Failed")

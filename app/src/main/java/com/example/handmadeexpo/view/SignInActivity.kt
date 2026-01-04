@@ -1,4 +1,5 @@
 package com.example.handmadeexpo.view
+
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -9,33 +10,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,11 +37,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.repo.BuyerRepoImpl
-import com.example.handmadeexpo.ui.theme.AquaGreen
 import com.example.handmadeexpo.ui.theme.Blue1
-import com.example.handmadeexpo.viewmodel.BuyerViewModel
 import com.example.handmadeexpo.ui.theme.MainColor
-import com.google.firebase.auth.FirebaseAuth
+import com.example.handmadeexpo.viewmodel.BuyerViewModel
 
 class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,8 +53,7 @@ class SignInActivity : ComponentActivity() {
 
 @Composable
 fun SignInBody() {
-
-    var buyerViewModel=remember { BuyerViewModel(BuyerRepoImpl()) }
+    val buyerViewModel = remember { BuyerViewModel(BuyerRepoImpl()) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var visibility by remember { mutableStateOf(false) }
@@ -83,16 +61,8 @@ fun SignInBody() {
     val context = LocalContext.current
     val activity = context as? Activity
 
-    val sharedPreferences =  context.getSharedPreferences("Buyer", Context.MODE_PRIVATE)
-
-
-
-
     Scaffold { padding ->
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-
+        Box(modifier = Modifier.fillMaxSize()) {
             Image(
                 painter = painterResource(R.drawable.img_1),
                 contentDescription = null,
@@ -107,15 +77,13 @@ fun SignInBody() {
                 item {
                     Spacer(modifier = Modifier.height(50.dp))
                     Row(
-                        modifier = Modifier.fillMaxWidth()
-                            .padding(padding),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-
                         Image(
                             painter = painterResource(R.drawable.logo),
-                            contentDescription = null,
+                            contentDescription = "Logo",
                             modifier = Modifier
                                 .size(177.dp)
                                 .clip(CircleShape),
@@ -135,8 +103,7 @@ fun SignInBody() {
 
                     Text(
                         "Welcome Back!",
-                        modifier = Modifier.fillMaxWidth()
-                            .padding(top=12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                         style = TextStyle(
                             color = Black,
                             fontWeight = FontWeight.SemiBold,
@@ -149,116 +116,95 @@ fun SignInBody() {
 
                     OutlinedTextField(
                         value = email,
-                        onValueChange = { data ->
-                            email = data
-                        },
+                        onValueChange = { email = it },
                         shape = RoundedCornerShape(12.dp),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 15.dp),
-                        placeholder = {
-                            Text("Email/Phone")
-                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp),
+                        placeholder = { Text("Email/Phone") },
                         colors = TextFieldDefaults.colors(
                             focusedIndicatorColor = Blue1,
                             unfocusedIndicatorColor = Color.Transparent
                         )
                     )
+                    
                     Spacer(modifier = Modifier.height(20.dp))
 
                     OutlinedTextField(
                         value = password,
-                        onValueChange = { data ->
-                            password = data
-                        },
-
+                        onValueChange = { password = it },
                         shape = RoundedCornerShape(12.dp),
                         visualTransformation = if (!visibility) PasswordVisualTransformation() else VisualTransformation.None,
                         trailingIcon = {
-                            IconButton(onClick = {
-                                visibility = !visibility
-                            }) {
+                            IconButton(onClick = { visibility = !visibility }) {
                                 Icon(
-                                    painter = if (visibility)
-                                        painterResource(R.drawable.baseline_visibility_off_24)
-                                    else
-                                        painterResource(
-                                            R.drawable.baseline_visibility_24
-                                        ),
+                                    painter = painterResource(
+                                        if (visibility) R.drawable.baseline_visibility_off_24 
+                                        else R.drawable.baseline_visibility_24
+                                    ),
                                     contentDescription = null
                                 )
                             }
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 15.dp),
-                        placeholder = {
-                            Text("*********")
-                        },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp),
+                        placeholder = { Text("*********") },
                         colors = TextFieldDefaults.colors(
                             focusedIndicatorColor = Blue1,
                             unfocusedIndicatorColor = Color.Transparent
                         )
                     )
+                    
                     Spacer(modifier = Modifier.height(20.dp))
 
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 15.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp),
                         horizontalArrangement = Arrangement.End
                     ) {
                         Text(
-                            "Forgot password?",fontSize = 16.sp,
+                            "Forgot password?", fontSize = 16.sp,
                             modifier = Modifier.clickable {
                                 val intent = Intent(context, ForgetPasswordActivity::class.java)
                                 activity?.startActivity(intent)
-
                             }
                         )
                     }
 
                     Button(
                         onClick = {
+                            if (email.isBlank() || password.isBlank()) {
+                                Toast.makeText(context, "Email and password required", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+
                             buyerViewModel.login(email, password) { success, msg ->
                                 if (success) {
                                     val userId = buyerViewModel.getCurrentUser()?.uid
-
                                     if (userId != null) {
                                         buyerViewModel.checkUserRole(userId) { role ->
                                             when (role) {
                                                 "buyer" -> {
-                                                    context.startActivity(
-                                                        Intent(context, DashboardActivity::class.java)
-                                                    )
+                                                    val intent = Intent(context, DashboardActivity::class.java)
+                                                    intent.putExtra("userId", userId)
+                                                    context.startActivity(intent)
                                                     activity?.finish()
                                                 }
-
                                                 "seller" -> {
-                                                    context.startActivity(
-                                                        Intent(context, SellerDashboard::class.java)
-                                                    )
+                                                    val intent = Intent(context, SellerDashboard::class.java)
+                                                    intent.putExtra("userId", userId)
+                                                    context.startActivity(intent)
                                                     activity?.finish()
                                                 }
-
                                                 else -> {
-                                                    Toast.makeText(
-                                                        context,
-                                                        "User role not found",
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
+                                                    Toast.makeText(context, "User role not defined", Toast.LENGTH_SHORT).show()
                                                 }
                                             }
                                         }
+                                    } else {
+                                        Toast.makeText(context, "User not found", Toast.LENGTH_SHORT).show()
                                     }
                                 } else {
                                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                 }
                             }
-
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -270,25 +216,22 @@ fun SignInBody() {
                         Text("Sign In", fontSize = 15.sp)
                     }
 
-                    Row(modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 30.dp),
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 30.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Start
                     ) {
-                        Text("Already have an account?", fontSize = 16.sp, color =Color.Black)
+                        Text("Don't have an account?", fontSize = 16.sp, color = Black)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "Sign Up",
                             color = Blue,
                             fontSize = 16.sp,
-                            modifier = Modifier
-                                .clickable {val intent = Intent(context, SignupActivity::class.java)
-                                    activity?.startActivity(intent)
-                                    activity?.finish()
-
-
-                                }
+                            modifier = Modifier.clickable {
+                                val intent = Intent(context, SignupActivity::class.java)
+                                activity?.startActivity(intent)
+                                activity?.finish()
+                            }
                         )
                     }
                 }
@@ -297,8 +240,7 @@ fun SignInBody() {
     }
 }
 
-
-@Preview
+@Preview(showBackground = true)
 @Composable
 fun SignInPreview() {
     SignInBody()

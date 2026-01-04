@@ -8,27 +8,31 @@ import androidx.lifecycle.ViewModel
 import com.example.handmadeexpo.model.ProductModel
 import com.example.handmadeexpo.repo.ProductRepo
 
-class ProductViewModel(val repo: ProductRepo) : ViewModel() {
+class ProductViewModel(private val repo: ProductRepo) : ViewModel() {
 
-    // --- REPO FUNCTIONS ---
-    fun addProduct(model: ProductModel, callback: (Boolean, String) -> Unit) = repo.addProduct(model, callback)
-    fun updateProduct(model: ProductModel, callback: (Boolean, String) -> Unit) = repo.updateProduct(model, callback)
-    fun deleteProduct(productID: String, callback: (Boolean, String) -> Unit) = repo.deleteProduct(productID, callback)
-    fun uploadImage(context: Context, imageUri: Uri, callback: (String?) -> Unit) = repo.uploadImage(context, imageUri, callback)
+    // --- State Management ---
+    private val _loading = MutableLiveData<Boolean>()
+    val loading: LiveData<Boolean> get() = _loading
 
-    // --- DATA HOLDERS ---
-    private val _allProducts = MutableLiveData<List<ProductModel>?>()
-    val allProducts: MutableLiveData<List<ProductModel>?> get() = _allProducts
+    private val _products = MutableLiveData<ProductModel?>()
+    val products: LiveData<ProductModel?> get() = _products
 
-    // Filtered list (This is what the UI observes)
+    private val _allProducts = MutableLiveData<List<ProductModel>>(emptyList())
+    val allProducts: LiveData<List<ProductModel>> = _allProducts
+
+    private val _allProductsCategory = MutableLiveData<List<ProductModel>>(emptyList())
+    val allProductsCategory: LiveData<List<ProductModel>> get() = _allProductsCategory
+
+    private val _sellerProducts = MutableLiveData<List<ProductModel>>()
+    val sellerProducts: LiveData<List<ProductModel>> = _sellerProducts
+
+    // --- Filtering State (from Development Branch) ---
     private val _filteredProducts = MutableLiveData<List<ProductModel>>()
     val filteredProducts: LiveData<List<ProductModel>> get() = _filteredProducts
 
-    // Slider State (0f to 100f)
     private val _sliderValue = MutableLiveData(100f)
     val sliderValue: LiveData<Float> get() = _sliderValue
 
-    // Display Price (e.g. 50000.0)
     private val _maxPriceDisplay = MutableLiveData(100000.0)
     val maxPriceDisplay: LiveData<Double> get() = _maxPriceDisplay
 
@@ -38,72 +42,80 @@ class ProductViewModel(val repo: ProductRepo) : ViewModel() {
         getAllProduct()
     }
 
-    // --- FETCH DATA ---
-    fun getAllProduct() {
-        repo.getAllProduct { success, msg, data ->
-            if (success) {
-                _allProducts.postValue(data)
+    // --- CRUD Operations ---
 
-                // Initially show everything
-                if (!data.isNullOrEmpty()) {
-                    _filteredProducts.postValue(data)
-                    _sliderValue.postValue(100f)
-                    _maxPriceDisplay.postValue(ABSOLUTE_MAX)
-                } else {
-                    _filteredProducts.postValue(emptyList())
-                }
+    fun addProduct(model: ProductModel, callback: (Boolean, String, String?) -> Unit) {
+        repo.addProduct(model, callback)
+    }
+
+    fun updateProduct(productId: String, model: ProductModel, callback: (Boolean, String) -> Unit) {
+        repo.updateProduct(productId, model, callback)
+    }
+
+    fun deleteProduct(productID: String, callback: (Boolean, String) -> Unit) {
+        repo.deleteProduct(productID, callback)
+    }
+
+    fun uploadImage(context: Context, imageUri: Uri, callback: (String?) -> Unit) {
+        repo.uploadImage(context, imageUri, callback)
+    }
+
+    // --- Data Fetching Logic ---
+
+    fun getProductById(productID: String) {
+        repo.getProductById(productID) { success, _, data ->
+            if (success) _products.postValue(data)
+        }
+    }
+
+    fun getAllProduct() {
+        _loading.postValue(true)
+        repo.getAllProduct { success, _, data ->
+            _loading.postValue(false)
+            if (success && data != null) {
+                _allProducts.postValue(data)
+                _filteredProducts.postValue(data)
+                // Reset slider to max when data is refreshed
+                _sliderValue.postValue(100f)
+                _maxPriceDisplay.postValue(ABSOLUTE_MAX)
+            } else {
+                _allProducts.postValue(emptyList())
+                _filteredProducts.postValue(emptyList())
             }
         }
     }
 
-    // --- LOGIC 1: SLIDER MOVED ---
+    fun getProductByCategory(categoryId: String) {
+        repo.getProductByCategory(categoryId) { success, _, data ->
+            _allProductsCategory.postValue(if (success) data ?: emptyList() else emptyList())
+        }
+    }
+
+    fun getProductsBySeller(sellerId: String) {
+        repo.getProductsBySeller(sellerId) { data ->
+            _sellerProducts.postValue(data)
+        }
+    }
+
+    // --- UI Logic: Filtering & Sliders ---
+
     fun onSliderChange(value: Float) {
         _sliderValue.value = value
-
-        // Calculate price from percentage
-        val percentage = value / 100
-        val calculatedLimit = percentage * ABSOLUTE_MAX
-
+        val calculatedLimit = (value / 100) * ABSOLUTE_MAX
         _maxPriceDisplay.value = calculatedLimit
         filterList(calculatedLimit)
     }
 
-    // --- LOGIC 2: CATEGORY CLICKED ---
     fun onCategorySelect(price: Double) {
-        // Update price display
         _maxPriceDisplay.value = price
         filterList(price)
-
-        // Move slider to correct position
-        // Formula: (Price / Max) * 100
         val newSliderPos = (price / ABSOLUTE_MAX) * 100f
         _sliderValue.value = newSliderPos.toFloat()
     }
 
     private fun filterList(limit: Double) {
         val currentList = _allProducts.value ?: emptyList()
-        val filtered = currentList.filter { product ->
-            product.price <= limit
-        }
+        val filtered = currentList.filter { it.price <= limit }
         _filteredProducts.value = filtered
-    }
-
-    // ... Keep other fetch methods ...
-    private val _products = MutableLiveData<ProductModel?>()
-    val products: MutableLiveData<ProductModel?> get() = _products
-
-    fun getProductById(productID: String) {
-        repo.getProductById(productID) { success, msg, data ->
-            if (success) _products.postValue(data)
-        }
-    }
-
-    private val _allProductsCategory = MutableLiveData<List<ProductModel>?>()
-    val allProductsCategory: MutableLiveData<List<ProductModel>?> get() = _allProductsCategory
-
-    fun getProductByCategory(categoryId: String) {
-        repo.getProductByCategory(categoryId) { success, msg, data ->
-            if (success) _allProductsCategory.postValue(data)
-        }
     }
 }

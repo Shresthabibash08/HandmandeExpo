@@ -8,7 +8,8 @@ data class SellerModel(
     val sellerPhoneNumber: String = "",
     val sellerAddress: String = "",
     val panNumber: String = "",
-    // --- NEW VERIFICATION FIELDS ---
+    val role: String = "seller",
+    // --- VERIFICATION FIELDS ---
     val documentType: String = "",
     val documentUrl: String = "",
     val verificationStatus: String = "Unverified"
@@ -22,6 +23,7 @@ data class SellerModel(
             "sellerPhoneNumber" to sellerPhoneNumber,
             "sellerAddress" to sellerAddress,
             "panNumber" to panNumber,
+            "role" to role,
             "documentType" to documentType,
             "documentUrl" to documentUrl,
             "verificationStatus" to verificationStatus

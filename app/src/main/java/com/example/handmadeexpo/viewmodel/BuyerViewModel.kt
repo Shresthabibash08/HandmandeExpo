@@ -5,6 +5,10 @@ import androidx.lifecycle.ViewModel
 import com.example.handmadeexpo.model.BuyerModel
 import com.example.handmadeexpo.repo.BuyerRepo
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.*
 
 class BuyerViewModel(
@@ -84,6 +88,12 @@ class BuyerViewModel(
     fun checkUserRole(
         userId: String,
         callback: (String?) -> Unit
+    ){
+        repo.getUserRole(userId, callback)
+    }
+
+
+}
     ) {
         val db = FirebaseDatabase.getInstance()
 
