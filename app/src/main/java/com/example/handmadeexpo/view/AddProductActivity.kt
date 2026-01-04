@@ -30,9 +30,11 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.handmadeexpo.model.ProductModel
 import com.example.handmadeexpo.repo.ProductRepoImpl
+import com.example.handmadeexpo.repo.SellerRepoImpl
 import com.example.handmadeexpo.ui.theme.*
 import com.example.handmadeexpo.utils.ImageUtils
 import com.example.handmadeexpo.viewmodel.ProductViewModel
+import com.example.handmadeexpo.viewmodel.SellerViewModel
 
 class AddProductActivity : ComponentActivity() {
 
@@ -78,6 +80,8 @@ fun AddProductBody(
 
     val repo = remember { ProductRepoImpl() }
     val viewModel = remember { ProductViewModel(repo) }
+    val sRepo = remember { SellerRepoImpl() }
+    val sViewModel = remember { SellerViewModel(sRepo) }
 
     Scaffold(
         topBar = {
@@ -273,6 +277,7 @@ fun AddProductBody(
                                 isLoading = true
                                 viewModel.uploadImage(context, selectedImageUri) { imageUrl ->
                                     if (imageUrl != null) {
+                                        val currentUserId = sViewModel.getCurrentUser()?.uid ?: ""
                                         val product = ProductModel(
                                             productId = "",
                                             name = pProductName,
@@ -280,10 +285,11 @@ fun AddProductBody(
                                             description = dDescription,
                                             image = imageUrl,
                                             categoryId = selectedCategory,
-                                            stock = sStockQuantity.toInt()
+                                            stock = sStockQuantity.toInt(),
+                                            sellerId = currentUserId
                                         )
 
-                                        viewModel.addProduct(product) { success, message,data ->
+                                        viewModel.addProduct(product) { success, message, _ ->
                                             isLoading = false
                                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                                             if (success) activity?.finish()

@@ -72,38 +72,9 @@ class BuyerViewModel (val repo: BuyerRepo): ViewModel() {
     fun checkUserRole(
         userId: String,
         callback: (String?) -> Unit
-    ) {
-        val db = FirebaseDatabase.getInstance()
-
-        // First check Buyer
-        db.getReference("Buyer").child(userId)
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    if (snapshot.exists()) {
-                        callback("buyer")
-                    } else {
-                        // If not buyer, check seller
-                        db.getReference("Seller").child(userId)
-                            .addListenerForSingleValueEvent(object : ValueEventListener {
-                                override fun onDataChange(snapshot: DataSnapshot) {
-                                    if (snapshot.exists()) {
-                                        callback("seller")
-                                    } else {
-                                        callback(null)
-                                    }
-                                }
-
-                                override fun onCancelled(error: DatabaseError) {
-                                    callback(null)
-                                }
-                            })
-                    }
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    callback(null)
-                }
-            })
+    ){
+        repo.getUserRole(userId, callback)
     }
+
 
 }

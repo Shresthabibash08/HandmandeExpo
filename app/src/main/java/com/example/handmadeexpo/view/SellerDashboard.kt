@@ -32,80 +32,48 @@ class SellerDashboard : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val sellerId = intent.getStringExtra("userId") ?: ""
+
         setContent {
-            SellerDashboardBody()
+            SellerDashboardBody(sellerId)
         }
     }
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SellerDashboardBody(){
-    data class NavItem(val icon:Int, val label:String)
+fun SellerDashboardBody(sellerId: String) {
 
-    // Make sure these drawables exist in your resources
+    data class NavItem(val icon: Int, val label: String)
+
     val listItems = listOf(
-        NavItem(icon = R.drawable.outline_home_24, label = "Home"),
-        NavItem(icon = R.drawable.baseline_inventory_24, label = "Inventory"),
-        NavItem(icon = R.drawable.outline_contacts_product_24, label = "Profile")
+        NavItem(R.drawable.outline_home_24, "Home"),
+        NavItem(R.drawable.baseline_inventory_24, "Inventory"),
+        NavItem(R.drawable.outline_contacts_product_24, "Profile")
     )
 
-    // ✅ FIXED: Added the missing state variable for navigation
     var selectedIndex by remember { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    titleContentColor = Color.White,
-                    actionIconContentColor = Color.White,
-                    navigationIconContentColor = Color.White,
-                    containerColor = MainColor
+                    containerColor = MainColor,
+                    titleContentColor = Color.White
                 ),
-                navigationIcon = {
-                    IconButton(onClick = {}) {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_arrow_back_ios_24),
-                            contentDescription = null
-                        )
-                    }
-                },
-                title = {
-                    Text("HandMade Expo")
-                },
-                actions = {
-                    IconButton(onClick = {}) {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_arrow_back_ios_24), // Ideally a Notification Icon
-                            contentDescription = null
-                        )
-                    }
-                    IconButton(onClick = {}) {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_arrow_back_ios_24), // Ideally a Cart Icon
-                            contentDescription = null
-                        )
-                    }
-                } // ✅ FIXED: Changed ')' to '}' here
+                title = { Text("HandMade Expo") }
             )
         },
         bottomBar = {
             NavigationBar {
                 listItems.forEachIndexed { index, item ->
                     NavigationBarItem(
-                        icon = {
-                            Icon(
-                                painter = painterResource(item.icon),
-                                contentDescription = item.label
-                            )
-                        },
-                        label = {
-                            Text(item.label)
-                        },
-                        onClick = {
-                            selectedIndex = index
-                        },
-                        selected = selectedIndex == index
+                        icon = { Icon(painterResource(item.icon), null) },
+                        label = { Text(item.label) },
+                        selected = selectedIndex == index,
+                        onClick = { selectedIndex = index }
                     )
                 }
             }
@@ -116,10 +84,10 @@ fun SellerDashboardBody(){
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            when(selectedIndex){
-                0 -> SellerHomeScreen()
-                1 -> InvetoryScreen()
-                2 -> SellerProfileScreen()
+            when (selectedIndex) {
+                0 -> SellerHomeScreen(sellerId)
+                1 -> InvetoryScreen(sellerId)
+                2 -> SellerProfileScreen(sellerId)
             }
         }
     }

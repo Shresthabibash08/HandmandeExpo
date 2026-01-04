@@ -1,5 +1,6 @@
 package com.example.handmadeexpo.view
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +26,10 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,178 +39,96 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.model.ProductModel
+import com.example.handmadeexpo.repo.ProductRepoImpl
+import com.example.handmadeexpo.ui.theme.Orange
+import com.example.handmadeexpo.viewmodel.ProductViewModel
 
 @Composable
-fun SellerHomeScreen() {
-    // 1. Categories Data
-    val categories = listOf(
-        "Beauty" to R.drawable.img_1,
-        "Home" to R.drawable.img_2,
-        "Fashion" to R.drawable.img_3,
-        "Appliances" to R.drawable.img_4,
-        "Party" to R.drawable.img_5,
-        "Toys" to R.drawable.img_6
-    )
+fun SellerHomeScreen(
+    sellerId: String
+) {
+    val viewModel: ProductViewModel = remember {
+        ProductViewModel(ProductRepoImpl())
+    }
 
-    // 2. Seller Products Data (Declared directly using Maps, no class needed)
-    val sellerProducts = listOf(
-        mapOf("name" to "Handmade Vase", "price" to "NRP 1200", "stock" to 50, "sold" to 12, "img" to R.drawable.img_1),
-        mapOf("name" to "Woolen Scarf", "price" to "NRP 800", "stock" to 100, "sold" to 45, "img" to R.drawable.img_6),
-        mapOf("name" to "Wooden Toy", "price" to "NRP 500", "stock" to 30, "sold" to 5, "img" to R.drawable.img_10),
-        mapOf("name" to "Ceramic Bowl", "price" to "NRP 1500", "stock" to 20, "sold" to 18, "img" to R.drawable.img_12),
-        mapOf("name" to "Painting", "price" to "NRP 5000", "stock" to 5, "sold" to 1, "img" to R.drawable.img_17)
-    )
+    LaunchedEffect(sellerId) {
+        Log.d("SELLER_ID_DEBUG", sellerId)
+        viewModel.getProductsBySeller(sellerId)
+    }
 
-    // Used Box to overlay the Floating Action Button on top of the list
-    Box(modifier = Modifier.fillMaxSize()) {
+    val sellerProducts by viewModel.sellerProducts.observeAsState(emptyList())
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
-                .padding(16.dp)
-        ) {
-            // --- Categories Section ---
-            Text(
-                text = "Categories",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF5F5F5))
+            .padding(16.dp)
+    ) {
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(categories) { (name, imageRes) ->
-                    SellerCategoryItem(name, imageRes)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // --- Inventory Section ---
+        item {
             Text(
                 text = "Your Inventory",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
             )
-
             Spacer(modifier = Modifier.height(12.dp))
-
-            // --- Scrollable Product List ---
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(sellerProducts) { product ->
-                    // Extracting data from the Map
-                    SellerProductItem(
-                        name = product["name"] as String,
-                        price = product["price"] as String,
-                        stock = product["stock"] as Int,
-                        sold = product["sold"] as Int,
-                        imageRes = product["img"] as Int
-                    )
-                }
-            }
         }
 
-        // --- Floating Action Button ---
-//        FloatingActionButton(
-//            onClick = { /* No navigation for now */ },
-//            modifier = Modifier
-//                .align(Alignment.BottomEnd)
-//                .padding(24.dp), // Padding from the edges
-//            containerColor = Color(0xFFE65100), // Matching the Orange Theme
-//            contentColor = Color.White
-//        ) {
-//            Icon(Icons.Default.Add, contentDescription = "Add Product")
-//        }
+        items(sellerProducts) { product ->
+            SellerProductCard(product)
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(80.dp))
+        }
     }
 }
 
-// --- Helper Composables ---
 
 @Composable
-fun SellerCategoryItem(name: String, imageRes: Int) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            modifier = Modifier
-                .size(60.dp)
-                .background(Color.White, RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(id = imageRes),
-                contentDescription = name,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Fit
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(name, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-    }
-}
-
-@Composable
-fun SellerProductItem(name: String, price: String, stock: Int, sold: Int, imageRes: Int) {
+fun SellerProductCard(product: ProductModel) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp),
-        modifier = Modifier.fillMaxWidth()
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Product Image
-            Image(
-                painter = painterResource(id = imageRes),
-                contentDescription = name,
-                contentScale = ContentScale.Crop,
+
+            AsyncImage(
+                model = product.image,
+                contentDescription = product.name,
                 modifier = Modifier
-                    .size(60.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .size(70.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
             )
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Product Details
             Column(modifier = Modifier.weight(1f)) {
+                Text(product.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text(
-                    text = name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-                Text(
-                    text = price,
-                    color = Color(0xFFE65100), // Orange
-                    fontSize = 14.sp,
+                    "NRP ${product.price}",
+                    color = Orange,
                     fontWeight = FontWeight.SemiBold
                 )
             }
 
-            // Stats Column
             Column(horizontalAlignment = Alignment.End) {
+                Text("Sold: ${product.sold}", fontSize = 12.sp)
                 Text(
-                    text = "Sold: $sold",
+                    "Stock: ${product.stock}",
                     fontSize = 12.sp,
-                    color = Color.Gray
-                )
-                Text(
-                    text = "Stock: $stock",
-                    fontSize = 12.sp,
-                    color = if (stock < 10) Color.Red else Color(0xFF4CAF50)
+                    color = if (product.stock < 10) Color.Red else Color(0xFF4CAF50)
                 )
             }
         }

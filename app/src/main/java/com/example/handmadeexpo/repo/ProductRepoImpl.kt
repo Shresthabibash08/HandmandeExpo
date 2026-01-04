@@ -18,9 +18,9 @@ import java.io.InputStream
 import java.util.concurrent.Executors
 
 class ProductRepoImpl : ProductRepo {
-    var database : FirebaseDatabase = FirebaseDatabase.getInstance()
+    var database: FirebaseDatabase = FirebaseDatabase.getInstance()
 
-    var ref : DatabaseReference = database.getReference("products")
+    var ref: DatabaseReference = database.getReference("products")
 
     private val cloudinary = Cloudinary(
         mapOf(
@@ -32,49 +32,48 @@ class ProductRepoImpl : ProductRepo {
 
     override fun addProduct(
         model: ProductModel,
-        callback: (Boolean, String,String?) -> Unit
+        callback: (Boolean, String, String?) -> Unit
     ) {
-        val newRef=ref.push()
-        val productId=newRef.key
+        val newRef = ref.push()
+        val productId = newRef.key
 
-        if(productId==null){
-            callback(false,"Failed to create a new product ID",null)
+        if (productId == null) {
+            callback(false, "Failed to create a new product ID", null)
             return
         }
 
-        newRef.setValue(model.copy(productId=productId)).addOnCompleteListener{ task ->
-            if(task.isSuccessful){
-                callback(true,"Product added successfully",productId)
-            }
-            else{
-                callback(false,task.exception?.message ?:"Unknown error while adding product",null)
+        newRef.setValue(model.copy(productId = productId)).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                callback(true, "Product added successfully", productId)
+            } else {
+                callback(false, task.exception?.message ?: "Unknown error while adding product", null)
             }
         }
     }
 
     override fun updateProduct(
+        productId: String,
         model: ProductModel,
         callback: (Boolean, String) -> Unit
     ) {
         ref.child(model.productId).updateChildren(model.toMap()).addOnCompleteListener {
-            if(it.isSuccessful){
-                callback(true,"Product updated successfully")
-            }else{
-                callback(false,"${it.exception?.message}")
+            if (it.isSuccessful) {
+                callback(true, "Product updated successfully")
+            } else {
+                callback(false, "${it.exception?.message}")
             }
         }
     }
-
 
     override fun deleteProduct(
         productID: String,
         callback: (Boolean, String) -> Unit
     ) {
         ref.child(productID).removeValue().addOnCompleteListener {
-            if(it.isSuccessful){
-                callback(true,"Product deleted successfully")
-            }else{
-                callback(false,"${it.exception?.message}")
+            if (it.isSuccessful) {
+                callback(true, "Product deleted successfully")
+            } else {
+                callback(false, "${it.exception?.message}")
             }
         }
     }
@@ -85,16 +84,16 @@ class ProductRepoImpl : ProductRepo {
     ) {
         ref.child(productID).addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                if(snapshot.exists()){
+                if (snapshot.exists()) {
                     var dataa = snapshot.getValue(ProductModel::class.java)
-                    if(dataa != null){
-                        callback(true,"product fetched",dataa)
+                    if (dataa != null) {
+                        callback(true, "product fetched", dataa)
                     }
                 }
             }
 
             override fun onCancelled(error: DatabaseError) {
-                callback(false,error.message,null)
+                callback(false, error.message, null)
             }
         })
     }
@@ -103,16 +102,17 @@ class ProductRepoImpl : ProductRepo {
         category: String,
         callback: (Boolean, String, List<ProductModel?>) -> Unit
     ) {
-        ref.orderByChild("category").equalTo(category).addListenerForSingleValueEvent(object : ValueEventListener{
-            override fun onDataChange(snapshot: DataSnapshot){
-                val  products=mutableListOf<ProductModel>()
-                for (data in snapshot.children){
-                    data.getValue(ProductModel::class.java)?.let{products.add(it)}
+        ref.orderByChild("category").equalTo(category).addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val products = mutableListOf<ProductModel>()
+                for (data in snapshot.children) {
+                    data.getValue(ProductModel::class.java)?.let { products.add(it) }
                 }
+                callback(true, "Products fetched by category", products)
             }
 
             override fun onCancelled(error: DatabaseError) {
-                callback(false,error.message,emptyList())
+                callback(false, error.message, emptyList())
             }
         })
     }
@@ -146,7 +146,7 @@ class ProductRepoImpl : ProductRepo {
 
     // In ProductRepoImpl.kt, update the getAllProduct function
     override fun getAllProduct(callback: (Boolean, String, List<ProductModel>?) -> Unit) {
-        ref.addListenerForSingleValueEvent(object : ValueEventListener {
+        ref.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val products = mutableListOf<ProductModel>()
                 for (data in snapshot.children) {
@@ -165,23 +165,23 @@ class ProductRepoImpl : ProductRepo {
         categoryId: String,
         callback: (Boolean, String, List<ProductModel>?) -> Unit
     ) {
-        ref.orderByChild("categoryId").equalTo(categoryId).addValueEventListener(object : ValueEventListener{
+        ref.orderByChild("categoryId").equalTo(categoryId).addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                if(snapshot.exists()){
+                if (snapshot.exists()) {
                     var allProducts = mutableListOf<ProductModel>()
-                    for(data in snapshot.children){
+                    for (data in snapshot.children) {
                         var product = data.getValue(ProductModel::class.java)
-                        if(product != null){
+                        if (product != null) {
                             allProducts.add(product)
                         }
                     }
 
-                    callback(true,"product fetched",allProducts)
+                    callback(true, "product fetched", allProducts)
                 }
             }
 
             override fun onCancelled(error: DatabaseError) {
-                callback(false,error.message,emptyList())
+                callback(false, error.message, emptyList())
             }
 
         })
@@ -235,5 +235,25 @@ class ProductRepoImpl : ProductRepo {
             }
         }
         return fileName
+    }
+
+    override fun getProductsBySeller(
+        sellerId: String,
+        callback: (List<ProductModel>) -> Unit
+    ) {
+        ref.orderByChild("sellerId")
+            .equalTo(sellerId)
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val list = snapshot.children.mapNotNull {
+                        it.getValue(ProductModel::class.java)
+                    }
+                    callback(list)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    // Log error if needed
+                }
+            })
     }
 }

@@ -53,7 +53,18 @@ class SellerRepoImpl :SellerRepo{
     ) {
         auth.createUserWithEmailAndPassword(email,password).addOnCompleteListener {
             if(it.isSuccessful){
-                callback(true,"Registration Successfully", "${auth.currentUser?.uid}")
+                val userId = auth.currentUser!!.uid
+
+                FirebaseDatabase.getInstance()
+                    .getReference("Seller")
+                    .child(userId)
+                    .setValue(
+                        mapOf(
+                            "email" to email,
+                            "role" to "seller"
+                        )
+                    )
+                callback(true, "Registration Successful", userId)
             }
             else{
                 callback(false,"${it.exception?.message}","")

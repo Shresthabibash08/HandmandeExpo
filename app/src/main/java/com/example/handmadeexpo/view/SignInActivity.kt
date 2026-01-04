@@ -56,6 +56,7 @@ import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.ui.theme.AquaGreen
 import com.example.handmadeexpo.ui.theme.Blue1
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
+import com.google.firebase.database.FirebaseDatabase
 
 class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -199,42 +200,47 @@ fun SignInBody() {
 
                     Button(
                         onClick = {
-                            buyerViewModel.login(email, password) { success, msg ->
-                                if (success) {
-                                    val userId = buyerViewModel.getCurrentUser()?.uid
-
-                                    if (userId != null) {
-                                        buyerViewModel.checkUserRole(userId) { role ->
-                                            when (role) {
-                                                "buyer" -> {
-                                                    context.startActivity(
-                                                        Intent(context, DashboardActivity::class.java)
-                                                    )
-                                                    activity?.finish()
-                                                }
-
-                                                "seller" -> {
-                                                    context.startActivity(
-                                                        Intent(context, SellerDashboard::class.java)
-                                                    )
-                                                    activity?.finish()
-                                                }
-
-                                                else -> {
-                                                    Toast.makeText(
-                                                        context,
-                                                        "User role not found",
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
-                                                }
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                }
+                            if (email.isBlank() || password.isBlank()) {
+                                Toast.makeText(context, "Email and password required", Toast.LENGTH_SHORT).show()
+                                return@Button
                             }
 
+                            buyerViewModel.login(email, password) { success, msg ->
+                                if (!success) {
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                    return@login
+                                }
+
+                                val userId = buyerViewModel.getCurrentUser()?.uid
+                                if (userId == null) {
+                                    Toast.makeText(context, "User not found", Toast.LENGTH_SHORT).show()
+                                    return@login
+                                }
+
+                                buyerViewModel.checkUserRole(userId) { role ->
+                                    when (role) {
+                                        "buyer" -> {
+                                            context.startActivity(
+                                                Intent(context, DashboardActivity::class.java)
+                                                    .putExtra("userId", userId)
+                                            )
+                                            activity?.finish()
+                                        }
+
+                                        "seller" -> {
+                                            context.startActivity(
+                                                Intent(context, SellerDashboard::class.java)
+                                                    .putExtra("userId", userId)   // ✅ VERY IMPORTANT
+                                            )
+                                            activity?.finish()
+                                        }
+
+                                        else -> {
+                                            Toast.makeText(context, "User role not defined", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = AquaGreen

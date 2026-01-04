@@ -27,4 +27,6 @@ interface BuyerRepo {
 
     fun getCurrentUser (): FirebaseUser?
 
+    fun getUserRole(userId: String, callback: (String?) -> Unit)
+
 }

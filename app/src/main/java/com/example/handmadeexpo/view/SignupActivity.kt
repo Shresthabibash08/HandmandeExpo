@@ -79,7 +79,7 @@ class SignupActivity : ComponentActivity() {
 @Composable
 fun SingUpBody(){
     var buyerViewModel=remember { BuyerViewModel(BuyerRepoImpl()) }
-    var fullname by remember { mutableStateOf("") }
+    var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -143,8 +143,8 @@ fun SingUpBody(){
                 }
                 AppOutlinedTextField(
                     label = "Full Name",
-                    value = fullname,
-                    onValueChange = { fullname = it }
+                    value = fullName,
+                    onValueChange = { fullName = it }
                 )
                 Spacer(modifier = Modifier.padding(vertical = 2.dp))
                 AppOutlinedTextField(
@@ -205,13 +205,13 @@ fun SingUpBody(){
                     onClick = {
 
                         when {
-                            fullname.isBlank() ->
+                            fullName.isBlank() ->
                                 Toast.makeText(context, "Full name is required", Toast.LENGTH_SHORT).show()
 
-                            !fullname.matches(Regex("^[A-Za-z ]+$")) ->
+                            !fullName.matches(Regex("^[A-Za-z ]+$")) ->
                                 Toast.makeText(context, "Name should contain only letters and spaces", Toast.LENGTH_SHORT).show()
 
-                            fullname.length < 2 ->
+                            fullName.length < 2 ->
                                 Toast.makeText(context, "Name must be at least 2 characters", Toast.LENGTH_SHORT).show()
 
                             email.isBlank() ->
@@ -247,7 +247,7 @@ fun SingUpBody(){
                                     if (success) {
                                         val buyerModel = BuyerModel(
                                             buyerId = buyerId,
-                                            buyerName = fullname,
+                                            buyerName = fullName,
                                             buyerEmail = email,
                                             buyerAddress = adress,
                                             buyerPhoneNumber = phoneNumber

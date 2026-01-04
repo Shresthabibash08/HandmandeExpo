@@ -13,7 +13,7 @@ interface ProductRepo {
 
     fun addProduct(model: ProductModel, callback:(Boolean, String,String?)->Unit)
 
-    fun updateProduct(model: ProductModel,callback: (Boolean, String) -> Unit)
+    fun updateProduct(productId: String,model: ProductModel,callback: (Boolean, String) -> Unit)
 
     fun deleteProduct(productID:String,callback: (Boolean, String) -> Unit)
 
@@ -36,6 +36,7 @@ interface ProductRepo {
 
     fun getFileNameFromUri(context:Context,uri: Uri):String?
 
+    fun getProductsBySeller( sellerId: String, callback: (List<ProductModel>) -> Unit)
 
 
 }

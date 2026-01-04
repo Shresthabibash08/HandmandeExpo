@@ -46,7 +46,7 @@ import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InvetoryScreen() {
+fun InvetoryScreen(sellerId: String) {
     val context = LocalContext.current
     val productViewModel: ProductViewModel = remember { ProductViewModel(ProductRepoImpl()) }
 
@@ -281,7 +281,7 @@ fun EditProductDialog(
                         description = desc,
                         image = image
                     )
-                    productViewModel.updateProduct(updated) { success, msg ->
+                    productViewModel.updateProduct(product.productId,updated) { success, msg ->
                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         if (success) onDismiss()
                     }

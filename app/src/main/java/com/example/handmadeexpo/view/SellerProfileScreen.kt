@@ -36,7 +36,7 @@ import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.Purple80
 
 @Composable
-fun SellerProfileScreen(){
+fun SellerProfileScreen(sellerId: String){
     Box(modifier = Modifier.fillMaxSize()) {
         // Background image
         Image(
