@@ -4,108 +4,96 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.repo.SellerRepoImpl
 import com.example.handmadeexpo.ui.theme.MainColor
+import com.example.handmadeexpo.viewmodel.SellerViewModel
 
 class SellerDashboard : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Capture the sellerId from the login intent
+        val sellerId = intent.getStringExtra("userId") ?: ""
+
         setContent {
-            SellerDashboardBody()
+            SellerDashboardBody(sellerId)
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SellerDashboardBody(){
-    data class NavItem(val icon:Int, val label:String)
+fun SellerDashboardBody(sellerId: String) {
 
-    // Make sure these drawables exist in your resources
+    data class NavItem(val icon: Int, val label: String)
+
     val listItems = listOf(
-        NavItem(icon = R.drawable.outline_home_24, label = "Home"),
-        NavItem(icon = R.drawable.baseline_inventory_24, label = "Inventory"),
-        NavItem(icon = R.drawable.outline_contacts_product_24, label = "Profile")
+        NavItem(R.drawable.outline_home_24, "Home"),
+        NavItem(R.drawable.baseline_inventory_24, "Inventory"),
+        NavItem(R.drawable.outline_contacts_product_24, "Profile")
     )
 
-    // ✅ FIXED: Added the missing state variable for navigation
+    // State management
     var selectedIndex by remember { mutableStateOf(0) }
+    var editing by remember { mutableStateOf(false) }
+    
+    // ViewModel initialization
+    val repo = remember { SellerRepoImpl() }
+    val viewModel = remember { SellerViewModel(repo) }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MainColor,
                     titleContentColor = Color.White,
-                    actionIconContentColor = Color.White,
                     navigationIconContentColor = Color.White,
-                    containerColor = MainColor
+                    actionIconContentColor = Color.White
                 ),
+                title = { Text("HandMade Expo", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
-                    IconButton(onClick = {}) {
+                    IconButton(onClick = { /* Handle navigation drawer or back */ }) {
                         Icon(
                             painter = painterResource(R.drawable.outline_arrow_back_ios_24),
-                            contentDescription = null
+                            contentDescription = "Back"
                         )
                     }
-                },
-                title = {
-                    Text("HandMade Expo")
                 },
                 actions = {
-                    IconButton(onClick = {}) {
+                    IconButton(onClick = { /* Notifications */ }) {
                         Icon(
-                            painter = painterResource(R.drawable.outline_arrow_back_ios_24), // Ideally a Notification Icon
-                            contentDescription = null
+                            painter = painterResource(R.drawable.outline_home_24), // Replace with notification icon
+                            contentDescription = "Notifications"
                         )
                     }
-                    IconButton(onClick = {}) {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_arrow_back_ios_24), // Ideally a Cart Icon
-                            contentDescription = null
-                        )
-                    }
-                } // ✅ FIXED: Changed ')' to '}' here
+                }
             )
         },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = Color.White,
+                tonalElevation = 8.dp
+            ) {
                 listItems.forEachIndexed { index, item ->
                     NavigationBarItem(
-                        icon = {
-                            Icon(
-                                painter = painterResource(item.icon),
-                                contentDescription = item.label
-                            )
-                        },
-                        label = {
-                            Text(item.label)
-                        },
-                        onClick = {
-                            selectedIndex = index
-                        },
-                        selected = selectedIndex == index
+                        icon = { Icon(painterResource(item.icon), contentDescription = item.label) },
+                        label = { Text(item.label) },
+                        selected = selectedIndex == index,
+                        onClick = { 
+                            selectedIndex = index 
+                            editing = false // Reset editing state when switching tabs
+                        }
                     )
                 }
             }
@@ -116,10 +104,23 @@ fun SellerDashboardBody(){
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            when(selectedIndex){
-                0 -> SellerHomeScreen()
-                1 -> InvetoryScreen()
-                2 -> SellerProfileScreen()
+            when (selectedIndex) {
+                0 -> SellerHomeScreen(sellerId)
+                1 -> InvetoryScreen(sellerId)
+                2 -> {
+                    if (editing) {
+                        EditSellerProfileScreen(
+                            viewModel = viewModel,
+                            onBack = { editing = false }
+                        )
+                    } else {
+                        SellerProfileScreen(
+                            sellerId = sellerId,
+                            viewModel = viewModel,
+                            onEditProfileClick = { editing = true }
+                        )
+                    }
+                }
             }
         }
     }

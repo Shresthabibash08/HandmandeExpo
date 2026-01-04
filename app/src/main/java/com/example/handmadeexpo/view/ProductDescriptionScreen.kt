@@ -1,6 +1,5 @@
 package com.example.handmadeexpo.view
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -20,16 +19,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.handmadeexpo.R
+import com.example.handmadeexpo.model.ProductModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProductDescription(
-    name: String,
-    price: String,
-    imageRes: Int,
+fun ProductDescriptionScreen(
+    product: ProductModel, 
     onBackClick: () -> Unit
 ) {
-    // Define the colors within the file to ensure it works
+    // --- THEME COLORS ---
     val OrangeBrand = Color(0xFFE65100)
     val CreamBackground = Color(0xFFFFF8E1)
     val TextGray = Color(0xFF757575)
@@ -46,7 +46,6 @@ fun ProductDescription(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = CreamBackground)
             )
         },
-        // Floating bottom bar for the buttons so they are always accessible
         bottomBar = {
             BottomAppBar(
                 containerColor = Color.White,
@@ -54,15 +53,12 @@ fun ProductDescription(
                 modifier = Modifier.height(80.dp)
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // ADD TO CART BUTTON
                     OutlinedButton(
-                        onClick = { /* Logic */ },
+                        onClick = { /* TODO: Add to cart logic */ },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
@@ -70,9 +66,8 @@ fun ProductDescription(
                         Text("Add to Cart", color = OrangeBrand, fontWeight = FontWeight.Bold)
                     }
 
-                    // BUY NOW BUTTON
                     Button(
-                        onClick = { /* Logic */ },
+                        onClick = { /* TODO: Buy now logic */ },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = OrangeBrand)
@@ -83,37 +78,35 @@ fun ProductDescription(
             }
         }
     ) { paddingValues ->
-        // This Column is now scrollable
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(Color.White)
-                .verticalScroll(rememberScrollState()) // <--- ENABLE SCROLLING HERE
+                .verticalScroll(rememberScrollState())
         ) {
-            // 1. ENLARGED PRODUCT IMAGE
+            // 1. PRODUCT IMAGE
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(380.dp) // Large height
+                    .height(380.dp)
                     .background(CreamBackground),
                 contentAlignment = Alignment.Center
             ) {
-                Image(
-                    painter = painterResource(id = imageRes),
-                    contentDescription = name,
+                AsyncImage(
+                    model = product.image,
+                    contentDescription = product.name,
                     modifier = Modifier
-                        .fillMaxSize(0.85f) // Makes it look larger
+                        .fillMaxSize(0.85f)
                         .clip(RoundedCornerShape(16.dp)),
-                    contentScale = ContentScale.Fit
+                    contentScale = ContentScale.Fit,
+                    error = painterResource(R.drawable.img_1) // Fallback placeholder
                 )
             }
 
             // 2. PRODUCT INFO SECTION
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp)
+                modifier = Modifier.fillMaxWidth().padding(20.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -121,14 +114,14 @@ fun ProductDescription(
                     verticalAlignment = Alignment.Top
                 ) {
                     Text(
-                        text = name,
+                        text = product.name,
                         fontSize = 26.sp,
                         fontWeight = FontWeight.ExtraBold,
                         modifier = Modifier.weight(1f),
                         lineHeight = 32.sp
                     )
                     Text(
-                        text = price,
+                        text = "NRP ${product.price.toInt()}",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = OrangeBrand
@@ -155,9 +148,9 @@ fun ProductDescription(
                     )
                 }
 
-                Divider(modifier = Modifier.padding(vertical = 20.dp), thickness = 0.5.dp)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp), thickness = 0.5.dp)
 
-                // 4. DESCRIPTION SECTION
+                // 4. DESCRIPTION
                 Text(
                     text = "Description",
                     fontSize = 18.sp,
@@ -168,21 +161,33 @@ fun ProductDescription(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = "This premium handmade product is part of our exclusive Expo collection. " +
-                            "It is designed with high-quality materials to ensure durability and style. " +
-                            "Whether you are buying this for yourself or as a gift, it represents the " +
-                            "finest craftsmanship available.\n\n" +
-                            "Key Features:\n" +
-                            "• Handmade with precision\n" +
-                            "• Eco-friendly materials\n" +
-                            "• Unique design not found in stores\n" +
-                            "• Limited edition collection.",
+                    text = if (product.description.isNotEmpty()) product.description 
+                           else "This premium handmade product is part of our exclusive Expo collection.",
                     fontSize = 16.sp,
                     color = TextGray,
                     lineHeight = 24.sp
                 )
 
-                // Extra spacer to ensure content doesn't get hidden behind the BottomAppBar
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // 5. STOCK STATUS
+                Text(
+                    text = "Stock Information",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = if (product.stock > 0) "Available: ${product.stock} items in stock"
+                           else "Currently out of stock",
+                    fontSize = 16.sp,
+                    color = if (product.stock > 0) Color(0xFF2E7D32) else Color.Red,
+                    fontWeight = FontWeight.Medium
+                )
+
                 Spacer(modifier = Modifier.height(40.dp))
             }
         }
