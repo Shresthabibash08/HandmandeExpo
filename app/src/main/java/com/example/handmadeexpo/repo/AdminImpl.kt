@@ -29,7 +29,6 @@ class AdminImpl : AdminRepo {
 
     override fun deleteUser(id: String, role: String, onComplete: (Boolean) -> Unit) {
         val node = if (role.equals("seller", ignoreCase = true)) "Seller" else "Buyer"
-        database.child(node).child(id).removeValue()
-            .addOnCompleteListener { onComplete(it.isSuccessful) }
+        database.child(node).child(id).removeValue().addOnCompleteListener { onComplete(it.isSuccessful) }
     }
 }

@@ -2,41 +2,39 @@ package com.example.handmadeexpo.viewmodel
 
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
-import com.example.handmadeexpo.model.BuyerModel
-import com.example.handmadeexpo.model.SellerModel
-import com.example.handmadeexpo.repo.AdminRepo
-import com.example.handmadeexpo.repo.AdminImpl
+import com.example.handmadeexpo.model.*
+import com.example.handmadeexpo.repo.*
 
 class AdminViewModel : ViewModel() {
-    private val repository: AdminRepo = AdminImpl()
+    private val adminRepo: AdminRepo = AdminImpl()
+    private val productRepo: ProductRepo = ProductRepoImpl()
 
     val sellers = mutableStateListOf<SellerModel>()
     val buyers = mutableStateListOf<BuyerModel>()
+    val products = mutableStateListOf<ProductModel>()
 
     var searchQuery by mutableStateOf("")
+    var isLoading by mutableStateOf(true)
 
-    // Loading States
-    var isSellersLoading by mutableStateOf(true)
-    var isBuyersLoading by mutableStateOf(true)
-
-    init {
-        fetchData()
-    }
+    init { fetchData() }
 
     private fun fetchData() {
-        repository.getSellers { data ->
-            sellers.clear()
-            sellers.addAll(data)
-            isSellersLoading = false
+        adminRepo.getSellers { data -> sellers.clear(); sellers.addAll(data) }
+        adminRepo.getBuyers { data -> buyers.clear(); buyers.addAll(data) }
+        productRepo.getAllProduct { success, _, data ->
+            if (success && data != null) {
+                products.clear()
+                products.addAll(data)
+            }
+            isLoading = false
         }
-        repository.getBuyers { data ->
-            buyers.clear()
-            buyers.addAll(data)
-            isBuyersLoading = false
-        }
+    }
+
+    fun deleteProduct(id: String) {
+        productRepo.deleteProduct(id) { _, _ -> }
     }
 
     fun deleteUser(id: String, role: String) {
-        repository.deleteUser(id, role) { }
+        adminRepo.deleteUser(id, role) { }
     }
 }

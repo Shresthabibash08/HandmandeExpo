@@ -3,6 +3,7 @@ package com.example.handmadeexpo.view
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -33,59 +34,72 @@ fun AdminDashboardScreen(adminViewModel: AdminViewModel = viewModel()) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Admin Dashboard", color = Color.White) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color(0xFF6200EE))
+                // CHANGED: containerColor set to Green (0xFF4CAF50)
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color(0xFF4CAF50)
+                )
             )
         },
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(selected = selectedTab == 0, onClick = { selectedTab = 0 }, label = { Text("Home") }, icon = { Icon(Icons.Default.Home, null) })
-                NavigationBarItem(selected = selectedTab == 1, onClick = { selectedTab = 1 }, label = { Text("Complaints") }, icon = { Icon(Icons.Default.Warning, null) })
-                NavigationBarItem(selected = selectedTab == 2, onClick = { selectedTab = 2 }, label = { Text("Users") }, icon = { Icon(Icons.Default.Person, null) })
+                NavigationBarItem(selected = selectedTab == 1, onClick = { selectedTab = 1 }, label = { Text("Users") }, icon = { Icon(Icons.Default.Person, null) })
+                NavigationBarItem(selected = selectedTab == 2, onClick = { selectedTab = 2 }, label = { Text("Products") }, icon = { Icon(Icons.Default.ShoppingBag, null) })
+                NavigationBarItem(selected = selectedTab == 3, onClick = { selectedTab = 3 }, label = { Text("Complaints") }, icon = { Icon(Icons.Default.Warning, null) })
             }
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
             when (selectedTab) {
-                0 -> AdminOverview(adminViewModel) { selectedTab = 2 }
-                1 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Coming Soon") }
-                2 -> AdminUserListScreen(adminViewModel)
+                0 -> AdminOverview(
+                    adminViewModel,
+                    onUserClick = { selectedTab = 1 },
+                    onProductClick = { selectedTab = 2 }
+                )
+                1 -> AdminUserListScreen(adminViewModel)
+                2 -> AdminProductListScreen(adminViewModel)
+                3 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Complaints Section: Coming Soon", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                }
             }
         }
     }
 }
 
 @Composable
-fun AdminOverview(viewModel: AdminViewModel, onRedirect: () -> Unit) {
+fun AdminOverview(viewModel: AdminViewModel, onUserClick: () -> Unit, onProductClick: () -> Unit) {
     val totalUsers = viewModel.sellers.size + viewModel.buyers.size
 
     Column(modifier = Modifier.padding(16.dp)) {
-        OutlinedTextField(
-            value = viewModel.searchQuery,
-            onValueChange = { viewModel.searchQuery = it },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Search...") },
-            leadingIcon = { Icon(Icons.Default.Search, null) }
-        )
-        Spacer(Modifier.height(20.dp))
-        Text("Statistics", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        Text("System Statistics", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        Spacer(Modifier.height(16.dp))
 
-        if (viewModel.isSellersLoading || viewModel.isBuyersLoading) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), color = Color(0xFF6200EE))
+        if (viewModel.isLoading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = Color(0xFF4CAF50))
         } else {
-            StatCard("Total Users", totalUsers.toString(), Modifier.fillMaxWidth().padding(vertical = 8.dp), Color(0xFF6200EE))
+            // All cards are now clickable as requested
+            DashboardStatCard("Total Users", totalUsers.toString(), Color(0xFF6200EE), Modifier.fillMaxWidth().clickable { onUserClick() })
+            Spacer(Modifier.height(8.dp))
+
+            DashboardStatCard("Total Products", viewModel.products.size.toString(), Color(0xFF2196F3), Modifier.fillMaxWidth().clickable { onProductClick() })
+            Spacer(Modifier.height(8.dp))
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatCard("Sellers", viewModel.sellers.size.toString(), Modifier.weight(1f), Color(0xFFFF9800))
-                StatCard("Buyers", viewModel.buyers.size.toString(), Modifier.weight(1f), Color(0xFF4CAF50))
+                DashboardStatCard("Sellers", viewModel.sellers.size.toString(), Color(0xFFFF9800), Modifier.weight(1f).clickable { onUserClick() })
+                DashboardStatCard("Buyers", viewModel.buyers.size.toString(), Color(0xFF4CAF50), Modifier.weight(1f).clickable { onUserClick() })
             }
         }
     }
 }
 
 @Composable
-fun StatCard(label: String, count: String, modifier: Modifier, color: Color) {
-    Card(modifier = modifier.height(100.dp), colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))) {
+fun DashboardStatCard(label: String, count: String, color: Color, modifier: Modifier) {
+    Card(
+        modifier = modifier.height(100.dp),
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))
+    ) {
         Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
-            Text(count, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(count, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = color)
             Text(label, fontSize = 14.sp)
         }
     }

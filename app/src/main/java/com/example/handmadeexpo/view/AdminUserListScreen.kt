@@ -23,6 +23,7 @@ fun AdminUserListScreen(viewModel: AdminViewModel) {
     var tabIndex by remember { mutableIntStateOf(0) }
     var selectedSeller by remember { mutableStateOf<SellerModel?>(null) }
     var selectedBuyer by remember { mutableStateOf<BuyerModel?>(null) }
+    var userToDelete by remember { mutableStateOf<Pair<String, String>?>(null) } // ID to Role
 
     Column(modifier = Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = tabIndex) {
@@ -30,56 +31,35 @@ fun AdminUserListScreen(viewModel: AdminViewModel) {
             Tab(selected = tabIndex == 1, onClick = { tabIndex = 1 }, text = { Text("Buyers") })
         }
 
-        // Check if data is still loading
-        if (viewModel.isSellersLoading || viewModel.isBuyersLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFF6200EE))
-            }
+        if (viewModel.isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         } else {
             LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (tabIndex == 0) {
-                    items(viewModel.sellers.filter { it.shopName.contains(viewModel.searchQuery, true) }) { seller ->
-                        UserRow(seller.shopName, seller.sellerEmail, onDelete = { viewModel.deleteUser(seller.sellerId, "seller") }) {
-                            selectedSeller = seller
-                        }
+                    items(viewModel.sellers) { seller ->
+                        UserRow(seller.shopName, seller.sellerEmail, onDelete = { userToDelete = seller.sellerId to "seller" }) { selectedSeller = seller }
                     }
                 } else {
-                    items(viewModel.buyers.filter { it.buyerName.contains(viewModel.searchQuery, true) }) { buyer ->
-                        UserRow(buyer.buyerName, buyer.buyerEmail, onDelete = { viewModel.deleteUser(buyer.buyerId, "buyer") }) {
-                            selectedBuyer = buyer
-                        }
+                    items(viewModel.buyers) { buyer ->
+                        UserRow(buyer.buyerName, buyer.buyerEmail, onDelete = { userToDelete = buyer.buyerId to "buyer" }) { selectedBuyer = buyer }
                     }
                 }
             }
         }
     }
 
-    // Detail Popups showing ALL data
-    selectedSeller?.let { seller ->
-        UserDetailPopup(
-            title = "Seller Details",
-            details = mapOf(
-                "Shop Name" to seller.shopName,
-                "Seller ID" to seller.sellerId,
-                "Email" to seller.sellerEmail,
-                "Phone" to seller.sellerPhoneNumber,
-                "Address" to seller.sellerAddress,
-                "PAN Number" to seller.panNumber
-            )
-        ) { selectedSeller = null }
+    if (userToDelete != null) {
+        DeleteConfirmationDialog(onConfirm = {
+            viewModel.deleteUser(userToDelete!!.first, userToDelete!!.second)
+            userToDelete = null
+        }, onDismiss = { userToDelete = null })
     }
 
+    selectedSeller?.let { seller ->
+        UserDetailPopup("Seller Details", mapOf("Shop" to seller.shopName, "Email" to seller.sellerEmail, "Phone" to seller.sellerPhoneNumber, "Address" to seller.sellerAddress)) { selectedSeller = null }
+    }
     selectedBuyer?.let { buyer ->
-        UserDetailPopup(
-            title = "Buyer Details",
-            details = mapOf(
-                "Name" to buyer.buyerName,
-                "Buyer ID" to buyer.buyerId,
-                "Email" to buyer.buyerEmail,
-                "Phone" to buyer.buyerPhoneNumber,
-                "Address" to buyer.buyerAddress
-            )
-        ) { selectedBuyer = null }
+        UserDetailPopup("Buyer Details", mapOf("Name" to buyer.buyerName, "Email" to buyer.buyerEmail, "Phone" to buyer.buyerPhoneNumber, "Address" to buyer.buyerAddress)) { selectedBuyer = null }
     }
 }
 
@@ -102,18 +82,24 @@ fun UserDetailPopup(title: String, details: Map<String, String>, onDismiss: () -
         onDismissRequest = onDismiss,
         title = { Text(title, fontWeight = FontWeight.Bold) },
         text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                details.forEach { (label, value) ->
-                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                        Text(label, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.Gray)
-                        Text(value.ifEmpty { "Not Provided" }, fontSize = 16.sp)
-                        HorizontalDivider(modifier = Modifier.padding(top = 4.dp), thickness = 0.5.dp)
-                    }
+            Column {
+                details.forEach { (k, v) ->
+                    Text("$k:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(v.ifEmpty { "N/A" }, modifier = Modifier.padding(bottom = 8.dp))
                 }
             }
         },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
-        }
+        confirmButton = { Button(onClick = onDismiss) { Text("Close") } }
+    )
+}
+
+@Composable
+fun DeleteConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirm Delete") },
+        text = { Text("Are you sure you want to delete this? This action cannot be undone.") },
+        confirmButton = { Button(onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) { Text("Delete") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
