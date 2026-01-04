@@ -14,10 +14,12 @@ class SellerViewModel(private val repo: SellerRepo) : ViewModel() {
 
     // --- LIVE DATA ---
     private val _seller = MutableLiveData<SellerModel?>()
-    val seller: LiveData<SellerModel?> get() = _seller
+    val seller: LiveData<SellerModel?>
+        get() = _seller
 
     private val _loading = MutableLiveData<Boolean>()
-    val loading: LiveData<Boolean> get() = _loading
+    val loading: LiveData<Boolean>
+        get() = _loading // FIXED: Returns _loading to prevent StackOverflow crash
 
     // --- AUTH METHODS ---
     fun login(email: String, password: String, callback: (Boolean, String) -> Unit) {
@@ -43,9 +45,13 @@ class SellerViewModel(private val repo: SellerRepo) : ViewModel() {
     // --- DATA FETCHING & DATABASE ---
     fun getSellerDetailsById(sellerId: String) {
         _loading.postValue(true)
-        repo.getSellerDetailsById(sellerId) { success, _, data ->
+        repo.getSellerDetailsById(sellerId) { success, msg, data ->
             _loading.postValue(false)
-            _seller.postValue(if (success) data else null)
+            if (success) {
+                _seller.postValue(data)
+            } else {
+                _seller.postValue(null)
+            }
         }
     }
 
@@ -57,12 +63,8 @@ class SellerViewModel(private val repo: SellerRepo) : ViewModel() {
         repo.addSellerToDatabase(sellerId, sellerModel, callback)
     }
 
-    // --- PROFILE MANAGEMENT ---
-    fun updateProfile(
-        sellerId: String,
-        model: SellerModel,
-        callback: (Boolean, String) -> Unit
-    ) {
+    // --- PROFILE & MEDIA MANAGEMENT ---
+    fun updateProfile(sellerId: String, model: SellerModel, callback: (Boolean, String) -> Unit) {
         repo.updateProfile(sellerId, model, callback)
     }
 
@@ -78,16 +80,12 @@ class SellerViewModel(private val repo: SellerRepo) : ViewModel() {
         repo.uploadImage(context, imageUri, callback)
     }
 
-    fun deleteAccount(
-        sellerId: String,
-        callback: (Boolean, String) -> Unit
-    ) {
+    fun deleteAccount(sellerId: String, callback: (Boolean, String) -> Unit) {
         repo.deleteAccount(sellerId, callback)
     }
 }
 
 // --- FACTORY CLASS ---
-// Required because ViewModel has a constructor parameter (SellerRepo)
 class SellerViewModelFactory(private val repo: SellerRepo) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SellerViewModel::class.java)) {

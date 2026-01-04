@@ -35,7 +35,8 @@ import com.example.handmadeexpo.viewmodel.SellerViewModelFactory
 
 @Composable
 fun SellerProfileScreen(
-    onEditProfileClick: () -> Unit
+    onEditProfileClick: () -> Unit,
+    viewModel: SellerViewModel
 ) {
     val context = LocalContext.current
     

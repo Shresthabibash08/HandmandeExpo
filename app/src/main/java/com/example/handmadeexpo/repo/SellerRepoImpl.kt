@@ -116,7 +116,9 @@ class SellerRepoImpl : SellerRepo {
         }
     }
 
-    override fun updateProfileFields(sellerId: String, updates: Map<String, Any>, callback: (Boolean, String) -> Unit) {
+    override fun updateProfileFields(sellerId: String, updates: Map<String, Any>,
+                                     callback: (Boolean, String) -> Unit
+    ) {
         ref.child(sellerId).updateChildren(updates).addOnCompleteListener { task ->
             if (task.isSuccessful) callback(true, "Fields Updated")
             else callback(false, task.exception?.message ?: "Update Failed")

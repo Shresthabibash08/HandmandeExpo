@@ -50,6 +50,11 @@ interface SellerRepo {
         sellerModel: SellerModel,
         callback: (Boolean, String) -> Unit
     )
+    fun updateProfileFields(
+        sellerId: String,
+        updates: Map<String, Any>,
+        callback: (Boolean, String) -> Unit
+    )
 
     fun getCurrentUser (): FirebaseUser?
 
