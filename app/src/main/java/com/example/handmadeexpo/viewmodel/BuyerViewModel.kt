@@ -5,36 +5,22 @@ import androidx.lifecycle.ViewModel
 import com.example.handmadeexpo.model.BuyerModel
 import com.example.handmadeexpo.repo.BuyerRepo
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.*
 
 class BuyerViewModel(
     private val repo: BuyerRepo
 ) : ViewModel() {
 
-    fun login(
-        email: String,
-        password: String,
-        callback: (Boolean, String) -> Unit
-    ) {
+    // --- Auth Operations ---
+    fun login(email: String, password: String, callback: (Boolean, String) -> Unit) {
         repo.login(email, password, callback)
     }
 
-    fun forgotPassword(
-        email: String,
-        callback: (Boolean, String) -> Unit
-    ) {
+    fun forgotPassword(email: String, callback: (Boolean, String) -> Unit) {
         repo.forgotPassword(email, callback)
     }
 
-    fun register(
-        email: String,
-        password: String,
-        callback: (Boolean, String, String) -> Unit
-    ) {
+    fun register(email: String, password: String, callback: (Boolean, String, String) -> Unit) {
         repo.register(email, password, callback)
     }
 
@@ -46,14 +32,14 @@ class BuyerViewModel(
         return repo.getCurrentUser()
     }
 
+    // --- State Management ---
     private val _buyer = MutableLiveData<BuyerModel?>()
-    val buyer: MutableLiveData<BuyerModel?>
-        get() = _buyer
+    val buyer: MutableLiveData<BuyerModel?> get() = _buyer
 
     private val _loading = MutableLiveData<Boolean>()
-    val loading: MutableLiveData<Boolean>
-        get() = _loading
+    val loading: MutableLiveData<Boolean> get() = _loading
 
+    // --- Profile Operations ---
     fun getBuyerDetailsById(buyerId: String) {
         _loading.postValue(true)
         repo.getBuyerDetailsById(buyerId) { success, _, data ->
@@ -62,39 +48,20 @@ class BuyerViewModel(
         }
     }
 
-    fun updateProfile(
-        buyerId: String,
-        model: BuyerModel,
-        callback: (Boolean, String) -> Unit
-    ) {
+    fun updateProfile(buyerId: String, model: BuyerModel, callback: (Boolean, String) -> Unit) {
         repo.updateProfile(buyerId, model, callback)
     }
 
-    fun deleteAccount(
-        buyerId: String,
-        callback: (Boolean, String) -> Unit
-    ) {
+    fun deleteAccount(buyerId: String, callback: (Boolean, String) -> Unit) {
         repo.deleteAccount(buyerId, callback)
     }
 
-    fun addBuyerToDatabase(
-        buyerId: String,
-        buyerModel: BuyerModel,
-        callback: (Boolean, String) -> Unit
-    ) {
+    fun addBuyerToDatabase(buyerId: String, buyerModel: BuyerModel, callback: (Boolean, String) -> Unit) {
         repo.addBuyerToDatabase(buyerId, buyerModel, callback)
     }
 
-    fun checkUserRole(
-        userId: String,
-        callback: (String?) -> Unit
-    ){
-        repo.getUserRole(userId, callback)
-    }
-
-
-}
-    ) {
+    // --- Role Check Logic (Moved inside the class) ---
+    fun checkUserRole(userId: String, callback: (String?) -> Unit) {
         val db = FirebaseDatabase.getInstance()
 
         db.getReference("Buyer").child(userId)
@@ -103,6 +70,7 @@ class BuyerViewModel(
                     if (snapshot.exists()) {
                         callback("buyer")
                     } else {
+                        // Check Seller node if not found in Buyer
                         db.getReference("Seller").child(userId)
                             .addListenerForSingleValueEvent(object : ValueEventListener {
                                 override fun onDataChange(snapshot: DataSnapshot) {
@@ -112,14 +80,12 @@ class BuyerViewModel(
                                         callback(null)
                                     }
                                 }
-
                                 override fun onCancelled(error: DatabaseError) {
                                     callback(null)
                                 }
                             })
                     }
                 }
-
                 override fun onCancelled(error: DatabaseError) {
                     callback(null)
                 }

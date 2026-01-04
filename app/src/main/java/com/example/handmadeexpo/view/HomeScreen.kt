@@ -105,7 +105,7 @@ fun MainHomeContent(
         item {
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
                 SearchBarInput(query = searchQuery, onQueryChange = { searchQuery = it })
-                PromoBanner()
+//                PromoBanner()
                 Spacer(modifier = Modifier.height(16.dp))
                 CategoryList(categories)
                 Spacer(modifier = Modifier.height(16.dp))
