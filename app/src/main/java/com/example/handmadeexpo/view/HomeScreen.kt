@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -77,21 +78,6 @@ fun HomeScreen() {
             product = selectedProduct!!,
             onBackClick = { selectedProduct = null } // Navigate back to Home
         )
-
-        // --- MAIN CONTENT ---
-        if (selectedProduct == null) {
-            MainHomeContent(
-                products = products ?: emptyList(),
-                onProductClick = { selectedProduct = it }
-            )
-        } else {
-            ProductDescription(
-                name = selectedProduct!!.name,
-                price = "NRP ${selectedProduct!!.price}",
-                imageUrl = selectedProduct!!.image,
-                onBackClick = { selectedProduct = null }
-            )
-        }
     }
 }
 
@@ -118,7 +104,7 @@ fun MainHomeContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    //.background(color = White12, shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
+                    .background(color = CreamBackground, shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
                     .padding(bottom = 24.dp)
             ) {
                 SearchBarInput(query = searchQuery, onQueryChange = { searchQuery = it })
@@ -152,7 +138,7 @@ fun MainHomeContent(
         item {
             Spacer(modifier = Modifier.height(16.dp))
             SectionHeader(title = "Recommended for you", subtitle = "Buy them before it's too late!", showArrow = true)
-            ProductRow(products = filteredProducts.reversed(), onProductClick = onProductClick)
+            ProductRow(products.reversed(), onProductClick)
             Spacer(modifier = Modifier.height(80.dp))
         }
     }
@@ -397,30 +383,8 @@ fun SectionHeader(title: String, subtitle: String?, showArrow: Boolean) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-            subtitle?.let { Text(it, fontSize = 12.sp, color = Gray) }
+            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            subtitle?.let { Text(it, fontSize = 12.sp, color = TextGray) }
         }
-    }
-}
-
-@Composable
-fun ProductDescription(
-    name: String,
-    price: String,
-    imageUrl: String,
-    onBackClick: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Button(onClick = onBackClick, modifier = Modifier.padding(16.dp)) { Text("Back") }
-
-        AsyncImage(
-            model = imageUrl,
-            contentDescription = name,
-            modifier = Modifier.fillMaxWidth().height(250.dp),
-            contentScale = ContentScale.Crop
-        )
-
-        Text(name, fontSize = 24.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.padding(16.dp))
-        Text(price, fontSize = 20.sp, color = Orange, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp))
     }
 }
