@@ -1,7 +1,6 @@
 package com.example.handmadeexpo.view
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,30 +19,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.ui.theme.MainColor
-import com.example.handmadeexpo.viewmodel.SellerProfileViewModel
+import com.example.handmadeexpo.viewmodel.SellerViewModel
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun SellerProfileScreen(
-    viewModel: SellerProfileViewModel
+    viewModel: SellerViewModel,
+    onEditProfileClick: () -> Unit
 ) {
 
-    val seller by viewModel.sellerProfile.observeAsState()
+    val seller by viewModel.seller.observeAsState()
     val loading by viewModel.loading.observeAsState(false)
 
-    // ✅ Get sellerId from FirebaseAuth
     val sellerId = FirebaseAuth.getInstance().currentUser?.uid
 
-    // ✅ Fetch seller profile ONCE
     LaunchedEffect(Unit) {
         sellerId?.let {
-            viewModel.getSellerProfileById(it)
+            viewModel.getSellerDetailsById(it)
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // Background image
         Image(
             painter = painterResource(R.drawable.bg10),
             contentDescription = null,
@@ -63,92 +60,68 @@ fun SellerProfileScreen(
 
             seller != null -> {
 
-                Column(
-                    modifier = Modifier.fillMaxSize()
-                ) {
+                Column(modifier = Modifier.fillMaxSize()) {
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
 
-                        Column(
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
+                        Text(
+                            text = "Your Profile",
+                            style = TextStyle(
+                                fontSize = 35.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MainColor
+                            ),
+                            modifier = Modifier.padding(20.dp)
+                        )
+
+                        Image(
+                            painter = painterResource(R.drawable.profilephoto),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(120.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+
+                        Text(
+                            text = seller!!.shopName,
+                            style = TextStyle(fontSize = 20.sp),
+                            modifier = Modifier.padding(10.dp)
+                        )
+
+                        Button(
+                            onClick = onEditProfileClick,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MainColor,
+                                contentColor = Color.White
+                            ),
+                            modifier = Modifier
+                                .width(120.dp)
+                                .height(35.dp)
                         ) {
+                            Text("Edit Profile")
+                        }
 
-                            Text(
-                                text = "Your Profile",
-                                style = TextStyle(
-                                    fontSize = 35.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MainColor
-                                ),
-                                modifier = Modifier.padding(20.dp)
-                            )
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                            Image(
-                                painter = painterResource(R.drawable.profilephoto),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(120.dp)
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            elevation = CardDefaults.cardElevation(8.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(20.dp)) {
 
-                            Text(
-                                text = seller!!.shopName,
-                                style = TextStyle(fontSize = 20.sp),
-                                modifier = Modifier.padding(10.dp)
-                            )
-
-                            Button(
-                                onClick = { /* Navigate to Edit Profile */ },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MainColor,
-                                    contentColor = Color.White
-                                ),
-                                modifier = Modifier
-                                    .width(120.dp)
-                                    .height(35.dp)
-                            ) {
-                                Text(text = "Edit Profile")
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(20.dp),
-                                shape = RoundedCornerShape(16.dp),
-                                elevation = CardDefaults.cardElevation(8.dp)
-                            ) {
-                                Column(modifier = Modifier.padding(20.dp)) {
-
-                                    ProfileRow(
-                                        title = "Email",
-                                        value = seller!!.sellerEmail
-                                    )
-
-                                    ProfileRow(
-                                        title = "Phone",
-                                        value = seller!!.sellerPhoneNumber
-                                    )
-
-                                    ProfileRow(
-                                        title = "Address",
-                                        value = seller!!.sellerAddress
-                                    )
-
-                                    ProfileRow(
-                                        title = "PAN Number",
-                                        value = seller!!.panNumber
-                                    )
-                                }
+                                ProfileRow("Email", seller!!.sellerEmail)
+                                ProfileRow("Phone", seller!!.sellerPhoneNumber)
+                                ProfileRow("Address", seller!!.sellerAddress)
+                                ProfileRow("PAN Number", seller!!.panNumber)
                             }
                         }
                     }

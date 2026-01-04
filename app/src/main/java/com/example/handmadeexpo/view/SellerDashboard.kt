@@ -26,9 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.example.handmadeexpo.R
-import com.example.handmadeexpo.repo.SellerProfileRepoImpl
+import com.example.handmadeexpo.repo.SellerRepoImpl
 import com.example.handmadeexpo.ui.theme.MainColor
-import com.example.handmadeexpo.viewmodel.SellerProfileViewModel
+import com.example.handmadeexpo.viewmodel.SellerViewModel
 
 class SellerDashboard : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,9 +54,9 @@ fun SellerDashboardBody(){
 
     // ✅ FIXED: Added the missing state variable for navigation
     var selectedIndex by remember { mutableStateOf(0) }
-    
-    val repo = remember { SellerProfileRepoImpl() }
-    val viewModel = remember { SellerProfileViewModel(repo) }
+    var editing by remember { mutableStateOf(false) }
+    val repo = remember { SellerRepoImpl() }
+    val viewModel = remember { SellerViewModel(repo) }
 
     Scaffold(
         topBar = {
@@ -124,7 +124,22 @@ fun SellerDashboardBody(){
             when(selectedIndex){
                 0 -> SellerHomeScreen()
                 1 -> InvetoryScreen()
-                2 -> SellerProfileScreen(viewModel)
+                2 -> {
+                    if (editing) {
+                        // Show Edit Screen
+                        EditSellerProfileScreen(
+                            viewModel = viewModel,
+                            onBack = { editing = false }
+                        )
+                    } else {
+                        // Show normal profile
+                        SellerProfileScreen(
+                            viewModel = viewModel,
+                            onEditProfileClick = { editing = true }
+                        )
+                    }
+                }
+
             }
         }
     }

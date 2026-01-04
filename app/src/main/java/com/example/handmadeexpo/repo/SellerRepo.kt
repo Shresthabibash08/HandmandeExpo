@@ -1,30 +1,52 @@
 package com.example.handmadeexpo.repo
 
-import com.example.handmadeexpo.model.BuyerModel
 import com.example.handmadeexpo.model.SellerModel
 import com.google.firebase.auth.FirebaseUser
 
 interface SellerRepo {
+
     fun login(
         email: String,
         password: String,
         callback: (Boolean, String) -> Unit
     )
 
+    fun forgotPassword(
+        email: String,
+        callback: (Boolean, String) -> Unit
+    )
 
-    fun forgotPassword(email:String,callback:(Boolean,String)->Unit)
+    fun register(
+        email: String,
+        password: String,
+        callback: (Boolean, String, String) -> Unit
+    )
 
-    fun register(email:String,password:String,callback:(Boolean,String,String)->Unit)
+    fun logout(
+        callback: (Boolean, String) -> Unit
+    )
 
-    fun logout(callback:(Boolean,String)->Unit)
+    fun updateProfile(
+        sellerId: String,
+        model: SellerModel,
+        callback: (Boolean, String) -> Unit
+    )
 
-    fun updateProfile(sellerId:String,model: SellerModel, callback:(Boolean, String)->Unit)
+    fun deleteAccount(
+        sellerId: String,
+        callback: (Boolean, String) -> Unit
+    )
 
-    fun deleteAccount(sellerId:String,callback:(Boolean,String)->Unit)
+    fun getSellerDetailsById(
+        sellerId: String,
+        callback: (Boolean, String, SellerModel?) -> Unit
+    )
 
-    fun getSellerDetailsById(sellerId:String,callback:(Boolean,String,SellerModel?)->Unit)
+    fun addSellerToDatabase(
+        sellerId: String,
+        sellerModel: SellerModel,
+        callback: (Boolean, String) -> Unit
+    )
 
-    fun addSellerToDatabase(sellerId: String,sellerModel:SellerModel,callback:(Boolean,String)->Unit)
-
-    fun getCurrentUser (): FirebaseUser?
+    fun getCurrentUser(): FirebaseUser?
 }
