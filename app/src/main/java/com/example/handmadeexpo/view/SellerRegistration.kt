@@ -1,5 +1,6 @@
 package com.example.handmadeexpo.view
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -50,15 +51,19 @@ class SellerRegistration : ComponentActivity() {
 @Composable
 fun SellerRegisterScreen() {
     val context = LocalContext.current
+    val activity = context as Activity
     val viewModel = remember { SellerViewModel(SellerRepoImpl()) }
 
-    var name by remember { mutableStateOf("") }
+    // State variables merged from both branches
+    var fullName by remember { mutableStateOf("") }
     var shopName by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
     var panNumber by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var contact by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    
     var passwordVisibility by remember { mutableStateOf(false) }
     var confirmPasswordVisibility by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
@@ -81,6 +86,7 @@ fun SellerRegisterScreen() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(30.dp))
+                
                 Image(
                     painter = painterResource(R.drawable.finallogo),
                     contentDescription = null,
@@ -96,6 +102,7 @@ fun SellerRegisterScreen() {
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
                 )
+                
                 Text(
                     "Start selling your crafts to the world.",
                     fontSize = 16.sp,
@@ -106,68 +113,93 @@ fun SellerRegisterScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                CustomTextField("Full Name", name) { name = it }
+                // Input Fields
+                CustomTextField("Full Name", fullName) { fullName = it }
                 Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField("Shop Name", shopName) { shopName = it }
+                Spacer(modifier = Modifier.height(12.dp))
+                CustomTextField("Address", address) { address = it }
                 Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField("PAN Number", panNumber) { panNumber = it }
                 Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField("Email", email) { email = it }
                 Spacer(modifier = Modifier.height(12.dp))
-                CustomTextField("Phone Number", contact) { contact = it }
+                CustomTextField("Phone Number", phoneNumber) { phoneNumber = it }
                 Spacer(modifier = Modifier.height(12.dp))
 
-                PasswordTextField("Password", password, passwordVisibility, { passwordVisibility = !passwordVisibility }, { password = it })
+                PasswordTextField(
+                    label = "Password",
+                    value = password,
+                    isVisible = passwordVisibility,
+                    onVisibilityChange = { passwordVisibility = !passwordVisibility },
+                    onValueChange = { password = it }
+                )
                 Spacer(modifier = Modifier.height(12.dp))
-                PasswordTextField("Confirm Password", confirmPassword, confirmPasswordVisibility, { confirmPasswordVisibility = !confirmPasswordVisibility }, { confirmPassword = it })
+                PasswordTextField(
+                    label = "Confirm Password",
+                    value = confirmPassword,
+                    isVisible = confirmPasswordVisibility,
+                    onVisibilityChange = { confirmPasswordVisibility = !confirmPasswordVisibility },
+                    onValueChange = { confirmPassword = it }
+                )
 
                 Spacer(modifier = Modifier.height(30.dp))
 
                 // --- REGISTER BUTTON ---
-                Card(
+                Button(
                     onClick = {
-                        if (name.isEmpty() || email.isEmpty() || password.isEmpty()) {
-                            Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
-                            return@Card
-                        }
-                        if (password != confirmPassword) {
-                            Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
-                            return@Card
-                        }
+                        // Extensive Validations from 'ansh' branch
+                        when {
+                            fullName.isBlank() -> Toast.makeText(context, "Full name is required", Toast.LENGTH_SHORT).show()
+                            shopName.isBlank() -> Toast.makeText(context, "Shop name is required", Toast.LENGTH_SHORT).show()
+                            address.isBlank() -> Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
+                            panNumber.isBlank() -> Toast.makeText(context, "PAN number is required", Toast.LENGTH_SHORT).show()
+                            !panNumber.matches(Regex("^[0-9]+$")) -> Toast.makeText(context, "PAN number must contain only digits", Toast.LENGTH_SHORT).show()
+                            email.isBlank() -> Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
+                            phoneNumber.isBlank() -> Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
+                            !phoneNumber.matches(Regex("^[0-9]{10}$")) -> Toast.makeText(context, "Phone number must be exactly 10 digits", Toast.LENGTH_SHORT).show()
+                            password.isBlank() -> Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
+                            password != confirmPassword -> Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+                            
+                            else -> {
+                                isLoading = true
+                                viewModel.register(email, password) { success, msg, sellerId ->
+                                    if (success) {
+                                        val sellerModel = SellerModel(
+                                            sellerId = sellerId,
+                                            fullName = fullName,
+                                            shopName = shopName,
+                                            sellerAddress = address,
+                                            sellerEmail = email,
+                                            sellerPhoneNumber = phoneNumber,
+                                            panNumber = panNumber,
+                                            verificationStatus = "Unverified"
+                                        )
 
-                        isLoading = true
-                        viewModel.register(email, password) { success, msg, userId ->
-                            if (success) {
-                                val newSeller = SellerModel(
-                                    sellerId = userId,
-                                    fullName = name,
-                                    shopName = shopName,
-                                    panNumber = panNumber,
-                                    sellerEmail = email,
-                                    sellerPhoneNumber = contact,
-                                    verificationStatus = "Unverified"
-                                )
-                                viewModel.addSellerToDatabase(userId, newSeller) { dbSuccess, dbMsg ->
-                                    isLoading = false
-                                    Toast.makeText(context, dbMsg, Toast.LENGTH_SHORT).show()
-                                    if (dbSuccess) {
-                                        val intent = Intent(context, SellerVerificationActivity::class.java)
-                                        context.startActivity(intent)
+                                        viewModel.addSellerToDatabase(sellerId, sellerModel) { dbSuccess, dbMsg ->
+                                            isLoading = false
+                                            Toast.makeText(context, dbMsg, Toast.LENGTH_SHORT).show()
+                                            if (dbSuccess) {
+                                                // Navigation logic from 'development' branch
+                                                val intent = Intent(context, SellerVerificationActivity::class.java)
+                                                context.startActivity(intent)
+                                                activity.finish()
+                                            }
+                                        }
+                                    } else {
+                                        isLoading = false
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                     }
                                 }
-                            } else {
-                                isLoading = false
-                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 16.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MainColor),
+                    colors = ButtonDefaults.buttonColors(containerColor = MainColor),
                     enabled = !isLoading
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxSize(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
@@ -180,6 +212,7 @@ fun SellerRegisterScreen() {
                         }
                     }
                 }
+
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // --- FOOTER: SIGN IN NAVIGATION ---
@@ -196,7 +229,6 @@ fun SellerRegisterScreen() {
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.clickable {
-                            // --- NAVIGATION TO LOGIN ---
                             val intent = Intent(context, SignInActivity::class.java)
                             context.startActivity(intent)
                         }
@@ -208,7 +240,6 @@ fun SellerRegisterScreen() {
     }
 }
 
-// ... (Keep CustomTextField and PasswordTextField functions here as they were) ...
 @Composable
 fun CustomTextField(label: String, value: String, onValueChange: (String) -> Unit) {
     OutlinedTextField(
@@ -251,7 +282,7 @@ fun PasswordTextField(
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MainColor,
             unfocusedBorderColor = MainColor,
-            focusedLabelColor = White12,
+            focusedLabelColor = MainColor, // Updated from White12 to MainColor for better visibility
             cursorColor = MainColor,
             focusedContainerColor = Offwhite12,
             unfocusedContainerColor = Offwhite12

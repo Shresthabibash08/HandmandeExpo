@@ -55,8 +55,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.ui.theme.AquaGreen
 import com.example.handmadeexpo.ui.theme.Blue1
+import com.example.handmadeexpo.viewmodel.BuyerViewModel
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.google.firebase.auth.FirebaseAuth
 
@@ -73,6 +75,7 @@ class SignInActivity : ComponentActivity() {
 @Composable
 fun SignInBody() {
 
+    var buyerViewModel=remember { BuyerViewModel(BuyerRepoImpl()) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var visibility by remember { mutableStateOf(false) }
@@ -220,48 +223,42 @@ fun SignInBody() {
 
                     Button(
                         onClick = {
+                            buyerViewModel.login(email, password) { success, msg ->
+                                if (success) {
+                                    val userId = buyerViewModel.getCurrentUser()?.uid
 
-                            // ✅ VALIDATION
-                            if (email.isBlank() || password.isBlank()) {
-                                Toast.makeText(
-                                    context,
-                                    "Please fill all fields",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                return@Button
+                                    if (userId != null) {
+                                        buyerViewModel.checkUserRole(userId) { role ->
+                                            when (role) {
+                                                "buyer" -> {
+                                                    context.startActivity(
+                                                        Intent(context, DashboardActivity::class.java)
+                                                    )
+                                                    activity?.finish()
+                                                }
+
+                                                "seller" -> {
+                                                    context.startActivity(
+                                                        Intent(context, SellerDashboard::class.java)
+                                                    )
+                                                    activity?.finish()
+                                                }
+
+                                                else -> {
+                                                    Toast.makeText(
+                                                        context,
+                                                        "User role not found",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                }
                             }
 
-                            // ✅ FIREBASE LOGIN
-                            FirebaseAuth.getInstance()
-                                .signInWithEmailAndPassword(email, password)
-                                .addOnSuccessListener {
-
-                                    val uid = FirebaseAuth
-                                        .getInstance()
-                                        .currentUser
-                                        ?.uid
-
-                                    // ✅ SAVE SESSION ONLY
-                                    sharedPreferences.edit()
-                                        .putBoolean("isLoggedIn", true)
-                                        .putString("buyerId", uid)
-                                        .putString("role", "Buyer")
-                                        .apply()
-
-                                    val intent = Intent(
-                                        context,
-                                        DashboardActivity::class.java
-                                    )
-                                    activity?.startActivity(intent)
-                                    activity?.finish()
-                                }
-                                .addOnFailureListener {
-                                    Toast.makeText(
-                                        context,
-                                        "Invalid email or password",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
                         },
                         modifier = Modifier
                             .fillMaxWidth()

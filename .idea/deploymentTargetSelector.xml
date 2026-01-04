@@ -11,6 +11,13 @@
       <SelectionState runConfigName="SignupActivity (2)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
+      <SelectionState runConfigName="SignInActivity">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="SellerRegistration">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="SignInActivity (1)">
       <SelectionState runConfigName="SignInActivity (1)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>

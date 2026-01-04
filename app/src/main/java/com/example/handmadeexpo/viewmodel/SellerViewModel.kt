@@ -2,6 +2,7 @@ package com.example.handmadeexpo.viewmodel
 
 import android.content.Context
 import android.net.Uri
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -9,16 +10,14 @@ import com.example.handmadeexpo.model.SellerModel
 import com.example.handmadeexpo.repo.SellerRepo
 import com.google.firebase.auth.FirebaseUser
 
-class SellerViewModel(val repo: SellerRepo) : ViewModel() {
+class SellerViewModel(private val repo: SellerRepo) : ViewModel() {
 
     // --- LIVE DATA ---
     private val _seller = MutableLiveData<SellerModel?>()
-    val seller: MutableLiveData<SellerModel?>
-        get() = _seller
+    val seller: LiveData<SellerModel?> get() = _seller
 
     private val _loading = MutableLiveData<Boolean>()
-    val loading: MutableLiveData<Boolean>
-        get() = _loading // FIXED: Changed from 'loading' to '_loading' to stop the crash
+    val loading: LiveData<Boolean> get() = _loading
 
     // --- AUTH METHODS ---
     fun login(email: String, password: String, callback: (Boolean, String) -> Unit) {
@@ -37,46 +36,58 @@ class SellerViewModel(val repo: SellerRepo) : ViewModel() {
         repo.logout(callback)
     }
 
-    fun updateProfile(sellerId: String, model: SellerModel, callback: (Boolean, String) -> Unit) {
-        repo.updateProfile(sellerId, model, callback)
+    fun getCurrentUser(): FirebaseUser? {
+        return repo.getCurrentUser()
     }
 
-    fun deleteAccount(sellerId: String, callback: (Boolean, String) -> Unit) {
-        repo.deleteAccount(sellerId, callback)
-    }
-
-    // --- DATA FETCHING ---
+    // --- DATA FETCHING & DATABASE ---
     fun getSellerDetailsById(sellerId: String) {
         _loading.postValue(true)
-        repo.getSellerDetailsById(sellerId) { success, msg, data ->
-            if (success) {
-                _loading.postValue(false)
-                _seller.postValue(data)
-            } else {
-                _loading.postValue(false)
-                _seller.postValue(null)
-            }
+        repo.getSellerDetailsById(sellerId) { success, _, data ->
+            _loading.postValue(false)
+            _seller.postValue(if (success) data else null)
         }
     }
 
-    fun addSellerToDatabase(sellerId: String, sellerModel: SellerModel, callback: (Boolean, String) -> Unit) {
+    fun addSellerToDatabase(
+        sellerId: String,
+        sellerModel: SellerModel,
+        callback: (Boolean, String) -> Unit
+    ) {
         repo.addSellerToDatabase(sellerId, sellerModel, callback)
     }
 
-    fun getCurrentUser(): FirebaseUser? {
-        return repo.getCurrentUser()
+    // --- PROFILE MANAGEMENT ---
+    fun updateProfile(
+        sellerId: String,
+        model: SellerModel,
+        callback: (Boolean, String) -> Unit
+    ) {
+        repo.updateProfile(sellerId, model, callback)
+    }
+
+    fun updateProfileFields(
+        sellerId: String,
+        updates: Map<String, Any>,
+        callback: (Boolean, String) -> Unit
+    ) {
+        repo.updateProfileFields(sellerId, updates, callback)
     }
 
     fun uploadImage(context: Context, imageUri: Uri, callback: (Boolean, String) -> Unit) {
         repo.uploadImage(context, imageUri, callback)
     }
 
-    fun updateProfileFields(sellerId: String, updates: Map<String, Any>, callback: (Boolean, String) -> Unit) {
-        repo.updateProfileFields(sellerId, updates, callback)
+    fun deleteAccount(
+        sellerId: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        repo.deleteAccount(sellerId, callback)
     }
 }
 
-// --- FACTORY CLASS (Required to prevent crash during initialization) ---
+// --- FACTORY CLASS ---
+// Required because ViewModel has a constructor parameter (SellerRepo)
 class SellerViewModelFactory(private val repo: SellerRepo) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SellerViewModel::class.java)) {

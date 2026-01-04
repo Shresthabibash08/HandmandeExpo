@@ -34,32 +34,31 @@ import com.example.handmadeexpo.viewmodel.SellerViewModel
 import com.example.handmadeexpo.viewmodel.SellerViewModelFactory
 
 @Composable
-fun SellerProfileScreen() {
-    // 1. Initialize Context
+fun SellerProfileScreen(
+    onEditProfileClick: () -> Unit
+) {
     val context = LocalContext.current
-
-    // 2. Initialize ViewModel using Factory
+    
+    // Initialize ViewModel using the Factory pattern from development
     val viewModel: SellerViewModel = viewModel(
         factory = SellerViewModelFactory(SellerRepoImpl())
     )
 
-    // 3. Observe Data
     val seller by viewModel.seller.observeAsState()
     val loading by viewModel.loading.observeAsState(initial = true)
-
-    // 4. State for Full Screen Image
+    
+    // State for Full Screen Document Viewer
     var showFullDocument by remember { mutableStateOf(false) }
 
-    // 5. Fetch Data Automatically
+    // Fetch Data Automatically on screen launch
     LaunchedEffect(Unit) {
-        val currentUser = viewModel.getCurrentUser()
-        if (currentUser != null) {
-            viewModel.getSellerDetailsById(currentUser.uid)
+        viewModel.getCurrentUser()?.uid?.let { id ->
+            viewModel.getSellerDetailsById(id)
         }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Background image
+        // Background Image
         Image(
             painter = painterResource(R.drawable.bg10),
             contentDescription = null,
@@ -67,140 +66,130 @@ fun SellerProfileScreen() {
             contentScale = ContentScale.Crop
         )
 
-        // --- LOADING STATE ---
-        if (loading == true) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MainColor)
+        when {
+            loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = MainColor)
+                }
             }
-        } else {
-            // Main Content (Scrollable)
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Spacer(modifier = Modifier.padding(10.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+            seller != null -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Title
+                    Text(
+                        text = "Your Profile",
+                        style = TextStyle(
+                            fontSize = 35.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MainColor
+                        ),
+                        modifier = Modifier.padding(20.dp)
+                    )
+
+                    // Profile Picture
+                    Image(
+                        painter = painterResource(R.drawable.profilephoto),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    // Shop Name / Username
+                    Text(
+                        text = seller?.shopName ?: "Unknown Shop",
+                        style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Medium),
+                        modifier = Modifier.padding(10.dp)
+                    )
+
+                    // Edit Button
+                    Button(
+                        onClick = onEditProfileClick,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MainColor,
+                            contentColor = Color.White
+                        ),
+                        modifier = Modifier
+                            .width(140.dp)
+                            .height(40.dp)
                     ) {
-                        // Title
-                        Text(
-                            text = "Your Profile",
-                            style = TextStyle(
-                                fontSize = 35.sp,
+                        Text("Edit Profile")
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Details Card
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(8.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                    ) {
+                        Column(modifier = Modifier.padding(20.dp)) {
+                            ProfileRow("Full Name", seller?.fullName ?: "N/A")
+                            ProfileRow("Email", seller?.sellerEmail ?: "N/A")
+                            ProfileRow("Phone", seller?.sellerPhoneNumber ?: "N/A")
+                            ProfileRow("Address", seller?.sellerAddress?.ifEmpty { "Not set" } ?: "Not set")
+                            ProfileRow("PAN Number", seller?.panNumber ?: "N/A")
+
+                            // Verification Document Section
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Verification Document (Tap to view)",
                                 fontWeight = FontWeight.Bold,
                                 color = MainColor
-                            ),
-                            modifier = Modifier.padding(20.dp)
-                        )
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                        // Profile Picture (Placeholder)
-                        Image(
-                            painter = painterResource(R.drawable.profilephoto),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .height(120.dp)
-                                .width(120.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-
-                        // Username (Shop Name)
-                        Text(
-                            text = "@${seller?.shopName ?: "username"}",
-                            style = TextStyle(fontSize = 20.sp),
-                            modifier = Modifier.padding(10.dp)
-                        )
-
-                        // Edit Button
-                        Button(
-                            onClick = { },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MainColor,
-                                contentColor = Color.White
-                            ),
-                            modifier = Modifier.width(120.dp).height(35.dp)
-                        ) {
-                            Text(text = "Edit Profile")
-                        }
-
-                        Spacer(modifier = Modifier.height(18.dp))
-
-                        // --- DETAILS CARD ---
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(20.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            elevation = CardDefaults.cardElevation(8.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White)
-                        ) {
-                            Column(modifier = Modifier.padding(20.dp)) {
-
-                                // Dynamic Rows
-                                ProfileRow("Full Name", seller?.fullName ?: "N/A")
-                                ProfileRow("Email", seller?.sellerEmail ?: "N/A")
-                                ProfileRow("Phone", seller?.sellerPhoneNumber ?: "N/A")
-                                ProfileRow("Address", seller?.sellerAddress?.ifEmpty { "Not set" } ?: "Not set")
-                                ProfileRow("Pan Number", seller?.panNumber ?: "N/A")
-
-                                // --- VERIFICATION IMAGE SECTION ---
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = "Verification Document (Tap to view)",
-                                    fontWeight = FontWeight.Bold,
-                                    color = MainColor
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                // Document Image Container
-                                Card(
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(180.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F0F0))
-                                ) {
-                                    if (!seller?.documentUrl.isNullOrEmpty()) {
-                                        AsyncImage(
-                                            model = ImageRequest.Builder(context)
-                                                .data(seller!!.documentUrl)
-                                                .crossfade(true)
-                                                .build(),
-                                            contentDescription = "Uploaded Doc",
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .clickable { showFullDocument = true }, // Make clickable
-                                            contentScale = ContentScale.Crop,
-                                            error = painterResource(R.drawable.baseline_cloud_upload_24)
-                                        )
-                                    } else {
-                                        Box(
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text("No Document Uploaded", color = Color.Gray)
-                                        }
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp)
+                                    .clickable { if (!seller?.documentUrl.isNullOrEmpty()) showFullDocument = true },
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F0F0))
+                            ) {
+                                if (!seller?.documentUrl.isNullOrEmpty()) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context)
+                                            .data(seller!!.documentUrl)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = "Uploaded Doc",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop,
+                                        error = painterResource(R.drawable.baseline_cloud_upload_24)
+                                    )
+                                } else {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text("No Document Uploaded", color = Color.Gray)
                                     }
                                 }
-
-                                // Status Removed Here
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(50.dp))
                 }
-                Spacer(modifier = Modifier.height(50.dp))
+            }
+
+            else -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Seller profile not found", color = Color.Gray)
+                }
             }
         }
 
-        // --- FULL SCREEN IMAGE DIALOG ---
+        // Full Screen Image Dialog Logic
         if (showFullDocument && !seller?.documentUrl.isNullOrEmpty()) {
             Dialog(
                 onDismissRequest = { showFullDocument = false },
@@ -209,26 +198,24 @@ fun SellerProfileScreen() {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black)
-                        .clickable { showFullDocument = false }, // Click background to close
+                        .background(Color.Black.copy(alpha = 0.9f))
+                        .clickable { showFullDocument = false },
                     contentAlignment = Alignment.Center
                 ) {
                     AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
+                        model = ImageRequest.Builder(context)
                             .data(seller!!.documentUrl)
-                            .crossfade(true)
                             .build(),
                         contentDescription = "Full Screen Document",
                         modifier = Modifier.fillMaxWidth(),
                         contentScale = ContentScale.Fit
                     )
-
                     Text(
                         text = "Tap anywhere to close",
                         color = Color.White,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(20.dp)
+                            .padding(30.dp)
                     )
                 }
             }
@@ -239,8 +226,8 @@ fun SellerProfileScreen() {
 @Composable
 fun ProfileRow(title: String, value: String) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        Text(text = title, fontWeight = FontWeight.Bold, color = Color.Black)
-        Text(text = value, color = Color.DarkGray)
-        HorizontalDivider(modifier = Modifier.padding(top = 8.dp), color = Color.LightGray)
+        Text(text = title, fontWeight = FontWeight.Bold, color = Color.Black, fontSize = 14.sp)
+        Text(text = value, color = Color.DarkGray, fontSize = 16.sp)
+        HorizontalDivider(modifier = Modifier.padding(top = 8.dp), color = Color.LightGray, thickness = 0.5.dp)
     }
 }
