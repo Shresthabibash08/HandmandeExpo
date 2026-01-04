@@ -19,10 +19,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Blue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -33,7 +35,6 @@ import com.example.handmadeexpo.model.SellerModel
 import com.example.handmadeexpo.repo.SellerRepoImpl
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.Offwhite12
-import com.example.handmadeexpo.ui.theme.White12
 import com.example.handmadeexpo.viewmodel.SellerViewModel
 
 class SellerRegistration : ComponentActivity() {
@@ -48,22 +49,26 @@ class SellerRegistration : ComponentActivity() {
 
 @Composable
 fun SellerRegisterScreen() {
-    var address by remember { mutableStateOf("") }
-    var shopName by remember { mutableStateOf("") }
-    var phoneNumber by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var passwordVisibility by remember { mutableStateOf(false) }
-    var confirmPasswordVisibility by remember { mutableStateOf(false) }
-    var confirmPassword by remember { mutableStateOf("") }
-    var panNumber by remember { mutableStateOf("") }
     val context = LocalContext.current
     val activity = context as Activity
-    var sellerViewModel = remember{ SellerViewModel(SellerRepoImpl()) }
+    val viewModel = remember { SellerViewModel(SellerRepoImpl()) }
+
+    // Merged state variables
+    var fullName by remember { mutableStateOf("") }
+    var shopName by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var panNumber by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    
+    var passwordVisibility by remember { mutableStateOf(false) }
+    var confirmPasswordVisibility by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
     Scaffold { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            // Background Image
             Image(
                 painter = painterResource(R.drawable.finalbackground),
                 contentDescription = null,
@@ -71,57 +76,56 @@ fun SellerRegisterScreen() {
                 contentScale = ContentScale.Crop
             )
 
-            // Content Column
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
-                    .imePadding()
-                ,
+                    .imePadding(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
+                Spacer(modifier = Modifier.height(30.dp))
+                
                 Image(
                     painter = painterResource(R.drawable.finallogo),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape),
+                    contentDescription = "Logo",
+                    modifier = Modifier.size(100.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
 
                 Text(
                     "Join As Artisan",
                     fontSize = 28.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    fontWeight = FontWeight.Bold,
                     color = MainColor,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
                 )
+                
                 Text(
                     "Start selling your crafts to the world.",
                     fontSize = 16.sp,
-                    color = androidx.compose.ui.graphics.Color.Gray,
+                    color = Color.Gray,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Text Fields
+                // Input Fields Grouped
+                CustomTextField("Full Name", fullName) { fullName = it }
+                Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField("Shop Name", shopName) { shopName = it }
-                Spacer(modifier = Modifier.height(15.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField("Address", address) { address = it }
-                Spacer(modifier = Modifier.height(15.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField("PAN Number", panNumber) { panNumber = it }
-                Spacer(modifier = Modifier.height(15.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField("Email", email) { email = it }
-                Spacer(modifier = Modifier.height(15.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField("Phone Number", phoneNumber) { phoneNumber = it }
-                Spacer(modifier = Modifier.height(15.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
                 PasswordTextField(
                     label = "Password",
                     value = password,
@@ -129,7 +133,7 @@ fun SellerRegisterScreen() {
                     onVisibilityChange = { passwordVisibility = !passwordVisibility },
                     onValueChange = { password = it }
                 )
-                Spacer(modifier = Modifier.height(15.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 PasswordTextField(
                     label = "Confirm Password",
                     value = confirmPassword,
@@ -138,85 +142,80 @@ fun SellerRegisterScreen() {
                     onValueChange = { confirmPassword = it }
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(30.dp))
+
+                // --- REGISTER BUTTON ---
                 Button(
                     onClick = {
-
+                        // Extensive Validations
                         when {
-                            shopName.isBlank() ->
-                                Toast.makeText(context, "Shop name is required", Toast.LENGTH_SHORT).show()
-
-                            address.isBlank() ->
-                                Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
-
-                            panNumber.isBlank() ->
-                                Toast.makeText(context, "PAN number is required", Toast.LENGTH_SHORT).show()
-
-                            !panNumber.matches(Regex("^[0-9]+$")) ->
-                                Toast.makeText(context, "PAN number must contain only digits", Toast.LENGTH_SHORT).show()
-
-                            email.isBlank() ->
-                                Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
-
-                            phoneNumber.isBlank() ->
-                                Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
-
-                            !phoneNumber.matches(Regex("^[0-9]{10}$")) ->
-                                Toast.makeText(context, "Phone number must be exactly 10 digits", Toast.LENGTH_SHORT).show()
-
-                            password.isBlank() ->
-                                Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
-
-                            confirmPassword.isBlank() ->
-                                Toast.makeText(context, "Confirm password is required", Toast.LENGTH_SHORT).show()
-
-                            password != confirmPassword ->
-                                Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
-
+                            fullName.isBlank() -> Toast.makeText(context, "Full name is required", Toast.LENGTH_SHORT).show()
+                            shopName.isBlank() -> Toast.makeText(context, "Shop name is required", Toast.LENGTH_SHORT).show()
+                            address.isBlank() -> Toast.makeText(context, "Address is required", Toast.LENGTH_SHORT).show()
+                            panNumber.isBlank() -> Toast.makeText(context, "PAN number is required", Toast.LENGTH_SHORT).show()
+                            !panNumber.matches(Regex("^[0-9]+$")) -> Toast.makeText(context, "PAN number must contain only digits", Toast.LENGTH_SHORT).show()
+                            email.isBlank() -> Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
+                            phoneNumber.isBlank() -> Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
+                            !phoneNumber.matches(Regex("^[0-9]{10}$")) -> Toast.makeText(context, "Phone number must be 10 digits", Toast.LENGTH_SHORT).show()
+                            password.isBlank() -> Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
+                            password != confirmPassword -> Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+                            
                             else -> {
-                                // ✅ All validations passed (UNCHANGED)
-                                sellerViewModel.register(email, password) { success, msg, sellerId ->
+                                isLoading = true
+                                viewModel.register(email, password) { success, msg, sellerId ->
                                     if (success) {
                                         val sellerModel = SellerModel(
                                             sellerId = sellerId,
+                                            fullName = fullName,
                                             shopName = shopName,
                                             sellerAddress = address,
                                             sellerEmail = email,
                                             sellerPhoneNumber = phoneNumber,
-                                            panNumber = panNumber
+                                            panNumber = panNumber,
+                                            verificationStatus = "Unverified"
                                         )
 
-                                        sellerViewModel.addSellerToDatabase(
-                                            sellerId,
-                                            sellerModel
-                                        ) { dbSuccess, dbMsg ->
+                                        viewModel.addSellerToDatabase(sellerId, sellerModel) { dbSuccess, dbMsg ->
+                                            isLoading = false
                                             Toast.makeText(context, dbMsg, Toast.LENGTH_SHORT).show()
-                                            if (dbSuccess) activity.finish()
+                                            if (dbSuccess) {
+                                                // Navigate to Verification
+                                                val intent = Intent(context, SellerVerificationActivity::class.java)
+                                                context.startActivity(intent)
+                                                activity.finish()
+                                            }
                                         }
                                     } else {
+                                        isLoading = false
                                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MainColor),
+                    modifier = Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 16.dp),
                     shape = RoundedCornerShape(12.dp),
-                    elevation = ButtonDefaults.buttonElevation(6.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(55.dp)
-                        .padding(horizontal = 16.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = MainColor),
+                    enabled = !isLoading
                 ) {
-                    Text("Register", fontSize = 18.sp, color = androidx.compose.ui.graphics.Color.White)
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Proceed to Verify Identity", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(painter = painterResource(R.drawable.baseline_arrow_forward_24), contentDescription = null)
+                        }
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 50.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // --- FOOTER: SIGN IN NAVIGATION ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Already have an account?", fontSize = 16.sp, color = MainColor)
                     Spacer(modifier = Modifier.width(4.dp))
@@ -224,13 +223,14 @@ fun SellerRegisterScreen() {
                         text = "Sign In",
                         color = Blue,
                         fontSize = 16.sp,
-                        modifier = Modifier
-                            .clickable {
-                                val intent = Intent(context, SignInActivity::class.java)
-                                activity.startActivity(intent)
-                            }
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable {
+                            val intent = Intent(context, SignInActivity::class.java)
+                            context.startActivity(intent)
+                        }
                     )
                 }
+                Spacer(modifier = Modifier.height(40.dp))
             }
         }
     }
@@ -242,15 +242,12 @@ fun CustomTextField(label: String, value: String, onValueChange: (String) -> Uni
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MainColor,
             unfocusedBorderColor = MainColor,
             focusedLabelColor = MainColor,
-            cursorColor = MainColor,
             focusedContainerColor = Offwhite12,
             unfocusedContainerColor = Offwhite12
         )
@@ -259,11 +256,8 @@ fun CustomTextField(label: String, value: String, onValueChange: (String) -> Uni
 
 @Composable
 fun PasswordTextField(
-    label: String,
-    value: String,
-    isVisible: Boolean,
-    onVisibilityChange: () -> Unit,
-    onValueChange: (String) -> Unit
+    label: String, value: String, isVisible: Boolean,
+    onVisibilityChange: () -> Unit, onValueChange: (String) -> Unit
 ) {
     OutlinedTextField(
         value = value,
@@ -273,26 +267,19 @@ fun PasswordTextField(
         trailingIcon = {
             IconButton(onClick = onVisibilityChange) {
                 Icon(
-                    painter = painterResource(
-                        if (isVisible) R.drawable.baseline_visibility_off_24
-                        else R.drawable.baseline_visibility_24
-                    ),
+                    painter = painterResource(if (isVisible) R.drawable.baseline_visibility_off_24 else R.drawable.baseline_visibility_24),
                     contentDescription = null
                 )
             }
         },
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MainColor,
             unfocusedBorderColor = MainColor,
-            focusedLabelColor = White12,
-            cursorColor = MainColor,
+            focusedLabelColor = MainColor,
             focusedContainerColor = Offwhite12,
             unfocusedContainerColor = Offwhite12
-
         )
     )
 }

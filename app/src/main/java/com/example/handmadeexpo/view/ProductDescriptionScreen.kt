@@ -15,21 +15,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.handmadeexpo.R
 import com.example.handmadeexpo.model.ProductModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProductDescription(
-    product: ProductModel,  // Change from separate parameters to ProductModel
-    onBackClick: () -> Unit,
-    name: String,
-    price: String,
-    imageRes: Int
+fun ProductDescriptionScreen(
+    product: ProductModel, 
+    onBackClick: () -> Unit
 ) {
+    // --- THEME COLORS ---
     val OrangeBrand = Color(0xFFE65100)
     val CreamBackground = Color(0xFFFFF8E1)
     val TextGray = Color(0xFF757575)
@@ -53,14 +53,12 @@ fun ProductDescription(
                 modifier = Modifier.height(80.dp)
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
-                        onClick = { /* Add to cart logic */ },
+                        onClick = { /* TODO: Add to cart logic */ },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
@@ -69,7 +67,7 @@ fun ProductDescription(
                     }
 
                     Button(
-                        onClick = { /* Buy now logic */ },
+                        onClick = { /* TODO: Buy now logic */ },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = OrangeBrand)
@@ -87,7 +85,7 @@ fun ProductDescription(
                 .background(Color.White)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Product Image
+            // 1. PRODUCT IMAGE
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -95,32 +93,20 @@ fun ProductDescription(
                     .background(CreamBackground),
                 contentAlignment = Alignment.Center
             ) {
-                if (product.image.isNotEmpty()) {
-                    AsyncImage(
-                        model = product.image,
-                        contentDescription = product.name,
-                        modifier = Modifier
-                            .fillMaxSize(0.85f)
-                            .clip(RoundedCornerShape(16.dp)),
-                        contentScale = ContentScale.Fit
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize(0.85f)
-                            .background(Color.LightGray, RoundedCornerShape(16.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("No Image", color = Color.White)
-                    }
-                }
+                AsyncImage(
+                    model = product.image,
+                    contentDescription = product.name,
+                    modifier = Modifier
+                        .fillMaxSize(0.85f)
+                        .clip(RoundedCornerShape(16.dp)),
+                    contentScale = ContentScale.Fit,
+                    error = painterResource(R.drawable.img_1) // Fallback placeholder
+                )
             }
 
-            // Product Info Section
+            // 2. PRODUCT INFO SECTION
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp)
+                modifier = Modifier.fillMaxWidth().padding(20.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -135,7 +121,7 @@ fun ProductDescription(
                         lineHeight = 32.sp
                     )
                     Text(
-                        text = "NRP ${product.price}",
+                        text = "NRP ${product.price.toInt()}",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = OrangeBrand
@@ -144,7 +130,7 @@ fun ProductDescription(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Rating Bar
+                // 3. RATING BAR
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     repeat(5) { index ->
                         Icon(
@@ -162,9 +148,9 @@ fun ProductDescription(
                     )
                 }
 
-                Divider(modifier = Modifier.padding(vertical = 20.dp), thickness = 0.5.dp)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp), thickness = 0.5.dp)
 
-                // Description Section
+                // 4. DESCRIPTION
                 Text(
                     text = "Description",
                     fontSize = 18.sp,
@@ -175,7 +161,8 @@ fun ProductDescription(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = product.description,
+                    text = if (product.description.isNotEmpty()) product.description 
+                           else "This premium handmade product is part of our exclusive Expo collection.",
                     fontSize = 16.sp,
                     color = TextGray,
                     lineHeight = 24.sp
@@ -183,7 +170,7 @@ fun ProductDescription(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Stock Information
+                // 5. STOCK STATUS
                 Text(
                     text = "Stock Information",
                     fontSize = 18.sp,
@@ -194,16 +181,13 @@ fun ProductDescription(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = if (product.stock > 0)
-                        "Available: ${product.stock} items in stock"
-                    else
-                        "Currently out of stock",
+                    text = if (product.stock > 0) "Available: ${product.stock} items in stock"
+                           else "Currently out of stock",
                     fontSize = 16.sp,
-                    color = if (product.stock > 0) Color.Green else Color.Red,
+                    color = if (product.stock > 0) Color(0xFF2E7D32) else Color.Red,
                     fontWeight = FontWeight.Medium
                 )
 
-                // Extra spacer to ensure content doesn't get hidden behind the BottomAppBar
                 Spacer(modifier = Modifier.height(40.dp))
             }
         }

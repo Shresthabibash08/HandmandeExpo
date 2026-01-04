@@ -1,6 +1,8 @@
 package com.example.handmadeexpo.view
 
+import android.R.attr.navigationIcon
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -22,6 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -51,6 +55,7 @@ import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.ui.theme.AquaGreen
 import com.example.handmadeexpo.ui.theme.Blue1
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
+import com.example.handmadeexpo.ui.theme.MainColor
 
 class ForgetPasswordActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,7 +79,7 @@ fun ForgetPasswordBody() {
         ) {
 
             Image(
-                painter = painterResource(R.drawable.bg1),
+                painter = painterResource(R.drawable.img_1),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
@@ -85,7 +90,21 @@ fun ForgetPasswordBody() {
                     .padding(padding)
             ) {
                 item {
-                    Spacer(modifier = Modifier.height(130.dp))
+                    Spacer(modifier = Modifier.height(15.dp))
+
+                    IconButton(onClick = {
+                        val intent = Intent(context, SignInActivity::class.java)
+                        activity?.startActivity(intent)
+                        activity?.finish()
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.outline_arrow_back_ios_24),
+                            contentDescription = null
+                        )
+                    }
+                }
+                item {
+                    Spacer(modifier = Modifier.height(50.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .padding(padding),
@@ -110,11 +129,11 @@ fun ForgetPasswordBody() {
                             color = Black,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
-                            fontSize = 40.sp
+                            fontSize = 32.sp
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
 
                     Text(
@@ -123,7 +142,7 @@ fun ForgetPasswordBody() {
                         style = TextStyle(
                             color = Black,
                             textAlign = TextAlign.Center,
-                            fontSize = 25.sp
+                            fontSize = 20.sp
                         )
                     )
                     Spacer(modifier = Modifier.height(27.dp))
@@ -163,7 +182,7 @@ fun ForgetPasswordBody() {
                            }
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = AquaGreen
+                            containerColor = MainColor
                         ),
                         elevation = ButtonDefaults.buttonElevation(
                             defaultElevation = 6.dp
@@ -173,7 +192,7 @@ fun ForgetPasswordBody() {
                             .fillMaxWidth().height(95.dp)
                             .padding(horizontal = 20.dp, vertical = 20.dp),
                     ) {
-                        Text("Send", style = TextStyle(fontSize = 20.sp))
+                        Text("Send", style = TextStyle(fontSize = 15.sp))
                     }
                 }
             }
