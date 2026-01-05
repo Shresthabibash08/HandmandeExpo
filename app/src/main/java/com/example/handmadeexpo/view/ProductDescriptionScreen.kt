@@ -6,7 +6,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -26,8 +27,9 @@ import com.example.handmadeexpo.model.ProductModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDescriptionScreen(
-    product: ProductModel, 
-    onBackClick: () -> Unit
+    product: ProductModel,
+    onBackClick: () -> Unit,
+    onChatClick: () -> Unit // Added to fix missing parameter error
 ) {
     // --- THEME COLORS ---
     val OrangeBrand = Color(0xFFE65100)
@@ -40,7 +42,8 @@ fun ProductDescriptionScreen(
                 title = { Text("Product Details", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        // Using AutoMirrored to fix deprecation warning
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = CreamBackground)
@@ -50,20 +53,31 @@ fun ProductDescriptionScreen(
             BottomAppBar(
                 containerColor = Color.White,
                 tonalElevation = 8.dp,
-                modifier = Modifier.height(80.dp)
+                modifier = Modifier.height(100.dp) // Height increased to fit icons comfortably
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // --- NEW CHAT BUTTON ---
+                    OutlinedIconButton(
+                        onClick = onChatClick,
+                        modifier = Modifier.size(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
+                    ) {
+                        // Using Chat icon for the new feature
+                        Icon(Icons.Default.Chat, contentDescription = "Chat", tint = OrangeBrand)
+                    }
+
                     OutlinedButton(
                         onClick = { /* TODO: Add to cart logic */ },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
                     ) {
-                        Text("Add to Cart", color = OrangeBrand, fontWeight = FontWeight.Bold)
+                        Text("Add to Cart", color = OrangeBrand, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
 
                     Button(
@@ -72,7 +86,7 @@ fun ProductDescriptionScreen(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = OrangeBrand)
                     ) {
-                        Text("Buy Now", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Buy Now", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }
@@ -100,7 +114,7 @@ fun ProductDescriptionScreen(
                         .fillMaxSize(0.85f)
                         .clip(RoundedCornerShape(16.dp)),
                     contentScale = ContentScale.Fit,
-                    error = painterResource(R.drawable.img_1) // Fallback placeholder
+                    error = painterResource(R.drawable.img_1)
                 )
             }
 
@@ -161,8 +175,7 @@ fun ProductDescriptionScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = if (product.description.isNotEmpty()) product.description 
-                           else "This premium handmade product is part of our exclusive Expo collection.",
+                    text = product.description.ifEmpty { "This premium handmade product is part of our exclusive Expo collection." },
                     fontSize = 16.sp,
                     color = TextGray,
                     lineHeight = 24.sp
@@ -182,7 +195,7 @@ fun ProductDescriptionScreen(
 
                 Text(
                     text = if (product.stock > 0) "Available: ${product.stock} items in stock"
-                           else "Currently out of stock",
+                    else "Currently out of stock",
                     fontSize = 16.sp,
                     color = if (product.stock > 0) Color(0xFF2E7D32) else Color.Red,
                     fontWeight = FontWeight.Medium
