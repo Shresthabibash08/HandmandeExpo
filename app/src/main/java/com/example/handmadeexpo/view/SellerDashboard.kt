@@ -146,7 +146,7 @@ fun SellerDashboardBody(sellerId: String) {
             // 4. Content Switcher
             when (selectedIndex) {
                 0 -> SellerHomeScreen(sellerId)
-                1 -> InvetoryScreen(sellerId)
+                1 -> InventoryScreen(sellerId)
                 2 -> {
                     // This screen only shows if a buyer has initiated chat
                     SellerChatListScreen(sellerId = sellerId)

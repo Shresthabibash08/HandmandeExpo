@@ -237,22 +237,19 @@ class ProductRepoImpl : ProductRepo {
         return fileName
     }
 
-    override fun getProductsBySeller(
-        sellerId: String,
-        callback: (List<ProductModel>) -> Unit
-    ) {
-        ref.orderByChild("sellerId")
-            .equalTo(sellerId)
-            .addValueEventListener(object : ValueEventListener {
+    override fun getProductsBySeller(sellerId: String, callback: (List<ProductModel>) -> Unit) {
+        ref.orderByChild("sellerId").equalTo(sellerId)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
-                    val list = snapshot.children.mapNotNull {
-                        it.getValue(ProductModel::class.java)
+                    val sellerProducts = mutableListOf<ProductModel>()
+                    for (snap in snapshot.children) {
+                        snap.getValue(ProductModel::class.java)?.let { sellerProducts.add(it) }
                     }
-                    callback(list)
+                    callback(sellerProducts)
                 }
 
                 override fun onCancelled(error: DatabaseError) {
-                    // Log error if needed
+                    callback(emptyList())
                 }
             })
     }
