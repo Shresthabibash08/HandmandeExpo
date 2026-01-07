@@ -221,7 +221,7 @@ fun SignInBody() {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Start
                     ) {
-                        Text("Don't have an account?", fontSize = 16.sp, color = Black)
+                        Text("Don't have an account? Register as buyer", fontSize = 16.sp, color = Black)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "Sign Up",
@@ -229,6 +229,25 @@ fun SignInBody() {
                             fontSize = 16.sp,
                             modifier = Modifier.clickable {
                                 val intent = Intent(context, SignupActivity::class.java)
+                                activity?.startActivity(intent)
+                                activity?.finish()
+                            }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 30.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Text("Don't have an account? Register as seller", fontSize = 16.sp, color = Black)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Sign Up",
+                            color = Blue,
+                            fontSize = 16.sp,
+                            modifier = Modifier.clickable {
+                                val intent = Intent(context, SellerRegistration::class.java)
                                 activity?.startActivity(intent)
                                 activity?.finish()
                             }

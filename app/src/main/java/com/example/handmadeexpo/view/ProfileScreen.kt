@@ -2,8 +2,13 @@ package com.example.handmadeexpo.view
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -20,12 +25,13 @@ import com.example.handmadeexpo.R
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.example.handmadeexpo.ui.theme.PurpleGrey40
 
 @Composable
 fun BuyerProfileScreen(
     viewModel: BuyerViewModel,
-    onEditClick: () -> Unit
+    onEditClick: () -> Unit,
+    onChangePasswordClick: () -> Unit,
+    onLogoutSuccess: () -> Unit
 ) {
 
     val buyer by viewModel.buyer.observeAsState()
@@ -33,10 +39,52 @@ fun BuyerProfileScreen(
 
     val buyerId = FirebaseAuth.getInstance().currentUser?.uid
 
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    var isLoggingOut by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         buyerId?.let {
             viewModel.getBuyerDetailsById(it)
         }
+    }
+
+    // Logout Confirmation Dialog
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Logout") },
+            text = { Text("Are you sure you want to logout?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        isLoggingOut = true
+                        viewModel.logout { success, message ->
+                            isLoggingOut = false
+                            showLogoutDialog = false
+                            if (success) {
+                                onLogoutSuccess()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MainColor),
+                    enabled = !isLoggingOut
+                ) {
+                    if (isLoggingOut) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    } else {
+                        Text("Logout")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -60,7 +108,9 @@ fun BuyerProfileScreen(
 
             buyer != null -> {
                 Column(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
 
@@ -92,6 +142,7 @@ fun BuyerProfileScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Profile Details Card
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -104,11 +155,94 @@ fun BuyerProfileScreen(
                             BuyerProfileRow("Address", buyer!!.buyerAddress)
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Action Buttons Card
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+
+                            // Change Password Button
+                            OutlinedButton(
+                                onClick = onChangePasswordClick,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(50.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MainColor
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Default.Lock,
+                                    contentDescription = "Change Password",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Change Password",
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 16.sp
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Logout Button
+                            Button(
+                                onClick = { showLogoutDialog = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(50.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFD32F2F)
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Default.ExitToApp,
+                                    contentDescription = "Logout",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Logout",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(40.dp))
                 }
             }
 
             else -> {
-                Text("Buyer profile not found")
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "Buyer profile not found",
+                            fontSize = 16.sp,
+                            color = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { showLogoutDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = MainColor)
+                        ) {
+                            Text("Logout")
+                        }
+                    }
+                }
             }
         }
     }
@@ -122,7 +256,3 @@ fun BuyerProfileRow(title: String, value: String) {
         Divider()
     }
 }
-
-
-
-

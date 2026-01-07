@@ -1,6 +1,7 @@
 package com.example.handmadeexpo.view
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,6 +21,11 @@ import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.White12
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
+
+// TODO: IMPORT YOUR LOGIN ACTIVITY HERE
+// Example: import com.example.handmadeexpo.view.LoginActivity
+// Example: import com.example.handmadeexpo.view.BuyerLoginActivity
+// Example: import com.example.handmadeexpo.view.AuthActivity
 
 class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,9 +52,13 @@ fun DashboardBody() {
 
     var selectedIndex by remember { mutableStateOf(0) }
     var editing by remember { mutableStateOf(false) }
+    var changingPassword by remember { mutableStateOf(false) }
 
     val repo = remember { BuyerRepoImpl() }
     val viewModel = remember { BuyerViewModel(repo) }
+
+    val context = LocalContext.current
+    val activity = context as? Activity
 
     Scaffold(
         topBar = {
@@ -81,7 +91,8 @@ fun DashboardBody() {
                         selected = selectedIndex == index,
                         onClick = {
                             selectedIndex = index
-                            editing = false // reset when switching tabs
+                            editing = false
+                            changingPassword = false
                         },
                         icon = {
                             Icon(
@@ -106,16 +117,39 @@ fun DashboardBody() {
                 1 -> Text("Search Screen")
                 2 -> CartScreen()
                 3 -> {
-                    if (editing) {
-                        EditBuyerProfileScreen(
-                            viewModel = viewModel,
-                            onBack = { editing = false }
-                        )
-                    } else {
-                        BuyerProfileScreen(
-                            viewModel = viewModel,
-                            onEditClick = { editing = true }
-                        )
+                    when {
+                        changingPassword -> {
+                            ChangePasswordScreen(
+                                viewModel = viewModel,
+                                onBackClick = { changingPassword = false },
+                                onPasswordChanged = { changingPassword = false }
+                            )
+                        }
+                        editing -> {
+                            EditBuyerProfileScreen(
+                                viewModel = viewModel,
+                                onBack = { editing = false }
+                            )
+                        }
+                        else -> {
+                            BuyerProfileScreen(
+                                viewModel = viewModel,
+                                onEditClick = { editing = true },
+                                onChangePasswordClick = { changingPassword = true },
+                                onLogoutSuccess = {
+                                    // TODO: REPLACE "LoginActivity" WITH YOUR ACTUAL LOGIN ACTIVITY NAME
+                                    // Common names: LoginActivity, BuyerLoginActivity, AuthActivity, SignInActivity
+
+                                    val intent = Intent(context, SignInActivity::class.java)
+
+                                    // These flags clear the back stack so user can't go back after logout
+                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+                                    context.startActivity(intent)
+                                    activity?.finish()
+                                }
+                            )
+                        }
                     }
                 }
             }

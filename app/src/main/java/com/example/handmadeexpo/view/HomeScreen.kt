@@ -49,35 +49,42 @@ fun HomeScreen() {
     val sliderValue by viewModel.sliderValue.observeAsState(100f)
     val maxPriceDisplay by viewModel.maxPriceDisplay.observeAsState(100000.0)
 
-    // --- CRITICAL NAVIGATION STATES ---
+    // --- NAVIGATION STATES ---
     var selectedProduct by remember { mutableStateOf<ProductModel?>(null) }
     var isChatOpen by remember { mutableStateOf(false) }
+    var showCart by remember { mutableStateOf(false) } // New state for cart
 
     // This must match your User Login ID
     val currentUserId = "Buyer_User_123"
 
     Box(modifier = Modifier.fillMaxSize()) {
         when {
-            // 1. OPEN CHAT: When both conditions are met
+            // 1. SHOW CART
+            showCart -> {
+                CartScreen()
+                // If you want a back button from cart, add onBackClick parameter to CartScreen
+            }
+            // 2. OPEN CHAT: When both conditions are met
             isChatOpen && selectedProduct != null -> {
                 ChatScreen(
                     product = selectedProduct!!,
-                    currentUserId = currentUserId, // Fixes "No value passed" error
+                    currentUserId = currentUserId,
                     onBackClick = {
                         isChatOpen = false
-                        // Keep selectedProduct null or set it back if you want to return to list
                     }
                 )
             }
-            // 2. OPEN PRODUCT DESCRIPTION
+            // 3. OPEN PRODUCT DESCRIPTION
             selectedProduct != null -> {
                 ProductDescriptionScreen(
                     product = selectedProduct!!,
+                    viewModel = viewModel,
                     onBackClick = { selectedProduct = null },
-                    onChatClick = { isChatOpen = true } // The bridge to Chat
+                    onChatClick = { isChatOpen = true },
+                    onNavigateToCart = { showCart = true } // Navigate to cart
                 )
             }
-            // 3. SHOW HOME LIST
+            // 4. SHOW HOME LIST
             else -> {
                 MainHomeContent(
                     products = products,
@@ -104,7 +111,7 @@ fun MainHomeContent(
     onSliderChange: (Float) -> Unit,
     onCategorySelect: (Double) -> Unit,
     onProductClick: (ProductModel) -> Unit,
-    onChatClick: (ProductModel) -> Unit // New parameter
+    onChatClick: (ProductModel) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val categories = listOf(

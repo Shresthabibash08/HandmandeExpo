@@ -13,6 +13,8 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.MutableData
+import com.google.firebase.database.Transaction
 import com.google.firebase.database.ValueEventListener
 import java.io.InputStream
 import java.util.concurrent.Executors
@@ -144,7 +146,6 @@ class ProductRepoImpl : ProductRepo {
         TODO("Not yet implemented")
     }
 
-    // In ProductRepoImpl.kt, update the getAllProduct function
     override fun getAllProduct(callback: (Boolean, String, List<ProductModel>?) -> Unit) {
         ref.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -255,5 +256,35 @@ class ProductRepoImpl : ProductRepo {
                     // Log error if needed
                 }
             })
+    }
+
+    override fun rateProduct(
+        productId: String,
+        rating: Int,
+        callback: (Boolean) -> Unit
+    ) {
+        // Fixed: Using the same "products" reference as the rest of the class
+        ref.child(productId).runTransaction(object : Transaction.Handler {
+            override fun doTransaction(currentData: MutableData): Transaction.Result {
+                val product = currentData.getValue(ProductModel::class.java)
+                    ?: return Transaction.success(currentData)
+
+                val newTotal = product.totalRating + rating
+                val newCount = product.ratingCount + 1
+
+                currentData.child("totalRating").value = newTotal
+                currentData.child("ratingCount").value = newCount
+
+                return Transaction.success(currentData)
+            }
+
+            override fun onComplete(
+                error: DatabaseError?,
+                committed: Boolean,
+                snapshot: DataSnapshot?
+            ) {
+                callback(committed && error == null)
+            }
+        })
     }
 }
