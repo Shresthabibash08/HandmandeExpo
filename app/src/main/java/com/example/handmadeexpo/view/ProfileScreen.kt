@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,6 +72,16 @@ fun BuyerProfileScreen(
                 ) {
 
                     Spacer(modifier = Modifier.height(20.dp))
+                    // Title
+                    Text(
+                        text = "Your Profile",
+                        style = TextStyle(
+                            fontSize = 35.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MainColor
+                        ),
+                        modifier = Modifier.padding(20.dp)
+                    )
 
                     Image(
                         painter = painterResource(R.drawable.profilephoto),
