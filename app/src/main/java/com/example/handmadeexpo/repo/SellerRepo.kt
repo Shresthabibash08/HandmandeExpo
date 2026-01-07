@@ -59,4 +59,10 @@ interface SellerRepo {
     fun getCurrentUser (): FirebaseUser?
 
     fun uploadImage(context: Context, imageUri: Uri, callback: (Boolean, String) -> Unit)
+
+    fun changePassword(
+        currentPassword: String,
+        newPassword: String,
+        callback: (Boolean, String) -> Unit
+    )
 }

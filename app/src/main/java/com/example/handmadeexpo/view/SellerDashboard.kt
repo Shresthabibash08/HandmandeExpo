@@ -1,5 +1,7 @@
 package com.example.handmadeexpo.view
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.handmadeexpo.R
@@ -27,6 +30,10 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+
+// TODO: IMPORT YOUR SIGN-IN ACTIVITY HERE
+// Common names: SignInActivity, LoginActivity, SellerLoginActivity, AuthActivity
+// Example: import com.example.handmadeexpo.view.SignInActivity
 
 class SellerDashboard : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,7 +53,6 @@ class SellerDashboard : ComponentActivity() {
 fun SellerDashboardBody(sellerId: String) {
 
     // 1. Firebase Listener for Inbox Count
-    // This allows the badge to update in real-time when a buyer initiates a chat
     val inboxRef = remember { FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId) }
     var chatCount by remember { mutableStateOf(0) }
 
@@ -71,9 +77,13 @@ fun SellerDashboardBody(sellerId: String) {
     // 3. State management
     var selectedIndex by remember { mutableStateOf(0) }
     var editing by remember { mutableStateOf(false) }
+    var changingPassword by remember { mutableStateOf(false) }
 
     val repo = remember { SellerRepoImpl() }
     val viewModel = remember { SellerViewModel(repo) }
+
+    val context = LocalContext.current
+    val activity = context as? Activity
 
     Scaffold(
         topBar = {
@@ -113,7 +123,6 @@ fun SellerDashboardBody(sellerId: String) {
                         icon = {
                             BadgedBox(
                                 badge = {
-                                    // Show badge only on index 2 (Chats) if there are active inquiries
                                     if (index == 2 && chatCount > 0) {
                                         Badge { Text(chatCount.toString()) }
                                     }
@@ -126,7 +135,8 @@ fun SellerDashboardBody(sellerId: String) {
                         selected = selectedIndex == index,
                         onClick = {
                             selectedIndex = index
-                            editing = false // Reset profile editing state
+                            editing = false
+                            changingPassword = false
                         },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MainColor,
@@ -148,21 +158,44 @@ fun SellerDashboardBody(sellerId: String) {
                 0 -> SellerHomeScreen(sellerId)
                 1 -> InvetoryScreen(sellerId)
                 2 -> {
-                    // This screen only shows if a buyer has initiated chat
                     SellerChatListScreen(sellerId = sellerId)
                 }
                 3 -> {
-                    if (editing) {
-                        EditSellerProfileScreen(
-                            viewModel = viewModel,
-                            onBack = { editing = false }
-                        )
-                    } else {
-                        SellerProfileScreen(
-                            sellerId = sellerId,
-                            viewModel = viewModel,
-                            onEditProfileClick = { editing = true }
-                        )
+                    when {
+                        // Show Change Password Screen
+                        changingPassword -> {
+                            SellerChangePasswordScreen(
+                                viewModel = viewModel,
+                                onBackClick = { changingPassword = false },
+                                onPasswordChanged = { changingPassword = false }
+                            )
+                        }
+                        // Show Edit Profile Screen
+                        editing -> {
+                            EditSellerProfileScreen(
+                                viewModel = viewModel,
+                                onBack = { editing = false }
+                            )
+                        }
+                        // Show Profile Screen
+                        else -> {
+                            SellerProfileScreen(
+                                sellerId = sellerId,
+                                viewModel = viewModel,
+                                onEditProfileClick = { editing = true },
+                                onChangePasswordClick = { changingPassword = true },
+                                onLogoutSuccess = {
+
+                                    val intent = Intent(context, SignInActivity::class.java)
+
+                                    // Clear the entire back stack so user can't go back
+                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+                                    context.startActivity(intent)
+                                    activity?.finish()
+                                }
+                            )
+                        }
                     }
                 }
             }
