@@ -2,7 +2,7 @@ package com.example.handmadeexpo.model
 
 data class CartItem(
     val productId: String = "",
-    val userId: String = "",          // the logged-in user's UID
+    val userId: String = "",
     val name: String = "",
     val price: Double = 0.0,
     val image: String = "",

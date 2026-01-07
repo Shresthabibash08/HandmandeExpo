@@ -83,7 +83,7 @@ fun InventoryScreen(sellerId: String) {
     Box(modifier = Modifier.fillMaxSize()) {
         // Background
         Image(
-            painter = painterResource(id = R.drawable.bg6),
+            painter = painterResource(id = R.drawable.bg7),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop

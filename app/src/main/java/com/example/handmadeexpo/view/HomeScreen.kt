@@ -30,8 +30,12 @@ import coil.compose.AsyncImage
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.model.ProductModel
 import com.example.handmadeexpo.repo.ProductRepoImpl
+import com.example.handmadeexpo.repo.CartRepoImpl
+import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.ProductViewModel
 import com.example.handmadeexpo.viewmodel.ProductViewModelFactory
+import com.example.handmadeexpo.viewmodel.CartViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 // --- COLORS ---
 val CreamBackground = Color(0xFFFFF8E1)
@@ -41,9 +45,14 @@ val PriceTextViolet = Color(0xFF311B92)
 
 @Composable
 fun HomeScreen() {
+    // 1. Existing Product ViewModel
     val viewModel: ProductViewModel = viewModel(
         factory = ProductViewModelFactory(ProductRepoImpl())
     )
+
+    // 2. NEW: Initialize Cart ViewModel for the Description Screen
+    val cartRepo = remember { CartRepoImpl() }
+    val cartViewModel = remember { CartViewModel(cartRepo) }
 
     val products by viewModel.filteredProducts.observeAsState(initial = emptyList())
     val sliderValue by viewModel.sliderValue.observeAsState(100f)
@@ -53,28 +62,27 @@ fun HomeScreen() {
     var selectedProduct by remember { mutableStateOf<ProductModel?>(null) }
     var isChatOpen by remember { mutableStateOf(false) }
 
-    // This must match your User Login ID
-    val currentUserId = "Buyer_User_123"
+    // 3. Get actual User ID from Firebase
+    val currentUserId = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "Buyer_User_123" }
 
     Box(modifier = Modifier.fillMaxSize()) {
         when {
-            // 1. OPEN CHAT: When both conditions are met
+            // 1. OPEN CHAT
             isChatOpen && selectedProduct != null -> {
                 ChatScreen(
                     product = selectedProduct!!,
-                    currentUserId = currentUserId, // Fixes "No value passed" error
-                    onBackClick = {
-                        isChatOpen = false
-                        // Keep selectedProduct null or set it back if you want to return to list
-                    }
+                    currentUserId = currentUserId,
+                    onBackClick = { isChatOpen = false }
                 )
             }
-            // 2. OPEN PRODUCT DESCRIPTION
+            // 2. OPEN PRODUCT DESCRIPTION (Fixed with missing parameters)
             selectedProduct != null -> {
                 ProductDescriptionScreen(
                     product = selectedProduct!!,
+                    currentUserId = currentUserId,       // Pass User ID
+                    cartViewModel = cartViewModel,       // Pass Cart ViewModel
                     onBackClick = { selectedProduct = null },
-                    onChatClick = { isChatOpen = true } // The bridge to Chat
+                    onChatClick = { isChatOpen = true }
                 )
             }
             // 3. SHOW HOME LIST
@@ -96,6 +104,8 @@ fun HomeScreen() {
     }
 }
 
+// --- ALL OTHER COMPOSABLES (MainHomeContent, ProductCard, etc.) REMAIN EXACTLY THE SAME ---
+
 @Composable
 fun MainHomeContent(
     products: List<ProductModel>,
@@ -104,9 +114,10 @@ fun MainHomeContent(
     onSliderChange: (Float) -> Unit,
     onCategorySelect: (Double) -> Unit,
     onProductClick: (ProductModel) -> Unit,
-    onChatClick: (ProductModel) -> Unit // New parameter
+    onChatClick: (ProductModel) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
+
     val categories = listOf(
         "All" to R.drawable.img_2, "Painting" to R.drawable.img_1,
         "Bag" to R.drawable.img_3, "Craft" to R.drawable.img_4,
@@ -117,8 +128,10 @@ fun MainHomeContent(
 
     LazyColumn(modifier = Modifier.fillMaxSize().background(Color.White)) {
         item {
-            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
                 SearchBarInput(query = searchQuery, onQueryChange = { searchQuery = it })
+                Text(text = "Categories", fontWeight = FontWeight.Bold, fontSize = 30.sp, color = MainColor,
+                    modifier = Modifier.padding(10.dp))
                 CategoryList(categories)
                 Spacer(modifier = Modifier.height(16.dp))
                 GradientPriceSliderSection(
@@ -191,7 +204,6 @@ fun ProductCard(
     }
 }
 
-// --- UTILITY COMPONENTS (REMAIN SAME) ---
 @Composable
 fun CategoryList(categories: List<Pair<String, Int>>) {
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {

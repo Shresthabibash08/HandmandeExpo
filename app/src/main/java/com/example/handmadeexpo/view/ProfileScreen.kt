@@ -33,13 +33,18 @@ fun BuyerProfileScreen(
 
     val buyerId = FirebaseAuth.getInstance().currentUser?.uid
 
+
+
     LaunchedEffect(Unit) {
         buyerId?.let {
             viewModel.getBuyerDetailsById(it)
         }
     }
 
+
+
     Box(modifier = Modifier.fillMaxSize()) {
+
 
         Image(
             painter = painterResource(R.drawable.bg10),
@@ -47,6 +52,7 @@ fun BuyerProfileScreen(
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
+
 
         when {
             loading -> {
@@ -122,7 +128,6 @@ fun BuyerProfileRow(title: String, value: String) {
         Divider()
     }
 }
-
 
 
 
