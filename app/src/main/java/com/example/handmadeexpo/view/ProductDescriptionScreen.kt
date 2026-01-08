@@ -1,5 +1,6 @@
 package com.example.handmadeexpo.view
 
+import android.content.Intent // <--- IMPORT THIS
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext // <--- IMPORT THIS
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -29,9 +31,11 @@ import com.example.handmadeexpo.model.ProductModel
 fun ProductDescriptionScreen(
     product: ProductModel,
     onBackClick: () -> Unit,
-    onChatClick: () -> Unit // Added to fix missing parameter error
+    onChatClick: () -> Unit
 ) {
-    // --- THEME COLORS ---
+    // 1. GET CONTEXT to launch Activity
+    val context = LocalContext.current
+
     val OrangeBrand = Color(0xFFE65100)
     val CreamBackground = Color(0xFFFFF8E1)
     val TextGray = Color(0xFF757575)
@@ -42,7 +46,6 @@ fun ProductDescriptionScreen(
                 title = { Text("Product Details", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        // Using AutoMirrored to fix deprecation warning
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -53,24 +56,24 @@ fun ProductDescriptionScreen(
             BottomAppBar(
                 containerColor = Color.White,
                 tonalElevation = 8.dp,
-                modifier = Modifier.height(100.dp) // Height increased to fit icons comfortably
+                modifier = Modifier.height(100.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // --- NEW CHAT BUTTON ---
+                    // Chat Button
                     OutlinedIconButton(
                         onClick = onChatClick,
                         modifier = Modifier.size(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
                     ) {
-                        // Using Chat icon for the new feature
                         Icon(Icons.Default.Chat, contentDescription = "Chat", tint = OrangeBrand)
                     }
 
+                    // Add to Cart Button
                     OutlinedButton(
                         onClick = { /* TODO: Add to cart logic */ },
                         modifier = Modifier.weight(1f).height(50.dp),
@@ -80,8 +83,18 @@ fun ProductDescriptionScreen(
                         Text("Add to Cart", color = OrangeBrand, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
 
+                    // --- BUY NOW BUTTON (UPDATED) ---
                     Button(
-                        onClick = { /* TODO: Buy now logic */ },
+                        onClick = {
+                            // 2. Launch CheckoutActivity with Data
+                            val intent = Intent(context, CheckoutActivity::class.java).apply {
+                                putExtra("productId", product.productId)
+                                putExtra("name", product.name)
+                                putExtra("price", product.price)
+                                putExtra("image", product.image)
+                            }
+                            context.startActivity(intent)
+                        },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = OrangeBrand)
@@ -99,7 +112,7 @@ fun ProductDescriptionScreen(
                 .background(Color.White)
                 .verticalScroll(rememberScrollState())
         ) {
-            // 1. PRODUCT IMAGE
+            // Image Section
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -118,10 +131,8 @@ fun ProductDescriptionScreen(
                 )
             }
 
-            // 2. PRODUCT INFO SECTION
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(20.dp)
-            ) {
+            // Info Section
+            Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -144,7 +155,6 @@ fun ProductDescriptionScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 3. RATING BAR
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     repeat(5) { index ->
                         Icon(
@@ -155,52 +165,28 @@ fun ProductDescriptionScreen(
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "4.8 (250+ Reviews)",
-                        color = TextGray,
-                        fontSize = 14.sp
-                    )
+                    Text("4.8 (250+ Reviews)", color = TextGray, fontSize = 14.sp)
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp), thickness = 0.5.dp)
 
-                // 4. DESCRIPTION
-                Text(
-                    text = "Description",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-
+                Text("Description", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                 Spacer(modifier = Modifier.height(10.dp))
-
                 Text(
                     text = product.description.ifEmpty { "This premium handmade product is part of our exclusive Expo collection." },
-                    fontSize = 16.sp,
-                    color = TextGray,
-                    lineHeight = 24.sp
+                    fontSize = 16.sp, color = TextGray, lineHeight = 24.sp
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // 5. STOCK STATUS
-                Text(
-                    text = "Stock Information",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-
+                Text("Stock Information", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                 Spacer(modifier = Modifier.height(10.dp))
-
                 Text(
-                    text = if (product.stock > 0) "Available: ${product.stock} items in stock"
-                    else "Currently out of stock",
+                    text = if (product.stock > 0) "Available: ${product.stock} items in stock" else "Currently out of stock",
                     fontSize = 16.sp,
                     color = if (product.stock > 0) Color(0xFF2E7D32) else Color.Red,
                     fontWeight = FontWeight.Medium
                 )
-
                 Spacer(modifier = Modifier.height(40.dp))
             }
         }

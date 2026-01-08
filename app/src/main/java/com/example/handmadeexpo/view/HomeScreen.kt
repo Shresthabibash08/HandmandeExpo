@@ -1,5 +1,6 @@
 package com.example.handmadeexpo.view
 
+import androidx.activity.compose.BackHandler // <--- IMPORTANT IMPORT
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -49,35 +50,42 @@ fun HomeScreen() {
     val sliderValue by viewModel.sliderValue.observeAsState(100f)
     val maxPriceDisplay by viewModel.maxPriceDisplay.observeAsState(100000.0)
 
-    // --- CRITICAL NAVIGATION STATES ---
+    // --- NAVIGATION STATES ---
     var selectedProduct by remember { mutableStateOf<ProductModel?>(null) }
     var isChatOpen by remember { mutableStateOf(false) }
 
     // This must match your User Login ID
     val currentUserId = "Buyer_User_123"
 
+    // --- 1. HANDLE BACK BUTTON PRESS ---
+    // If Chat is open, close chat. If Product is open, close product.
+    BackHandler(enabled = isChatOpen || selectedProduct != null) {
+        if (isChatOpen) {
+            isChatOpen = false
+        } else {
+            selectedProduct = null
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         when {
-            // 1. OPEN CHAT: When both conditions are met
+            // A. SHOW CHAT SCREEN
             isChatOpen && selectedProduct != null -> {
                 ChatScreen(
                     product = selectedProduct!!,
-                    currentUserId = currentUserId, // Fixes "No value passed" error
-                    onBackClick = {
-                        isChatOpen = false
-                        // Keep selectedProduct null or set it back if you want to return to list
-                    }
+                    currentUserId = currentUserId,
+                    onBackClick = { isChatOpen = false }
                 )
             }
-            // 2. OPEN PRODUCT DESCRIPTION
+            // B. SHOW PRODUCT DETAILS
             selectedProduct != null -> {
                 ProductDescriptionScreen(
                     product = selectedProduct!!,
                     onBackClick = { selectedProduct = null },
-                    onChatClick = { isChatOpen = true } // The bridge to Chat
+                    onChatClick = { isChatOpen = true }
                 )
             }
-            // 3. SHOW HOME LIST
+            // C. SHOW HOME LIST (Default)
             else -> {
                 MainHomeContent(
                     products = products,
@@ -96,6 +104,7 @@ fun HomeScreen() {
     }
 }
 
+// ... (Rest of MainHomeContent, ProductRow, ProductCard, etc. remains exactly the same as your code)
 @Composable
 fun MainHomeContent(
     products: List<ProductModel>,
@@ -104,7 +113,7 @@ fun MainHomeContent(
     onSliderChange: (Float) -> Unit,
     onCategorySelect: (Double) -> Unit,
     onProductClick: (ProductModel) -> Unit,
-    onChatClick: (ProductModel) -> Unit // New parameter
+    onChatClick: (ProductModel) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val categories = listOf(
@@ -191,7 +200,6 @@ fun ProductCard(
     }
 }
 
-// --- UTILITY COMPONENTS (REMAIN SAME) ---
 @Composable
 fun CategoryList(categories: List<Pair<String, Int>>) {
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
