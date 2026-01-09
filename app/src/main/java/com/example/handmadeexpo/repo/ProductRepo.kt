@@ -38,5 +38,11 @@ interface ProductRepo {
 
     fun getProductsBySeller( sellerId: String, callback: (List<ProductModel>) -> Unit)
 
+    fun rateProduct(
+        productId: String,
+        rating: Int,
+        callback: (Boolean) -> Unit
+    )
+
 
 }

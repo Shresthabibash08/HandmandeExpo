@@ -9,7 +9,9 @@ data class ProductModel(
     val sold: Int = 0,
     val image: String = "",
     val description:String="",
-    val categoryId:String=""
+    val categoryId:String="",
+    val totalRating: Int = 0,   // sum of all stars
+    val ratingCount: Int = 0    // number of users who rated
 
 ) {
     fun toMap(): Map<String, Any?> {
@@ -22,6 +24,9 @@ data class ProductModel(
             "image" to image,
             "stock" to stock,
             "sellerId" to sellerId,
+            "sold" to sold,
+            "totalRating" to totalRating,
+            "ratingCount" to ratingCount
         )
     }
 }

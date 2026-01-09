@@ -91,4 +91,11 @@ class BuyerViewModel(
                 }
             })
     }
+    fun changePassword(
+        currentPassword: String,
+        newPassword: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        repo.changePassword(currentPassword, newPassword, callback)
+    }
 }
