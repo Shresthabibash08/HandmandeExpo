@@ -17,102 +17,122 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.handmadeexpo.model.ProductModel
 import com.example.handmadeexpo.repo.ChatRepoImpl
 import com.example.handmadeexpo.viewmodel.ChatViewModel
 import com.example.handmadeexpo.viewmodel.ChatViewModelFactory
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
-    product: ProductModel,
-    currentUserId: String, // FIX: Required parameter
+    chatId: String,
+    sellerId: String,
+    sellerName: String,
+    currentUserId: String,
     onBackClick: () -> Unit
 ) {
-    val chatViewModel: ChatViewModel = viewModel(
+    // FIX: Pass ChatRepoImpl() to the Factory to solve the "No value passed for parameter 'repo'" error
+    val viewModel: ChatViewModel = viewModel(
         factory = ChatViewModelFactory(ChatRepoImpl())
     )
 
-    val messages by chatViewModel.messages.collectAsState()
     var messageText by remember { mutableStateOf("") }
 
-    // Unique chat ID based on product and buyer
-    val chatId = "chat_${product.name.hashCode()}_${currentUserId}"
+    // Using collectAsState to sync with the Repository/ViewModel Flow
+    val messages by viewModel.messages.collectAsState(initial = emptyList())
 
+    // Start listening for messages when the screen opens
     LaunchedEffect(chatId) {
-        chatViewModel.listenForMessages(chatId)
+        viewModel.listenForMessages(chatId)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(product.name, fontWeight = FontWeight.Bold) },
+                title = { Text(sellerName, fontSize = 18.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        // FIX: Resolved deprecation warnings
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                }
             )
         },
         bottomBar = {
-            Surface(tonalElevation = 4.dp, color = Color.White) {
+            BottomAppBar(
+                containerColor = Color.White,
+                modifier = Modifier.imePadding() // Ensures keyboard doesn't cover input
+            ) {
                 Row(
-                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                    modifier = Modifier.padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextField(
                         value = messageText,
                         onValueChange = { messageText = it },
-                        placeholder = { Text("Message...") },
                         modifier = Modifier.weight(1f),
+                        placeholder = { Text("Type a message...") },
                         colors = TextFieldDefaults.colors(
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent
                         ),
                         shape = RoundedCornerShape(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(
-                        onClick = {
-                            if (messageText.isNotBlank()) {
-                                chatViewModel.sendMessage(chatId, currentUserId, product.sellerId, messageText)
-                                messageText = ""
-                            }
-                        },
-                        colors = IconButtonDefaults.iconButtonColors(containerColor = Color(0xFFE65100))
-                    ) {
-                        // FIX: Resolved deprecation warnings
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color.White)
+                    IconButton(onClick = {
+                        if (messageText.isNotBlank()) {
+                            viewModel.sendMessage(chatId, currentUserId, sellerId, messageText)
+                            messageText = ""
+                        }
+                    }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = null,
+                            tint = Color(0xFFE65100)
+                        )
                     }
                 }
             }
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding).background(Color(0xFFF7F7F7)),
-            contentPadding = PaddingValues(16.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            reverseLayout = false
         ) {
             items(messages) { msg ->
                 val isMe = msg.senderId == currentUserId
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    contentAlignment = if (isMe) Alignment.CenterEnd else Alignment.CenterStart
-                ) {
-                    Surface(
-                        color = if (isMe) Color(0xFFE65100) else Color.White,
-                        shape = RoundedCornerShape(12.dp),
-                        tonalElevation = 1.dp
-                    ) {
-                        Text(
-                            text = msg.message,
-                            modifier = Modifier.padding(12.dp),
-                            color = if (isMe) Color.White else Color.Black
-                        )
-                    }
-                }
+                ChatBubble(text = msg.message, isMe = isMe)
             }
+        }
+    }
+}
+
+@Composable
+fun ChatBubble(text: String, isMe: Boolean) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
+    ) {
+        Surface(
+            color = if (isMe) Color(0xFFE65100) else Color(0xFFF1F1F1),
+            shape = RoundedCornerShape(
+                topStart = 12.dp, topEnd = 12.dp,
+                bottomStart = if (isMe) 12.dp else 0.dp,
+                bottomEnd = if (isMe) 0.dp else 12.dp
+            )
+        ) {
+            Text(
+                text = text,
+                modifier = Modifier.padding(12.dp),
+                color = if (isMe) Color.White else Color.Black,
+                fontSize = 14.sp
+            )
         }
     }
 }

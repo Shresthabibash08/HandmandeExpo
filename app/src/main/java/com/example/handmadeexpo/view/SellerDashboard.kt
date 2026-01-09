@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
@@ -31,10 +32,6 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 
-// TODO: IMPORT YOUR SIGN-IN ACTIVITY HERE
-// Common names: SignInActivity, LoginActivity, SellerLoginActivity, AuthActivity
-// Example: import com.example.handmadeexpo.view.SignInActivity
-
 class SellerDashboard : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,11 +48,22 @@ class SellerDashboard : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SellerDashboardBody(sellerId: String) {
-
-    // 1. Firebase Listener for Inbox Count
-    val inboxRef = remember { FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId) }
+    // --- 1. STATE DEFINITIONS ---
+    var selectedIndex by remember { mutableIntStateOf(0) }
+    var editing by remember { mutableStateOf(false) }
+    var changingPassword by remember { mutableStateOf(false) }
     var chatCount by remember { mutableStateOf(0) }
 
+    // Triple stores: (ChatID, BuyerID, BuyerName)
+    var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
+
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val repo = remember { SellerRepoImpl() }
+    val viewModel = remember { SellerViewModel(repo) }
+
+    // --- 2. FIREBASE LISTENER FOR BADGE ---
+    val inboxRef = remember { FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId) }
     LaunchedEffect(sellerId) {
         inboxRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -65,7 +73,7 @@ fun SellerDashboardBody(sellerId: String) {
         })
     }
 
-    // 2. Navigation Item Definition
+    // --- 3. NAVIGATION ITEMS ---
     data class NavItem(val icon: ImageVector, val label: String)
     val listItems = listOf(
         NavItem(Icons.Default.Home, "Home"),
@@ -74,41 +82,37 @@ fun SellerDashboardBody(sellerId: String) {
         NavItem(Icons.Default.Person, "Profile")
     )
 
-    // 3. State management
-    var selectedIndex by remember { mutableStateOf(0) }
-    var editing by remember { mutableStateOf(false) }
-    var changingPassword by remember { mutableStateOf(false) }
-
-    val repo = remember { SellerRepoImpl() }
-    val viewModel = remember { SellerViewModel(repo) }
-
-    val context = LocalContext.current
-    val activity = context as? Activity
+    // Handle back button specifically for closing a chat thread
+    BackHandler(enabled = (selectedIndex == 2 && activeChatData != null)) {
+        activeChatData = null
+    }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MainColor,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White,
-                    actionIconContentColor = Color.White
+                    titleContentColor = Color.White
                 ),
                 title = {
-                    val titleText = when (selectedIndex) {
-                        0 -> "HandMade Expo"
-                        1 -> "My Inventory"
-                        2 -> "Messages"
+                    val titleText = when {
+                        selectedIndex == 2 && activeChatData != null -> activeChatData!!.third
+                        selectedIndex == 0 -> "HandMade Expo"
+                        selectedIndex == 1 -> "My Inventory"
+                        selectedIndex == 2 -> "Messages"
                         else -> "Profile"
                     }
                     Text(titleText, style = MaterialTheme.typography.titleLarge)
                 },
                 navigationIcon = {
-                    IconButton(onClick = { /* Handle navigation drawer or back */ }) {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_arrow_back_ios_24),
-                            contentDescription = "Back"
-                        )
+                    if (selectedIndex == 2 && activeChatData != null) {
+                        IconButton(onClick = { activeChatData = null }) {
+                            Icon(
+                                painter = painterResource(R.drawable.outline_arrow_back_ios_24),
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
                     }
                 }
             )
@@ -137,6 +141,7 @@ fun SellerDashboardBody(sellerId: String) {
                             selectedIndex = index
                             editing = false
                             changingPassword = false
+                            if (index != 2) activeChatData = null
                         },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MainColor,
@@ -153,16 +158,24 @@ fun SellerDashboardBody(sellerId: String) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // 4. Content Switcher
             when (selectedIndex) {
                 0 -> SellerHomeScreen(sellerId)
                 1 -> InvetoryScreen(sellerId)
                 2 -> {
-                    SellerChatListScreen(sellerId = sellerId)
+                    if (activeChatData != null) {
+                        SellerReplyView(
+                            chatId = activeChatData!!.first,
+                            buyerId = activeChatData!!.second,
+                            sellerId = sellerId
+                        )
+                    } else {
+                        ChatListContent(sellerId = sellerId) { chatId, buyerId, buyerName ->
+                            activeChatData = Triple(chatId, buyerId, buyerName)
+                        }
+                    }
                 }
                 3 -> {
                     when {
-                        // Show Change Password Screen
                         changingPassword -> {
                             SellerChangePasswordScreen(
                                 viewModel = viewModel,
@@ -170,14 +183,12 @@ fun SellerDashboardBody(sellerId: String) {
                                 onPasswordChanged = { changingPassword = false }
                             )
                         }
-                        // Show Edit Profile Screen
                         editing -> {
                             EditSellerProfileScreen(
                                 viewModel = viewModel,
                                 onBack = { editing = false }
                             )
                         }
-                        // Show Profile Screen
                         else -> {
                             SellerProfileScreen(
                                 sellerId = sellerId,
@@ -185,12 +196,8 @@ fun SellerDashboardBody(sellerId: String) {
                                 onEditProfileClick = { editing = true },
                                 onChangePasswordClick = { changingPassword = true },
                                 onLogoutSuccess = {
-
                                     val intent = Intent(context, SignInActivity::class.java)
-
-                                    // Clear the entire back stack so user can't go back
                                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
                                     context.startActivity(intent)
                                     activity?.finish()
                                 }

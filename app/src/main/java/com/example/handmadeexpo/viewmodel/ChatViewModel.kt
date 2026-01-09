@@ -1,31 +1,24 @@
 package com.example.handmadeexpo.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.example.handmadeexpo.model.ChatMessage
-import com.example.handmadeexpo.repo.ChatRepo
+import com.example.handmadeexpo.repo.ChatRepoImpl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
-class ChatViewModel(private val repository: ChatRepo) : ViewModel() {
+class ChatViewModel(private val repo: ChatRepoImpl) : ViewModel() {
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages
 
     fun listenForMessages(chatId: String) {
-        repository.getMessages(chatId) { newList ->
-            _messages.value = newList
+        viewModelScope.launch {
+            repo.listenForMessages(chatId).collect { _messages.value = it }
         }
     }
 
     fun sendMessage(chatId: String, senderId: String, receiverId: String, text: String) {
-        if (text.isBlank()) return
-        val msg = ChatMessage(senderId, receiverId, text)
-        repository.sendMessage(chatId, msg)
-    }
-}
-
-class ChatViewModelFactory(private val repository: ChatRepo) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return ChatViewModel(repository) as T
+        repo.sendMessage(chatId, senderId, receiverId, text)
     }
 }
