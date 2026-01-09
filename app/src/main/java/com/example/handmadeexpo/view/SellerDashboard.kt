@@ -160,7 +160,7 @@ fun SellerDashboardBody(sellerId: String) {
         ) {
             when (selectedIndex) {
                 0 -> SellerHomeScreen(sellerId)
-                1 -> InvetoryScreen(sellerId)
+                1 -> InventoryScreen(sellerId)
                 2 -> {
                     if (activeChatData != null) {
                         SellerReplyView(

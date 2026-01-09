@@ -31,8 +31,11 @@ import coil.compose.AsyncImage
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.model.ProductModel
 import com.example.handmadeexpo.repo.ProductRepoImpl
+import com.example.handmadeexpo.repo.CartRepoImpl
+import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.ProductViewModel
 import com.example.handmadeexpo.viewmodel.ProductViewModelFactory
+import com.example.handmadeexpo.viewmodel.CartViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 
@@ -40,9 +43,6 @@ import com.google.firebase.database.FirebaseDatabase
 val OrangeBrand = Color(0xFFE65100)
 val CreamBackground = Color(0xFFFFF8E1)
 
-/**
- * Utility for generating consistent Chat IDs
- */
 object ChatUtils {
     fun generateChatId(uid1: String, uid2: String): String {
         return if (uid1 < uid2) "${uid1}_${uid2}" else "${uid2}_${uid1}"
@@ -51,9 +51,14 @@ object ChatUtils {
 
 @Composable
 fun HomeScreen() {
+    // 1. Existing Product ViewModel
     val viewModel: ProductViewModel = viewModel(
         factory = ProductViewModelFactory(ProductRepoImpl())
     )
+
+    // 2. Initialize Cart ViewModel for the Description Screen
+    val cartRepo = remember { CartRepoImpl() }
+    val cartViewModel = remember { CartViewModel(cartRepo) }
 
     val products by viewModel.filteredProducts.observeAsState(initial = emptyList())
     val sliderValue by viewModel.sliderValue.observeAsState(100f)
@@ -64,21 +69,24 @@ fun HomeScreen() {
     var isChatOpen by remember { mutableStateOf(false) }
     var showCart by remember { mutableStateOf(false) }
 
-    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: "Guest"
+    // 3. Get User ID
+    val currentUserId = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "Guest" }
 
     Box(modifier = Modifier.fillMaxSize()) {
         when {
             // 1. SHOW CART
             showCart -> {
-                CartScreen() 
-                // To enable back navigation, you could pass: onBack = { showCart = false }
+                CartScreen(
+                    cartViewModel = cartViewModel,
+                    currentUserId = currentUserId
+                )
             }
 
-            // 2. OPEN CHAT: Triggers when user clicks chat from Product Details or Card
+            // 2. OPEN CHAT
             isChatOpen && selectedProduct != null -> {
                 val chatId = ChatUtils.generateChatId(currentUserId, selectedProduct!!.sellerId)
-
                 var sellerNameState by remember { mutableStateOf("Loading...") }
+                
                 LaunchedEffect(selectedProduct!!.sellerId) {
                     FirebaseDatabase.getInstance().getReference("sellers")
                         .child(selectedProduct!!.sellerId).child("name").get()
@@ -98,14 +106,16 @@ fun HomeScreen() {
             selectedProduct != null -> {
                 ProductDescriptionScreen(
                     product = selectedProduct!!,
-                    viewModel = viewModel,
+                    currentUserId = currentUserId,
+                    cartViewModel = cartViewModel,
+                    viewModel = viewModel, // From dev branch requirement
                     onBackClick = { selectedProduct = null },
                     onChatClick = { isChatOpen = true },
                     onNavigateToCart = { showCart = true }
                 )
             }
 
-            // 4. MAIN HOME CONTENT (LIST)
+            // 4. MAIN HOME CONTENT
             else -> {
                 MainHomeContent(
                     products = products,
@@ -135,6 +145,7 @@ fun MainHomeContent(
     onChatClick: (ProductModel) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
+
     val categories = listOf(
         "All" to R.drawable.img_2, "Painting" to R.drawable.img_1,
         "Bag" to R.drawable.img_3, "Craft" to R.drawable.img_4
@@ -144,10 +155,19 @@ fun MainHomeContent(
 
     LazyColumn(modifier = Modifier.fillMaxSize().background(Color.White)) {
         item {
-            SearchBarInput(query = searchQuery, onQueryChange = { searchQuery = it })
-            CategoryList(categories)
-            Spacer(modifier = Modifier.height(16.dp))
-            GradientPriceSliderSection(sliderValue, maxPrice, onSliderChange, onCategorySelect)
+            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
+                SearchBarInput(query = searchQuery, onQueryChange = { searchQuery = it })
+                Text(
+                    text = "Categories", 
+                    fontWeight = FontWeight.Bold, 
+                    fontSize = 24.sp, // Normalized from 30.sp
+                    color = MainColor,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+                CategoryList(categories)
+                Spacer(modifier = Modifier.height(16.dp))
+                GradientPriceSliderSection(sliderValue, maxPrice, onSliderChange, onCategorySelect)
+            }
         }
 
         item {
@@ -163,6 +183,8 @@ fun MainHomeContent(
         }
     }
 }
+
+// --- UI COMPONENTS ---
 
 @Composable
 fun ProductRow(

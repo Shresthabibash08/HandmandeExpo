@@ -1,7 +1,7 @@
 package com.example.handmadeexpo.view
 
-import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -27,32 +27,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.model.CartItem
 import com.example.handmadeexpo.model.ProductModel
+import com.example.handmadeexpo.viewmodel.CartViewModel
 import com.example.handmadeexpo.viewmodel.ProductViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDescriptionScreen(
     product: ProductModel,
-    viewModel: ProductViewModel,
+    currentUserId: String,
+    cartViewModel: CartViewModel,
+    viewModel: ProductViewModel, // Combined both ViewModels
     onBackClick: () -> Unit,
     onChatClick: () -> Unit,
-    onNavigateToCart: () -> Unit // New parameter for cart navigation
+    onNavigateToCart: () -> Unit
 ) {
     // --- THEME COLORS ---
     val OrangeBrand = Color(0xFFE65100)
     val CreamBackground = Color(0xFFFFF8E1)
     val TextGray = Color(0xFF757575)
 
-    // Get context for starting CheckoutActivity
     val context = LocalContext.current
 
-    // --- Rating State ---
-    var selectedRating by remember { mutableStateOf(0) }
+    // --- Rating & UI State ---
+    var selectedRating by remember { mutableIntStateOf(0) }
     var hasRated by remember { mutableStateOf(false) }
     var showRatingDialog by remember { mutableStateOf(false) }
-
-    // Show success message when adding to cart
     var showCartAddedMessage by remember { mutableStateOf(false) }
 
     // Calculate average rating
@@ -62,7 +63,7 @@ fun ProductDescriptionScreen(
         0f
     }
 
-    // Show rating confirmation dialog
+    // --- Rating Dialog ---
     if (showRatingDialog) {
         AlertDialog(
             onDismissRequest = { showRatingDialog = false },
@@ -71,8 +72,6 @@ fun ProductDescriptionScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("How would you rate this product?")
                     Spacer(modifier = Modifier.height(16.dp))
-
-                    // Interactive rating stars in dialog
                     Row(
                         horizontalArrangement = Arrangement.Center,
                         modifier = Modifier.fillMaxWidth()
@@ -105,7 +104,7 @@ fun ProductDescriptionScreen(
                     },
                     enabled = selectedRating > 0
                 ) {
-                    Text("Submit Rating")
+                    Text("Submit")
                 }
             },
             dismissButton = {
@@ -114,14 +113,6 @@ fun ProductDescriptionScreen(
                 }
             }
         )
-    }
-
-    // Show snackbar when item is added to cart
-    if (showCartAddedMessage) {
-        LaunchedEffect(Unit) {
-            kotlinx.coroutines.delay(2000)
-            showCartAddedMessage = false
-        }
     }
 
     Scaffold(
@@ -157,12 +148,18 @@ fun ProductDescriptionScreen(
                         Icon(Icons.Default.Chat, contentDescription = "Chat", tint = OrangeBrand)
                     }
 
-                    // Add to Cart Button
+                    // Add to Cart Button (Fixed Logic)
                     OutlinedButton(
                         onClick = {
-                            // TODO: Add actual cart logic here (add to cart database/state)
-                            showCartAddedMessage = true
-                            onNavigateToCart() // Navigate to cart screen
+                            val cartItem = CartItem.fromProduct(product, currentUserId)
+                            cartViewModel.addToCart(cartItem) { success ->
+                                if (success) {
+                                    showCartAddedMessage = true
+                                    Toast.makeText(context, "Added to cart", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Failed to add", Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
@@ -174,12 +171,11 @@ fun ProductDescriptionScreen(
                     // Buy Now Button
                     Button(
                         onClick = {
-                            // Navigate to CheckoutActivity
-                            val intent = Intent(context, CheckoutActivity::class.java)
-                            // You can pass product details as extras if needed
-                            intent.putExtra("product_id", product.productId)
-                            intent.putExtra("product_name", product.name)
-                            intent.putExtra("product_price", product.price)
+                            val intent = Intent(context, CheckoutActivity::class.java).apply {
+                                putExtra("product_id", product.productId)
+                                putExtra("product_name", product.name)
+                                putExtra("product_price", product.price)
+                            }
                             context.startActivity(intent)
                         },
                         modifier = Modifier.weight(1f).height(50.dp),
@@ -194,10 +190,20 @@ fun ProductDescriptionScreen(
         snackbarHost = {
             if (showCartAddedMessage) {
                 Snackbar(
-                    modifier = Modifier.padding(16.dp),
-                    containerColor = Color(0xFF4CAF50)
+                    modifier = Modifier.padding(16.dp).clickable { onNavigateToCart() },
+                    containerColor = Color(0xFF4CAF50),
+                    action = {
+                        TextButton(onClick = onNavigateToCart) {
+                            Text("VIEW", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 ) {
                     Text("Added to cart!", color = Color.White)
+                }
+                // Auto-hide snackbar
+                LaunchedEffect(Unit) {
+                    kotlinx.coroutines.delay(3000)
+                    showCartAddedMessage = false
                 }
             }
         }
@@ -229,9 +235,7 @@ fun ProductDescriptionScreen(
             }
 
             // 2. PRODUCT INFO SECTION
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(20.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -254,9 +258,8 @@ fun ProductDescriptionScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 3. RATING BAR (Display + Interactive)
+                // 3. RATING BAR
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    // Display average rating
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         repeat(5) { index ->
                             Icon(
@@ -276,7 +279,6 @@ fun ProductDescriptionScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Rate this product button
                     if (!hasRated) {
                         OutlinedButton(
                             onClick = { showRatingDialog = true },
@@ -284,12 +286,7 @@ fun ProductDescriptionScreen(
                             shape = RoundedCornerShape(8.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
                         ) {
-                            Icon(
-                                Icons.Default.Star,
-                                contentDescription = null,
-                                tint = OrangeBrand,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Icon(Icons.Default.Star, contentDescription = null, tint = OrangeBrand, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Rate this Product", color = OrangeBrand)
                         }
@@ -300,24 +297,13 @@ fun ProductDescriptionScreen(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    Icons.Default.Star,
-                                    contentDescription = null,
-                                    tint = Color(0xFF2E7D32),
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFF2E7D32), modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Thank you for rating!",
-                                    color = Color(0xFF2E7D32),
-                                    fontWeight = FontWeight.Medium
-                                )
+                                Text("Thank you for rating!", color = Color(0xFF2E7D32), fontWeight = FontWeight.Medium)
                             }
                         }
                     }
@@ -326,15 +312,8 @@ fun ProductDescriptionScreen(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp), thickness = 0.5.dp)
 
                 // 4. DESCRIPTION
-                Text(
-                    text = "Description",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-
+                Text(text = "Description", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(10.dp))
-
                 Text(
                     text = product.description.ifEmpty { "This premium handmade product is part of our exclusive Expo collection." },
                     fontSize = 16.sp,
@@ -345,15 +324,8 @@ fun ProductDescriptionScreen(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // 5. STOCK STATUS
-                Text(
-                    text = "Stock Information",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-
+                Text(text = "Stock Information", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(10.dp))
-
                 Text(
                     text = if (product.stock > 0) "Available: ${product.stock} items in stock"
                     else "Currently out of stock",
@@ -361,7 +333,6 @@ fun ProductDescriptionScreen(
                     color = if (product.stock > 0) Color(0xFF2E7D32) else Color.Red,
                     fontWeight = FontWeight.Medium
                 )
-
                 Spacer(modifier = Modifier.height(40.dp))
             }
         }

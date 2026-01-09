@@ -20,11 +20,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.repo.BuyerRepoImpl
+import com.example.handmadeexpo.repo.CartRepoImpl
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.White12
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
+import com.example.handmadeexpo.viewmodel.CartViewModel
 import com.google.firebase.auth.FirebaseAuth
 
 class DashboardActivity : ComponentActivity() {
@@ -45,15 +48,8 @@ class DashboardActivity : ComponentActivity() {
 fun DashboardBody(userId: String) {
     val context = LocalContext.current
     val activity = context as? Activity
-    
-    data class NavItem(val icon: ImageVector, val label: String)
-    val listItems = listOf(
-        NavItem(Icons.Default.Home, "Home"),
-        NavItem(Icons.AutoMirrored.Filled.Chat, "Inbox"),
-        NavItem(Icons.Default.ShoppingCart, "Cart"),
-        NavItem(Icons.Default.Person, "Profile")
-    )
 
+    // --- 1. NAVIGATION STATE ---
     var selectedIndex by remember { mutableIntStateOf(0) }
     var editing by remember { mutableStateOf(false) }
     var changingPassword by remember { mutableStateOf(false) }
@@ -62,8 +58,20 @@ fun DashboardBody(userId: String) {
     // (ChatID, SellerID, SellerName)
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
-    val repo = remember { BuyerRepoImpl() }
-    val viewModel = remember { BuyerViewModel(repo) }
+    // --- 2. INITIALIZE REPOS AND VIEWMODELS ---
+    val buyerRepo = remember { BuyerRepoImpl() }
+    val buyerViewModel = remember { BuyerViewModel(buyerRepo) }
+
+    val cartRepo = remember { CartRepoImpl() }
+    val cartViewModel = remember { CartViewModel(cartRepo) }
+
+    data class NavItem(val icon: ImageVector, val label: String)
+    val listItems = listOf(
+        NavItem(Icons.Default.Home, "Home"),
+        NavItem(Icons.AutoMirrored.Filled.Chat, "Inbox"),
+        NavItem(Icons.Default.ShoppingCart, "Cart"),
+        NavItem(Icons.Default.Person, "Profile")
+    )
 
     // Handle back button for the Chat flow
     BackHandler(enabled = (selectedIndex == 1 && (activeChatData != null || showAllSellers))) {
@@ -114,6 +122,7 @@ fun DashboardBody(userId: String) {
             }
         },
         floatingActionButton = {
+            // Only show "New Chat" button when on the Inbox tab and not currently in a chat
             if (selectedIndex == 1 && activeChatData == null && !showAllSellers) {
                 FloatingActionButton(
                     onClick = { showAllSellers = true },
@@ -152,25 +161,30 @@ fun DashboardBody(userId: String) {
                     }
                 }
 
-                2 -> CartScreen()
+                2 -> {
+                    CartScreen(
+                        cartViewModel = cartViewModel,
+                        currentUserId = userId
+                    )
+                }
 
                 3 -> when {
                     changingPassword -> {
                         ChangePasswordScreen(
-                            viewModel = viewModel,
+                            viewModel = buyerViewModel,
                             onBackClick = { changingPassword = false },
                             onPasswordChanged = { changingPassword = false }
                         )
                     }
                     editing -> {
                         EditBuyerProfileScreen(
-                            viewModel = viewModel,
+                            viewModel = buyerViewModel,
                             onBack = { editing = false }
                         )
                     }
                     else -> {
                         BuyerProfileScreen(
-                            viewModel = viewModel,
+                            viewModel = buyerViewModel,
                             onEditClick = { editing = true },
                             onChangePasswordClick = { changingPassword = true },
                             onLogoutSuccess = {

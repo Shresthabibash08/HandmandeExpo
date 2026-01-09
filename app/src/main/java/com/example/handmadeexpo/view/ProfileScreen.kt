@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,12 +34,11 @@ fun BuyerProfileScreen(
     onChangePasswordClick: () -> Unit,
     onLogoutSuccess: () -> Unit
 ) {
-
     val buyer by viewModel.buyer.observeAsState()
     val loading by viewModel.loading.observeAsState(false)
-
     val buyerId = FirebaseAuth.getInstance().currentUser?.uid
 
+    // Logout and Dialog States
     var showLogoutDialog by remember { mutableStateOf(false) }
     var isLoggingOut by remember { mutableStateOf(false) }
 
@@ -58,7 +58,7 @@ fun BuyerProfileScreen(
                 Button(
                     onClick = {
                         isLoggingOut = true
-                        viewModel.logout { success, message ->
+                        viewModel.logout { success, _ ->
                             isLoggingOut = false
                             showLogoutDialog = false
                             if (success) {
@@ -88,7 +88,7 @@ fun BuyerProfileScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-
+        // Background Image
         Image(
             painter = painterResource(R.drawable.bg10),
             contentDescription = null,
@@ -113,8 +113,17 @@ fun BuyerProfileScreen(
                         .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-
                     Spacer(modifier = Modifier.height(20.dp))
+                    
+                    Text(
+                        text = "Your Profile",
+                        style = TextStyle(
+                            fontSize = 35.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MainColor
+                        ),
+                        modifier = Modifier.padding(20.dp)
+                    )
 
                     Image(
                         painter = painterResource(R.drawable.profilephoto),
@@ -125,7 +134,7 @@ fun BuyerProfileScreen(
                     )
 
                     Text(
-                        buyer!!.buyerName,
+                        text = buyer?.buyerName ?: "",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(8.dp)
@@ -133,9 +142,7 @@ fun BuyerProfileScreen(
 
                     Button(
                         onClick = onEditClick,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MainColor
-                        )
+                        colors = ButtonDefaults.buttonColors(containerColor = MainColor)
                     ) {
                         Text("Edit Profile")
                     }
@@ -150,13 +157,11 @@ fun BuyerProfileScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
-                            BuyerProfileRow("Email", buyer!!.buyerEmail)
-                            BuyerProfileRow("Phone", buyer!!.buyerPhoneNumber)
-                            BuyerProfileRow("Address", buyer!!.buyerAddress)
+                            BuyerProfileRow("Email", buyer?.buyerEmail ?: "")
+                            BuyerProfileRow("Phone", buyer?.buyerPhoneNumber ?: "")
+                            BuyerProfileRow("Address", buyer?.buyerAddress ?: "")
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
 
                     // Action Buttons Card
                     Card(
@@ -166,74 +171,43 @@ fun BuyerProfileScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-
-                            // Change Password Button
                             OutlinedButton(
                                 onClick = onChangePasswordClick,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(50.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MainColor
-                                )
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MainColor)
                             ) {
-                                Icon(
-                                    Icons.Default.Lock,
-                                    contentDescription = "Change Password",
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Change Password",
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 16.sp
-                                )
+                                Text("Change Password", fontWeight = FontWeight.Medium, fontSize = 16.sp)
                             }
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // Logout Button
                             Button(
                                 onClick = { showLogoutDialog = true },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(50.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFD32F2F)
-                                )
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
                             ) {
-                                Icon(
-                                    Icons.Default.ExitToApp,
-                                    contentDescription = "Logout",
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                Icon(Icons.Default.ExitToApp, contentDescription = null, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Logout",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
-                                )
+                                Text("Logout", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
                         }
                     }
-
                     Spacer(modifier = Modifier.height(40.dp))
                 }
             }
 
             else -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            "Buyer profile not found",
-                            fontSize = 16.sp,
-                            color = Color.Gray
-                        )
+                        Text("Buyer profile not found", color = Color.Gray)
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = { showLogoutDialog = true },
@@ -253,6 +227,6 @@ fun BuyerProfileRow(title: String, value: String) {
     Column(modifier = Modifier.padding(vertical = 6.dp)) {
         Text(title, fontWeight = FontWeight.Bold)
         Text(value, color = Color.DarkGray)
-        Divider()
+        HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
     }
 }
