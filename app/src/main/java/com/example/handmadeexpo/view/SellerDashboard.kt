@@ -1,7 +1,10 @@
 package com.example.handmadeexpo.view
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
@@ -17,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.handmadeexpo.R
@@ -44,12 +48,22 @@ class SellerDashboard : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SellerDashboardBody(sellerId: String) {
-
-    // 1. Firebase Listener for Inbox Count
-    // This allows the badge to update in real-time when a buyer initiates a chat
-    val inboxRef = remember { FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId) }
+    // --- 1. STATE DEFINITIONS ---
+    var selectedIndex by remember { mutableIntStateOf(0) }
+    var editing by remember { mutableStateOf(false) }
+    var changingPassword by remember { mutableStateOf(false) }
     var chatCount by remember { mutableStateOf(0) }
 
+    // Triple stores: (ChatID, BuyerID, BuyerName)
+    var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
+
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val repo = remember { SellerRepoImpl() }
+    val viewModel = remember { SellerViewModel(repo) }
+
+    // --- 2. FIREBASE LISTENER FOR BADGE ---
+    val inboxRef = remember { FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId) }
     LaunchedEffect(sellerId) {
         inboxRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -59,7 +73,7 @@ fun SellerDashboardBody(sellerId: String) {
         })
     }
 
-    // 2. Navigation Item Definition
+    // --- 3. NAVIGATION ITEMS ---
     data class NavItem(val icon: ImageVector, val label: String)
     val listItems = listOf(
         NavItem(Icons.Default.Home, "Home"),
@@ -68,37 +82,37 @@ fun SellerDashboardBody(sellerId: String) {
         NavItem(Icons.Default.Person, "Profile")
     )
 
-    // 3. State management
-    var selectedIndex by remember { mutableStateOf(0) }
-    var editing by remember { mutableStateOf(false) }
-
-    val repo = remember { SellerRepoImpl() }
-    val viewModel = remember { SellerViewModel(repo) }
+    // Handle back button specifically for closing a chat thread
+    BackHandler(enabled = (selectedIndex == 2 && activeChatData != null)) {
+        activeChatData = null
+    }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MainColor,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White,
-                    actionIconContentColor = Color.White
+                    titleContentColor = Color.White
                 ),
                 title = {
-                    val titleText = when (selectedIndex) {
-                        0 -> "HandMade Expo"
-                        1 -> "My Inventory"
-                        2 -> "Messages"
+                    val titleText = when {
+                        selectedIndex == 2 && activeChatData != null -> activeChatData!!.third
+                        selectedIndex == 0 -> "HandMade Expo"
+                        selectedIndex == 1 -> "My Inventory"
+                        selectedIndex == 2 -> "Messages"
                         else -> "Profile"
                     }
                     Text(titleText, style = MaterialTheme.typography.titleLarge)
                 },
                 navigationIcon = {
-                    IconButton(onClick = { /* Handle navigation drawer or back */ }) {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_arrow_back_ios_24),
-                            contentDescription = "Back"
-                        )
+                    if (selectedIndex == 2 && activeChatData != null) {
+                        IconButton(onClick = { activeChatData = null }) {
+                            Icon(
+                                painter = painterResource(R.drawable.outline_arrow_back_ios_24),
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
                     }
                 }
             )
@@ -113,7 +127,6 @@ fun SellerDashboardBody(sellerId: String) {
                         icon = {
                             BadgedBox(
                                 badge = {
-                                    // Show badge only on index 2 (Chats) if there are active inquiries
                                     if (index == 2 && chatCount > 0) {
                                         Badge { Text(chatCount.toString()) }
                                     }
@@ -126,7 +139,9 @@ fun SellerDashboardBody(sellerId: String) {
                         selected = selectedIndex == index,
                         onClick = {
                             selectedIndex = index
-                            editing = false // Reset profile editing state
+                            editing = false
+                            changingPassword = false
+                            if (index != 2) activeChatData = null
                         },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MainColor,
@@ -143,26 +158,51 @@ fun SellerDashboardBody(sellerId: String) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // 4. Content Switcher
             when (selectedIndex) {
                 0 -> SellerHomeScreen(sellerId)
                 1 -> InventoryScreen(sellerId)
                 2 -> {
-                    // This screen only shows if a buyer has initiated chat
-                    SellerChatListScreen(sellerId = sellerId)
-                }
-                3 -> {
-                    if (editing) {
-                        EditSellerProfileScreen(
-                            viewModel = viewModel,
-                            onBack = { editing = false }
+                    if (activeChatData != null) {
+                        SellerReplyView(
+                            chatId = activeChatData!!.first,
+                            buyerId = activeChatData!!.second,
+                            sellerId = sellerId
                         )
                     } else {
-                        SellerProfileScreen(
-                            sellerId = sellerId,
-                            viewModel = viewModel,
-                            onEditProfileClick = { editing = true }
-                        )
+                        ChatListContent(sellerId = sellerId) { chatId, buyerId, buyerName ->
+                            activeChatData = Triple(chatId, buyerId, buyerName)
+                        }
+                    }
+                }
+                3 -> {
+                    when {
+                        changingPassword -> {
+                            SellerChangePasswordScreen(
+                                viewModel = viewModel,
+                                onBackClick = { changingPassword = false },
+                                onPasswordChanged = { changingPassword = false }
+                            )
+                        }
+                        editing -> {
+                            EditSellerProfileScreen(
+                                viewModel = viewModel,
+                                onBack = { editing = false }
+                            )
+                        }
+                        else -> {
+                            SellerProfileScreen(
+                                sellerId = sellerId,
+                                viewModel = viewModel,
+                                onEditProfileClick = { editing = true },
+                                onChangePasswordClick = { changingPassword = true },
+                                onLogoutSuccess = {
+                                    val intent = Intent(context, SignInActivity::class.java)
+                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    context.startActivity(intent)
+                                    activity?.finish()
+                                }
+                            )
+                        }
                     }
                 }
             }

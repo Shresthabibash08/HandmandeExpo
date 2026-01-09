@@ -83,6 +83,13 @@ class SellerViewModel(private val repo: SellerRepo) : ViewModel() {
     fun deleteAccount(sellerId: String, callback: (Boolean, String) -> Unit) {
         repo.deleteAccount(sellerId, callback)
     }
+    fun changePassword(
+        currentPassword: String,
+        newPassword: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        repo.changePassword(currentPassword, newPassword, callback)
+    }
 }
 
 // --- FACTORY CLASS ---
@@ -94,4 +101,6 @@ class SellerViewModelFactory(private val repo: SellerRepo) : ViewModelProvider.F
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
+
+
 }
