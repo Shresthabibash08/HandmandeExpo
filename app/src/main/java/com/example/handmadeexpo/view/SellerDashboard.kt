@@ -1,5 +1,7 @@
 package com.example.handmadeexpo.view
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -18,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.handmadeexpo.R
@@ -45,17 +48,22 @@ class SellerDashboard : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SellerDashboardBody(sellerId: String) {
-    // --- 1. STATE DEFINITIONS (Must be at the top to fix Unresolved Reference) ---
+    // --- 1. STATE DEFINITIONS ---
     var selectedIndex by remember { mutableIntStateOf(0) }
     var editing by remember { mutableStateOf(false) }
+    var changingPassword by remember { mutableStateOf(false) }
+    var chatCount by remember { mutableStateOf(0) }
 
     // Triple stores: (ChatID, BuyerID, BuyerName)
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
-    val inboxRef = remember { FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId) }
-    var chatCount by remember { mutableStateOf(0) }
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val repo = remember { SellerRepoImpl() }
+    val viewModel = remember { SellerViewModel(repo) }
 
-    // --- 2. FIREBASE LISTENER ---
+    // --- 2. FIREBASE LISTENER FOR BADGE ---
+    val inboxRef = remember { FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId) }
     LaunchedEffect(sellerId) {
         inboxRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -65,10 +73,7 @@ fun SellerDashboardBody(sellerId: String) {
         })
     }
 
-    // --- 3. NAVIGATION LOGIC ---
-    val repo = remember { SellerRepoImpl() }
-    val viewModel = remember { SellerViewModel(repo) }
-
+    // --- 3. NAVIGATION ITEMS ---
     data class NavItem(val icon: ImageVector, val label: String)
     val listItems = listOf(
         NavItem(Icons.Default.Home, "Home"),
@@ -91,7 +96,7 @@ fun SellerDashboardBody(sellerId: String) {
                 ),
                 title = {
                     val titleText = when {
-                        selectedIndex == 2 && activeChatData != null -> activeChatData!!.third // Show Buyer Name
+                        selectedIndex == 2 && activeChatData != null -> activeChatData!!.third
                         selectedIndex == 0 -> "HandMade Expo"
                         selectedIndex == 1 -> "My Inventory"
                         selectedIndex == 2 -> "Messages"
@@ -100,7 +105,6 @@ fun SellerDashboardBody(sellerId: String) {
                     Text(titleText, style = MaterialTheme.typography.titleLarge)
                 },
                 navigationIcon = {
-                    // Show back arrow ONLY when inside a chat
                     if (selectedIndex == 2 && activeChatData != null) {
                         IconButton(onClick = { activeChatData = null }) {
                             Icon(
@@ -136,7 +140,7 @@ fun SellerDashboardBody(sellerId: String) {
                         onClick = {
                             selectedIndex = index
                             editing = false
-                            // Reset chat state if navigating away from the chat tab
+                            changingPassword = false
                             if (index != 2) activeChatData = null
                         },
                         colors = NavigationBarItemDefaults.colors(
@@ -154,38 +158,51 @@ fun SellerDashboardBody(sellerId: String) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // --- 4. CONTENT SWITCHER ---
             when (selectedIndex) {
                 0 -> SellerHomeScreen(sellerId)
                 1 -> InvetoryScreen(sellerId)
                 2 -> {
-                    // This section handles both the List and the Message Thread
                     if (activeChatData != null) {
-                        // FIX: Calling the View inside SellerChatListScreen.kt
                         SellerReplyView(
                             chatId = activeChatData!!.first,
                             buyerId = activeChatData!!.second,
                             sellerId = sellerId
                         )
                     } else {
-                        // FIX: Providing the onChatSelected parameter
                         ChatListContent(sellerId = sellerId) { chatId, buyerId, buyerName ->
                             activeChatData = Triple(chatId, buyerId, buyerName)
                         }
                     }
                 }
                 3 -> {
-                    if (editing) {
-                        EditSellerProfileScreen(
-                            viewModel = viewModel,
-                            onBack = { editing = false }
-                        )
-                    } else {
-                        SellerProfileScreen(
-                            sellerId = sellerId,
-                            viewModel = viewModel,
-                            onEditProfileClick = { editing = true }
-                        )
+                    when {
+                        changingPassword -> {
+                            SellerChangePasswordScreen(
+                                viewModel = viewModel,
+                                onBackClick = { changingPassword = false },
+                                onPasswordChanged = { changingPassword = false }
+                            )
+                        }
+                        editing -> {
+                            EditSellerProfileScreen(
+                                viewModel = viewModel,
+                                onBack = { editing = false }
+                            )
+                        }
+                        else -> {
+                            SellerProfileScreen(
+                                sellerId = sellerId,
+                                viewModel = viewModel,
+                                onEditProfileClick = { editing = true },
+                                onChangePasswordClick = { changingPassword = true },
+                                onLogoutSuccess = {
+                                    val intent = Intent(context, SignInActivity::class.java)
+                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    context.startActivity(intent)
+                                    activity?.finish()
+                                }
+                            )
+                        }
                     }
                 }
             }

@@ -1,5 +1,7 @@
 package com.example.handmadeexpo.view
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -15,8 +17,8 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.repo.BuyerRepoImpl
@@ -30,8 +32,6 @@ class DashboardActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Get the real Firebase UID.
-        // Logic Fix: Default to empty string or handle null to prevent crashes
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
         setContent {
@@ -43,6 +43,9 @@ class DashboardActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardBody(userId: String) {
+    val context = LocalContext.current
+    val activity = context as? Activity
+    
     data class NavItem(val icon: ImageVector, val label: String)
     val listItems = listOf(
         NavItem(Icons.Default.Home, "Home"),
@@ -53,10 +56,10 @@ fun DashboardBody(userId: String) {
 
     var selectedIndex by remember { mutableIntStateOf(0) }
     var editing by remember { mutableStateOf(false) }
+    var changingPassword by remember { mutableStateOf(false) }
     var showAllSellers by remember { mutableStateOf(false) }
 
-    // Triple stores: (ChatID, SellerID, SellerName)
-    // This state allows the name to persist when navigating into a ChatScreen
+    // (ChatID, SellerID, SellerName)
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
     val repo = remember { BuyerRepoImpl() }
@@ -80,7 +83,7 @@ fun DashboardBody(userId: String) {
                 ),
                 title = {
                     val title = when {
-                        selectedIndex == 1 && activeChatData != null -> activeChatData!!.third // Shows Seller Name
+                        selectedIndex == 1 && activeChatData != null -> activeChatData!!.third
                         selectedIndex == 1 && showAllSellers -> "Select Seller"
                         selectedIndex == 1 -> "Messages"
                         selectedIndex == 2 -> "My Cart"
@@ -98,8 +101,10 @@ fun DashboardBody(userId: String) {
                         selected = selectedIndex == index,
                         onClick = {
                             selectedIndex = index
+                            // Reset sub-states when switching tabs
+                            editing = false
+                            changingPassword = false
                             showAllSellers = false
-                            // Important: Clear chat data if navigating away from Inbox
                             if (index != 1) activeChatData = null
                         },
                         icon = { Icon(item.icon, contentDescription = item.label) },
@@ -112,58 +117,69 @@ fun DashboardBody(userId: String) {
             if (selectedIndex == 1 && activeChatData == null && !showAllSellers) {
                 FloatingActionButton(
                     onClick = { showAllSellers = true },
-                    containerColor = Color(0xFFE65100),
-                    contentColor = Color.White
+                    containerColor = MainColor,
+                    contentColor = White12
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "New Chat")
                 }
             }
         }
     ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             when (selectedIndex) {
                 0 -> HomeScreen()
 
-                1 -> {
-                    when {
-                        // 1. Specific Chat Screen
-                        activeChatData != null -> {
-                            ChatScreen(
-                                chatId = activeChatData!!.first,
-                                sellerId = activeChatData!!.second,
-                                sellerName = activeChatData!!.third,
-                                currentUserId = userId,
-                                onBackClick = { activeChatData = null }
-                            )
+                1 -> when {
+                    activeChatData != null -> {
+                        ChatScreen(
+                            chatId = activeChatData!!.first,
+                            sellerId = activeChatData!!.second,
+                            sellerName = activeChatData!!.third,
+                            currentUserId = userId,
+                            onBackClick = { activeChatData = null }
+                        )
+                    }
+                    showAllSellers -> {
+                        AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
+                            activeChatData = Triple(chatId, sellerId, sellerName)
+                            showAllSellers = false
                         }
-                        // 2. New Chat Selection
-                        showAllSellers -> {
-                            AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
-                                activeChatData = Triple(chatId, sellerId, sellerName)
-                                showAllSellers = false
-                            }
-                        }
-                        // 3. Main Inbox List
-                        else -> {
-                            // Logic Fix: Ensure this composable fetches names from Firebase
-                            BuyerChatListScreen(userId) { chatId, sellerId, sellerName ->
-                                activeChatData = Triple(chatId, sellerId, sellerName)
-                            }
+                    }
+                    else -> {
+                        BuyerChatListScreen(userId) { chatId, sellerId, sellerName ->
+                            activeChatData = Triple(chatId, sellerId, sellerName)
                         }
                     }
                 }
 
                 2 -> CartScreen()
 
-                3 -> {
-                    if (editing) {
-                        EditBuyerProfileScreen(viewModel, onBack = { editing = false })
-                    } else {
-                        BuyerProfileScreen(viewModel, onEditClick = { editing = true })
+                3 -> when {
+                    changingPassword -> {
+                        ChangePasswordScreen(
+                            viewModel = viewModel,
+                            onBackClick = { changingPassword = false },
+                            onPasswordChanged = { changingPassword = false }
+                        )
+                    }
+                    editing -> {
+                        EditBuyerProfileScreen(
+                            viewModel = viewModel,
+                            onBack = { editing = false }
+                        )
+                    }
+                    else -> {
+                        BuyerProfileScreen(
+                            viewModel = viewModel,
+                            onEditClick = { editing = true },
+                            onChangePasswordClick = { changingPassword = true },
+                            onLogoutSuccess = {
+                                val intent = Intent(context, SignInActivity::class.java)
+                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                context.startActivity(intent)
+                                activity?.finish()
+                            }
+                        )
                     }
                 }
             }

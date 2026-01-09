@@ -40,6 +40,15 @@ import com.google.firebase.database.FirebaseDatabase
 val OrangeBrand = Color(0xFFE65100)
 val CreamBackground = Color(0xFFFFF8E1)
 
+/**
+ * Utility for generating consistent Chat IDs
+ */
+object ChatUtils {
+    fun generateChatId(uid1: String, uid2: String): String {
+        return if (uid1 < uid2) "${uid1}_${uid2}" else "${uid2}_${uid1}"
+    }
+}
+
 @Composable
 fun HomeScreen() {
     val viewModel: ProductViewModel = viewModel(
@@ -50,19 +59,25 @@ fun HomeScreen() {
     val sliderValue by viewModel.sliderValue.observeAsState(100f)
     val maxPriceDisplay by viewModel.maxPriceDisplay.observeAsState(100000.0)
 
+    // --- NAVIGATION STATES ---
     var selectedProduct by remember { mutableStateOf<ProductModel?>(null) }
     var isChatOpen by remember { mutableStateOf(false) }
+    var showCart by remember { mutableStateOf(false) }
 
-    // LOGIC FIX: Use actual Firebase Auth UID instead of hardcoded "Buyer_User_123"
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: "Guest"
 
     Box(modifier = Modifier.fillMaxSize()) {
         when {
-            // Screen 1: Chat View
+            // 1. SHOW CART
+            showCart -> {
+                CartScreen() 
+                // To enable back navigation, you could pass: onBack = { showCart = false }
+            }
+
+            // 2. OPEN CHAT: Triggers when user clicks chat from Product Details or Card
             isChatOpen && selectedProduct != null -> {
                 val chatId = ChatUtils.generateChatId(currentUserId, selectedProduct!!.sellerId)
 
-                // LOGIC FIX: Fetch the actual Seller Name from the database
                 var sellerNameState by remember { mutableStateOf("Loading...") }
                 LaunchedEffect(selectedProduct!!.sellerId) {
                     FirebaseDatabase.getInstance().getReference("sellers")
@@ -79,16 +94,18 @@ fun HomeScreen() {
                 )
             }
 
-            // Screen 2: Description View
+            // 3. OPEN PRODUCT DESCRIPTION
             selectedProduct != null -> {
                 ProductDescriptionScreen(
                     product = selectedProduct!!,
+                    viewModel = viewModel,
                     onBackClick = { selectedProduct = null },
-                    onChatClick = { isChatOpen = true }
+                    onChatClick = { isChatOpen = true },
+                    onNavigateToCart = { showCart = true }
                 )
             }
 
-            // Screen 3: Main Home Content
+            // 4. MAIN HOME CONTENT (LIST)
             else -> {
                 MainHomeContent(
                     products = products,

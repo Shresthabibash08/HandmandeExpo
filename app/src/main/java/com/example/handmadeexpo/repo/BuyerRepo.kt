@@ -29,4 +29,10 @@ interface BuyerRepo {
 
     fun getUserRole(userId: String, callback: (String?) -> Unit)
 
+    fun changePassword(
+        currentPassword: String,
+        newPassword: String,
+        callback: (Boolean, String) -> Unit
+    )
+
 }

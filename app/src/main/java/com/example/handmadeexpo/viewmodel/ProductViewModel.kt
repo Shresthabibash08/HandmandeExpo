@@ -118,4 +118,13 @@ class ProductViewModel(private val repo: ProductRepo) : ViewModel() {
         val filtered = currentList.filter { it.price <= limit }
         _filteredProducts.value = filtered
     }
+
+    fun rateProduct(
+        productId: String,
+        rating: Int,
+        callback: (Boolean) -> Unit
+    ) {
+        repo.rateProduct(productId, rating, callback)
+    }
+
 }

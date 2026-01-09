@@ -1,6 +1,9 @@
 package com.example.handmadeexpo.view
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,13 +12,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,18 +28,101 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.model.ProductModel
+import com.example.handmadeexpo.viewmodel.ProductViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDescriptionScreen(
     product: ProductModel,
+    viewModel: ProductViewModel,
     onBackClick: () -> Unit,
-    onChatClick: () -> Unit // Added to fix missing parameter error
+    onChatClick: () -> Unit,
+    onNavigateToCart: () -> Unit // New parameter for cart navigation
 ) {
     // --- THEME COLORS ---
     val OrangeBrand = Color(0xFFE65100)
     val CreamBackground = Color(0xFFFFF8E1)
     val TextGray = Color(0xFF757575)
+
+    // Get context for starting CheckoutActivity
+    val context = LocalContext.current
+
+    // --- Rating State ---
+    var selectedRating by remember { mutableStateOf(0) }
+    var hasRated by remember { mutableStateOf(false) }
+    var showRatingDialog by remember { mutableStateOf(false) }
+
+    // Show success message when adding to cart
+    var showCartAddedMessage by remember { mutableStateOf(false) }
+
+    // Calculate average rating
+    val averageRating = if (product.ratingCount > 0) {
+        product.totalRating.toFloat() / product.ratingCount
+    } else {
+        0f
+    }
+
+    // Show rating confirmation dialog
+    if (showRatingDialog) {
+        AlertDialog(
+            onDismissRequest = { showRatingDialog = false },
+            title = { Text("Rate this Product") },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("How would you rate this product?")
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Interactive rating stars in dialog
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        repeat(5) { index ->
+                            Icon(
+                                imageVector = if (index < selectedRating) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                                contentDescription = "Rate ${index + 1} stars",
+                                tint = if (index < selectedRating) Color(0xFFFFB300) else Color.LightGray,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clickable { selectedRating = index + 1 }
+                                    .padding(4.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (selectedRating > 0) {
+                            viewModel.rateProduct(product.productId, selectedRating) { success ->
+                                if (success) {
+                                    hasRated = true
+                                    showRatingDialog = false
+                                }
+                            }
+                        }
+                    },
+                    enabled = selectedRating > 0
+                ) {
+                    Text("Submit Rating")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRatingDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Show snackbar when item is added to cart
+    if (showCartAddedMessage) {
+        LaunchedEffect(Unit) {
+            kotlinx.coroutines.delay(2000)
+            showCartAddedMessage = false
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -42,7 +130,6 @@ fun ProductDescriptionScreen(
                 title = { Text("Product Details", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        // Using AutoMirrored to fix deprecation warning
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -53,26 +140,30 @@ fun ProductDescriptionScreen(
             BottomAppBar(
                 containerColor = Color.White,
                 tonalElevation = 8.dp,
-                modifier = Modifier.height(100.dp) // Height increased to fit icons comfortably
+                modifier = Modifier.height(100.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // --- NEW CHAT BUTTON ---
+                    // Chat Button
                     OutlinedIconButton(
                         onClick = onChatClick,
                         modifier = Modifier.size(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
                     ) {
-                        // Using Chat icon for the new feature
                         Icon(Icons.Default.Chat, contentDescription = "Chat", tint = OrangeBrand)
                     }
 
+                    // Add to Cart Button
                     OutlinedButton(
-                        onClick = { /* TODO: Add to cart logic */ },
+                        onClick = {
+                            // TODO: Add actual cart logic here (add to cart database/state)
+                            showCartAddedMessage = true
+                            onNavigateToCart() // Navigate to cart screen
+                        },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
@@ -80,14 +171,33 @@ fun ProductDescriptionScreen(
                         Text("Add to Cart", color = OrangeBrand, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
 
+                    // Buy Now Button
                     Button(
-                        onClick = { /* TODO: Buy now logic */ },
+                        onClick = {
+                            // Navigate to CheckoutActivity
+                            val intent = Intent(context, CheckoutActivity::class.java)
+                            // You can pass product details as extras if needed
+                            intent.putExtra("product_id", product.productId)
+                            intent.putExtra("product_name", product.name)
+                            intent.putExtra("product_price", product.price)
+                            context.startActivity(intent)
+                        },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = OrangeBrand)
                     ) {
                         Text("Buy Now", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
+                }
+            }
+        },
+        snackbarHost = {
+            if (showCartAddedMessage) {
+                Snackbar(
+                    modifier = Modifier.padding(16.dp),
+                    containerColor = Color(0xFF4CAF50)
+                ) {
+                    Text("Added to cart!", color = Color.White)
                 }
             }
         }
@@ -144,22 +254,73 @@ fun ProductDescriptionScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 3. RATING BAR
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    repeat(5) { index ->
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = if (index < 4) Color(0xFFFFB300) else Color.LightGray,
-                            modifier = Modifier.size(22.dp)
+                // 3. RATING BAR (Display + Interactive)
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Display average rating
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        repeat(5) { index ->
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = if (index < averageRating.toInt()) Color(0xFFFFB300) else Color.LightGray,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = String.format("%.1f (%d Reviews)", averageRating, product.ratingCount),
+                            color = TextGray,
+                            fontSize = 14.sp
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "4.8 (250+ Reviews)",
-                        color = TextGray,
-                        fontSize = 14.sp
-                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Rate this product button
+                    if (!hasRated) {
+                        OutlinedButton(
+                            onClick = { showRatingDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
+                        ) {
+                            Icon(
+                                Icons.Default.Star,
+                                contentDescription = null,
+                                tint = OrangeBrand,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Rate this Product", color = OrangeBrand)
+                        }
+                    } else {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = Color(0xFF2E7D32),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Thank you for rating!",
+                                    color = Color(0xFF2E7D32),
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp), thickness = 0.5.dp)
