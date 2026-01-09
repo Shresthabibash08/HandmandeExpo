@@ -1,33 +1,61 @@
 package com.example.handmadeexpo.repo
 
 import com.example.handmadeexpo.model.ChatMessage
-import com.google.firebase.database.*
+import com.google.firebase.database.FirebaseDatabase
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 
-class ChatRepoImpl : ChatRepo {
-    private val database = FirebaseDatabase.getInstance().getReference("chats")
-    private val sellerInbox = FirebaseDatabase.getInstance().getReference("seller_inbox")
+class ChatRepoImpl {
+    private val db = FirebaseDatabase.getInstance()
 
-    override fun sendMessage(chatId: String, chatMessage: ChatMessage) {
-        database.child(chatId).push().setValue(chatMessage)
+    fun sendMessage(chatId: String, senderId: String, receiverId: String, messageText: String) {
+        val timestamp = System.currentTimeMillis()
+        val messageData = ChatMessage(senderId, receiverId, messageText, timestamp)
 
-        // Update seller inbox so buyer appears in their list
+        // 1. Save the actual message to the shared chat thread
+        db.getReference("chats").child(chatId).child("messages").push().setValue(messageData)
+
+        // 2. Prepare the Inbox Entry
+        // This is what shows up in the "Messages" list (Last message, time, etc.)
         val inboxEntry = mapOf(
-            "buyerId" to chatMessage.senderId,
-            "lastMessage" to chatMessage.message,
-            "timestamp" to chatMessage.timestamp,
-            "chatId" to chatId
+            "chatId" to chatId,
+            "lastMessage" to messageText,
+            "timestamp" to timestamp
         )
-        sellerInbox.child(chatMessage.receiverId).child(chatId).setValue(inboxEntry)
+
+        // 3. UPDATE INBOXES (The "Dual Update" Logic)
+        // We update BOTH the sender's and receiver's inbox so the list stays current for both.
+
+        // Update Buyer Inbox folder
+        // If sender is Buyer, participant is Receiver. If sender is Seller, participant is Sender.
+        // To keep it simple, we save the "other person" as the participantId.
+
+        val senderInbox = inboxEntry + ("participantId" to receiverId)
+        val receiverInbox = inboxEntry + ("participantId" to senderId)
+
+        // We check if the sender is a buyer or seller and update the correct folder
+        // Logic: Try updating both; only the existing path in Firebase will reflect changes for that user
+        db.getReference("buyer_inbox").child(senderId).child(chatId).setValue(senderInbox)
+        db.getReference("seller_inbox").child(senderId).child(chatId).setValue(senderInbox)
+
+        db.getReference("buyer_inbox").child(receiverId).child(chatId).setValue(receiverInbox)
+        db.getReference("seller_inbox").child(receiverId).child(chatId).setValue(receiverInbox)
     }
 
-    // FIX: Match the exact signature required by your interface
-    override fun getMessages(chatId: String, onUpdate: (List<ChatMessage>) -> Unit) {
-        database.child(chatId).addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
+    fun listenForMessages(chatId: String): Flow<List<ChatMessage>> = callbackFlow {
+        val ref = db.getReference("chats").child(chatId).child("messages")
+        val listener = ref.addValueEventListener(object : com.google.firebase.database.ValueEventListener {
+            override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                // Sorting by timestamp ensures older messages are at the top
                 val messages = snapshot.children.mapNotNull { it.getValue(ChatMessage::class.java) }
-                onUpdate(messages)
+                    .sortedBy { it.timestamp }
+                trySend(messages)
             }
-            override fun onCancelled(error: DatabaseError) {}
+            override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
+                close(error.toException())
+            }
         })
+        awaitClose { ref.removeEventListener(listener) }
     }
 }
