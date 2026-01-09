@@ -31,6 +31,7 @@ import com.example.handmadeexpo.model.CartItem
 import com.example.handmadeexpo.model.ProductModel
 import com.example.handmadeexpo.viewmodel.CartViewModel
 import com.example.handmadeexpo.viewmodel.ProductViewModel
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,25 +39,25 @@ fun ProductDescriptionScreen(
     product: ProductModel,
     currentUserId: String,
     cartViewModel: CartViewModel,
-    viewModel: ProductViewModel, // Combined both ViewModels
+    viewModel: ProductViewModel,
     onBackClick: () -> Unit,
     onChatClick: () -> Unit,
     onNavigateToCart: () -> Unit
 ) {
-    // --- THEME COLORS ---
+    val context = LocalContext.current
+
+    // Theme Colors
     val OrangeBrand = Color(0xFFE65100)
     val CreamBackground = Color(0xFFFFF8E1)
     val TextGray = Color(0xFF757575)
 
-    val context = LocalContext.current
-
-    // --- Rating & UI State ---
+    // --- State Management ---
     var selectedRating by remember { mutableIntStateOf(0) }
     var hasRated by remember { mutableStateOf(false) }
     var showRatingDialog by remember { mutableStateOf(false) }
     var showCartAddedMessage by remember { mutableStateOf(false) }
 
-    // Calculate average rating
+    // Calculate average rating dynamically
     val averageRating = if (product.ratingCount > 0) {
         product.totalRating.toFloat() / product.ratingCount
     } else {
@@ -138,7 +139,7 @@ fun ProductDescriptionScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Chat Button
+                    // 1. Chat Button
                     OutlinedIconButton(
                         onClick = onChatClick,
                         modifier = Modifier.size(50.dp),
@@ -148,7 +149,7 @@ fun ProductDescriptionScreen(
                         Icon(Icons.Default.Chat, contentDescription = "Chat", tint = OrangeBrand)
                     }
 
-                    // Add to Cart Button (Fixed Logic)
+                    // 2. Add to Cart Button
                     OutlinedButton(
                         onClick = {
                             val cartItem = CartItem.fromProduct(product, currentUserId)
@@ -168,10 +169,15 @@ fun ProductDescriptionScreen(
                         Text("Add to Cart", color = OrangeBrand, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
 
-                    // Buy Now Button
+                    // 3. Buy Now Button (Merged Data Keys)
                     Button(
                         onClick = {
                             val intent = Intent(context, CheckoutActivity::class.java).apply {
+                                putExtra("productId", product.productId)
+                                putExtra("name", product.name)
+                                putExtra("price", product.price)
+                                putExtra("image", product.image)
+                                // Standardized keys for consistency
                                 putExtra("product_id", product.productId)
                                 putExtra("product_name", product.name)
                                 putExtra("product_price", product.price)
@@ -200,9 +206,8 @@ fun ProductDescriptionScreen(
                 ) {
                     Text("Added to cart!", color = Color.White)
                 }
-                // Auto-hide snackbar
                 LaunchedEffect(Unit) {
-                    kotlinx.coroutines.delay(3000)
+                    delay(3000)
                     showCartAddedMessage = false
                 }
             }
@@ -215,7 +220,7 @@ fun ProductDescriptionScreen(
                 .background(Color.White)
                 .verticalScroll(rememberScrollState())
         ) {
-            // 1. PRODUCT IMAGE
+            // 1. Image Section
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -234,7 +239,7 @@ fun ProductDescriptionScreen(
                 )
             }
 
-            // 2. PRODUCT INFO SECTION
+            // 2. Product Info Section
             Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -258,7 +263,7 @@ fun ProductDescriptionScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 3. RATING BAR
+                // 3. Rating & Feedback Section
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         repeat(5) { index ->
@@ -311,24 +316,21 @@ fun ProductDescriptionScreen(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp), thickness = 0.5.dp)
 
-                // 4. DESCRIPTION
+                // 4. Description
                 Text(text = "Description", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = product.description.ifEmpty { "This premium handmade product is part of our exclusive Expo collection." },
-                    fontSize = 16.sp,
-                    color = TextGray,
-                    lineHeight = 24.sp
+                    fontSize = 16.sp, color = TextGray, lineHeight = 24.sp
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // 5. STOCK STATUS
+                // 5. Stock Status
                 Text(text = "Stock Information", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = if (product.stock > 0) "Available: ${product.stock} items in stock"
-                    else "Currently out of stock",
+                    text = if (product.stock > 0) "Available: ${product.stock} items in stock" else "Currently out of stock",
                     fontSize = 16.sp,
                     color = if (product.stock > 0) Color(0xFF2E7D32) else Color.Red,
                     fontWeight = FontWeight.Medium

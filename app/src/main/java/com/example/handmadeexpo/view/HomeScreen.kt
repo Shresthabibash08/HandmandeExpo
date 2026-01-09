@@ -1,5 +1,7 @@
 package com.example.handmadeexpo.view
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -51,30 +53,36 @@ object ChatUtils {
 
 @Composable
 fun HomeScreen() {
-    // 1. Existing Product ViewModel
+    // 1. ViewModels
     val viewModel: ProductViewModel = viewModel(
         factory = ProductViewModelFactory(ProductRepoImpl())
     )
-
-    // 2. Initialize Cart ViewModel for the Description Screen
     val cartRepo = remember { CartRepoImpl() }
     val cartViewModel = remember { CartViewModel(cartRepo) }
 
+    // 2. States
     val products by viewModel.filteredProducts.observeAsState(initial = emptyList())
     val sliderValue by viewModel.sliderValue.observeAsState(100f)
     val maxPriceDisplay by viewModel.maxPriceDisplay.observeAsState(100000.0)
 
-    // --- NAVIGATION STATES ---
     var selectedProduct by remember { mutableStateOf<ProductModel?>(null) }
     var isChatOpen by remember { mutableStateOf(false) }
     var showCart by remember { mutableStateOf(false) }
 
-    // 3. Get User ID
     val currentUserId = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "Guest" }
+
+    // 3. Back Navigation Logic
+    BackHandler(enabled = isChatOpen || selectedProduct != null || showCart) {
+        when {
+            showCart -> showCart = false
+            isChatOpen -> isChatOpen = false
+            else -> selectedProduct = null
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         when {
-            // 1. SHOW CART
+            // A. CART SCREEN
             showCart -> {
                 CartScreen(
                     cartViewModel = cartViewModel,
@@ -82,11 +90,11 @@ fun HomeScreen() {
                 )
             }
 
-            // 2. OPEN CHAT
+            // B. CHAT SCREEN
             isChatOpen && selectedProduct != null -> {
                 val chatId = ChatUtils.generateChatId(currentUserId, selectedProduct!!.sellerId)
                 var sellerNameState by remember { mutableStateOf("Loading...") }
-                
+
                 LaunchedEffect(selectedProduct!!.sellerId) {
                     FirebaseDatabase.getInstance().getReference("sellers")
                         .child(selectedProduct!!.sellerId).child("name").get()
@@ -102,20 +110,20 @@ fun HomeScreen() {
                 )
             }
 
-            // 3. OPEN PRODUCT DESCRIPTION
+            // C. PRODUCT DESCRIPTION
             selectedProduct != null -> {
                 ProductDescriptionScreen(
                     product = selectedProduct!!,
                     currentUserId = currentUserId,
                     cartViewModel = cartViewModel,
-                    viewModel = viewModel, // From dev branch requirement
+                    viewModel = viewModel,
                     onBackClick = { selectedProduct = null },
                     onChatClick = { isChatOpen = true },
                     onNavigateToCart = { showCart = true }
                 )
             }
 
-            // 4. MAIN HOME CONTENT
+            // D. MAIN HOME CONTENT
             else -> {
                 MainHomeContent(
                     products = products,
@@ -158,9 +166,9 @@ fun MainHomeContent(
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
                 SearchBarInput(query = searchQuery, onQueryChange = { searchQuery = it })
                 Text(
-                    text = "Categories", 
-                    fontWeight = FontWeight.Bold, 
-                    fontSize = 24.sp, // Normalized from 30.sp
+                    text = "Categories",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp,
                     color = MainColor,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
