@@ -2,6 +2,7 @@ package com.example.handmadeexpo.view
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
@@ -44,12 +45,17 @@ class SellerDashboard : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SellerDashboardBody(sellerId: String) {
+    // --- 1. STATE DEFINITIONS (Must be at the top to fix Unresolved Reference) ---
+    var selectedIndex by remember { mutableIntStateOf(0) }
+    var editing by remember { mutableStateOf(false) }
 
-    // 1. Firebase Listener for Inbox Count
-    // This allows the badge to update in real-time when a buyer initiates a chat
+    // Triple stores: (ChatID, BuyerID, BuyerName)
+    var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
+
     val inboxRef = remember { FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId) }
     var chatCount by remember { mutableStateOf(0) }
 
+    // --- 2. FIREBASE LISTENER ---
     LaunchedEffect(sellerId) {
         inboxRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -59,7 +65,10 @@ fun SellerDashboardBody(sellerId: String) {
         })
     }
 
-    // 2. Navigation Item Definition
+    // --- 3. NAVIGATION LOGIC ---
+    val repo = remember { SellerRepoImpl() }
+    val viewModel = remember { SellerViewModel(repo) }
+
     data class NavItem(val icon: ImageVector, val label: String)
     val listItems = listOf(
         NavItem(Icons.Default.Home, "Home"),
@@ -68,37 +77,38 @@ fun SellerDashboardBody(sellerId: String) {
         NavItem(Icons.Default.Person, "Profile")
     )
 
-    // 3. State management
-    var selectedIndex by remember { mutableStateOf(0) }
-    var editing by remember { mutableStateOf(false) }
-
-    val repo = remember { SellerRepoImpl() }
-    val viewModel = remember { SellerViewModel(repo) }
+    // Handle back button specifically for closing a chat thread
+    BackHandler(enabled = (selectedIndex == 2 && activeChatData != null)) {
+        activeChatData = null
+    }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MainColor,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White,
-                    actionIconContentColor = Color.White
+                    titleContentColor = Color.White
                 ),
                 title = {
-                    val titleText = when (selectedIndex) {
-                        0 -> "HandMade Expo"
-                        1 -> "My Inventory"
-                        2 -> "Messages"
+                    val titleText = when {
+                        selectedIndex == 2 && activeChatData != null -> activeChatData!!.third // Show Buyer Name
+                        selectedIndex == 0 -> "HandMade Expo"
+                        selectedIndex == 1 -> "My Inventory"
+                        selectedIndex == 2 -> "Messages"
                         else -> "Profile"
                     }
                     Text(titleText, style = MaterialTheme.typography.titleLarge)
                 },
                 navigationIcon = {
-                    IconButton(onClick = { /* Handle navigation drawer or back */ }) {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_arrow_back_ios_24),
-                            contentDescription = "Back"
-                        )
+                    // Show back arrow ONLY when inside a chat
+                    if (selectedIndex == 2 && activeChatData != null) {
+                        IconButton(onClick = { activeChatData = null }) {
+                            Icon(
+                                painter = painterResource(R.drawable.outline_arrow_back_ios_24),
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
                     }
                 }
             )
@@ -113,7 +123,6 @@ fun SellerDashboardBody(sellerId: String) {
                         icon = {
                             BadgedBox(
                                 badge = {
-                                    // Show badge only on index 2 (Chats) if there are active inquiries
                                     if (index == 2 && chatCount > 0) {
                                         Badge { Text(chatCount.toString()) }
                                     }
@@ -126,7 +135,9 @@ fun SellerDashboardBody(sellerId: String) {
                         selected = selectedIndex == index,
                         onClick = {
                             selectedIndex = index
-                            editing = false // Reset profile editing state
+                            editing = false
+                            // Reset chat state if navigating away from the chat tab
+                            if (index != 2) activeChatData = null
                         },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MainColor,
@@ -143,13 +154,25 @@ fun SellerDashboardBody(sellerId: String) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // 4. Content Switcher
+            // --- 4. CONTENT SWITCHER ---
             when (selectedIndex) {
                 0 -> SellerHomeScreen(sellerId)
                 1 -> InvetoryScreen(sellerId)
                 2 -> {
-                    // This screen only shows if a buyer has initiated chat
-                    SellerChatListScreen(sellerId = sellerId)
+                    // This section handles both the List and the Message Thread
+                    if (activeChatData != null) {
+                        // FIX: Calling the View inside SellerChatListScreen.kt
+                        SellerReplyView(
+                            chatId = activeChatData!!.first,
+                            buyerId = activeChatData!!.second,
+                            sellerId = sellerId
+                        )
+                    } else {
+                        // FIX: Providing the onChatSelected parameter
+                        ChatListContent(sellerId = sellerId) { chatId, buyerId, buyerName ->
+                            activeChatData = Triple(chatId, buyerId, buyerName)
+                        }
+                    }
                 }
                 3 -> {
                     if (editing) {
