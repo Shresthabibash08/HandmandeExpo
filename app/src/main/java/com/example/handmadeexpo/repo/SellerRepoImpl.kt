@@ -9,6 +9,7 @@ import android.provider.OpenableColumns
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
 import com.example.handmadeexpo.model.SellerModel
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.database.*
@@ -184,5 +185,36 @@ class SellerRepoImpl : SellerRepo {
             }
         }
         return fileName
+    }
+
+    override fun changePassword(
+        currentPassword: String,
+        newPassword: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val user = auth.currentUser
+
+        if (user == null || user.email == null) {
+            callback(false, "User not logged in")
+            return
+        }
+
+        // Re-authenticate user with current password
+        val credential = EmailAuthProvider.getCredential(user.email!!, currentPassword)
+
+        user.reauthenticate(credential)
+            .addOnSuccessListener {
+                // If re-authentication successful, update password
+                user.updatePassword(newPassword)
+                    .addOnSuccessListener {
+                        callback(true, "Password changed successfully")
+                    }
+                    .addOnFailureListener { exception ->
+                        callback(false, "Failed to update password: ${exception.message}")
+                    }
+            }
+            .addOnFailureListener { exception ->
+                callback(false, "Current password is incorrect: ${exception.message}")
+            }
     }
 }

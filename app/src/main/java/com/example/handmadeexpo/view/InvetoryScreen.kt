@@ -46,47 +46,58 @@ import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InvetoryScreen(sellerId: String) {
+fun InventoryScreen(sellerId: String) {
     val context = LocalContext.current
     val productViewModel: ProductViewModel = remember { ProductViewModel(ProductRepoImpl()) }
 
-    // State Observers
-    val allProducts by productViewModel.allProducts.observeAsState(initial = emptyList())
+    val sellerProducts by productViewModel.sellerProducts.observeAsState(initial = emptyList())
     val selectedProduct by productViewModel.products.observeAsState()
 
     var showDialog by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Optimization: Re-calculate total only when list updates
-    val totalAmount by remember(allProducts) {
-        derivedStateOf { allProducts?.sumOf { it.price } ?: 0.0 }
+    // --- Total Value ---
+    val totalAmount by remember(sellerProducts) {
+        derivedStateOf { sellerProducts.sumOf { it.price } }
     }
 
-    // Fetch data on enter
-    LaunchedEffect(Unit) {
+    // --- Refresh trigger ---
+    var refreshTrigger by remember { mutableStateOf(0) }
+
+    // --- Fetch seller products ---
+    LaunchedEffect(sellerId, refreshTrigger) {
         isLoading = true
-        productViewModel.getAllProduct()
-        delay(800) // Aesthetic delay for smooth loading transition
+        productViewModel.getProductsBySeller(sellerId)
+        delay(300) // smooth loading
         isLoading = false
     }
 
+    // --- Launcher for AddProductActivity ---
+    val addProductLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        // Refresh product list after returning from AddProductActivity
+        refreshTrigger++
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        // Background Image
+        // Background
         Image(
-            painter = painterResource(id = R.drawable.bg6),
+            painter = painterResource(id = R.drawable.bg7),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
-
-        // Translucent overlay
         Box(modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.4f)))
 
         Scaffold(
             containerColor = Color.Transparent,
             floatingActionButton = {
                 ExtendedFloatingActionButton(
-                    onClick = { context.startActivity(Intent(context, AddProductActivity::class.java)) },
+                    onClick = {
+                        val intent = Intent(context, AddProductActivity::class.java)
+                        addProductLauncher.launch(intent)
+                    },
                     containerColor = MainColor,
                     contentColor = Color.White,
                     shape = CircleShape,
@@ -105,41 +116,44 @@ fun InvetoryScreen(sellerId: String) {
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 25.sp,
                     color = MainColor,
-                    modifier = Modifier.padding(start = 20.dp)
+                    modifier = Modifier.padding(start = 20.dp, top = 16.dp)
                 )
 
-                InventoryHeaderCard(allProducts?.size ?: 0, totalAmount)
+                InventoryHeaderCard(sellerProducts.size, totalAmount)
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (!isLoading) {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(bottom = 100.dp)
-                        ) {
-                            items(allProducts ?: emptyList(), key = { it.productId }) { product ->
-                                ProductItemRow(
-                                    product = product,
-                                    onEdit = {
-                                        productViewModel.getProductById(product.productId)
-                                        showDialog = true
-                                    },
-                                    onDelete = {
-                                        productViewModel.deleteProduct(product.productId) { success, msg ->
-                                            if (!success) Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        if (sellerProducts.isNotEmpty()) {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 100.dp)
+                            ) {
+                                items(sellerProducts, key = { it.productId }) { product ->
+                                    ProductItemRow(
+                                        product = product,
+                                        onEdit = {
+                                            productViewModel.getProductById(product.productId)
+                                            showDialog = true
+                                        },
+                                        onDelete = {
+                                            productViewModel.deleteProduct(product.productId) { success, msg ->
+                                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                                if (success) {
+                                                    refreshTrigger++ // refresh list after deletion
+                                                }
+                                            }
                                         }
-                                    }
-                                )
+                                    )
+                                }
                             }
+                        } else {
+                            EmptyInventoryView()
                         }
-                    }
-
-                    if (!isLoading && allProducts.isNullOrEmpty()) {
-                        EmptyInventoryView()
                     }
                 }
             }
 
-            // Loading Overlay
+            // --- Loading Overlay ---
             AnimatedVisibility(
                 visible = isLoading,
                 enter = fadeIn(),
@@ -150,17 +164,18 @@ fun InvetoryScreen(sellerId: String) {
                 }
             }
 
-            // Edit Dialog with Image Upload & Loading
+            // --- Edit Dialog ---
             if (showDialog && selectedProduct != null) {
                 EditProductDialog(
                     product = selectedProduct!!,
                     productViewModel = productViewModel,
-                    onDismiss = { showDialog = false }
+                    onDismiss = { showDialog = false; refreshTrigger++ } // refresh after edit
                 )
             }
         }
     }
 }
+
 
 @Composable
 fun InventoryHeaderCard(count: Int, total: Double) {
@@ -188,8 +203,11 @@ fun InventoryHeaderCard(count: Int, total: Double) {
     }
 }
 
+
 @Composable
 fun ProductItemRow(product: ProductModel, onEdit: () -> Unit, onDelete: () -> Unit) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -209,15 +227,45 @@ fun ProductItemRow(product: ProductModel, onEdit: () -> Unit, onDelete: () -> Un
             Column(modifier = Modifier.weight(1f)) {
                 Text(product.name, fontWeight = FontWeight.Bold, maxLines = 1, fontSize = 15.sp)
                 Text("Rs. ${product.price}", color = MainColor, fontWeight = FontWeight.SemiBold)
-                Text("Stock: ${product.stock}", color = if (product.stock < 5) Color.Red else Color.Gray, fontSize = 12.sp)
+                Text(
+                    "Stock: ${product.stock}",
+                    color = if (product.stock < 5) Color.Red else Color.Gray,
+                    fontSize = 12.sp
+                )
             }
             Row {
                 IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "Edit", tint = Color.Gray) }
-                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "Delete", tint = Color(0xFFEF5350)) }
+                IconButton(onClick = { showDeleteDialog = true }) {
+                    Icon(Icons.Default.Delete, "Delete", tint = Color(0xFFEF5350))
+                }
             }
         }
     }
+
+    // --- Delete Confirmation Dialog ---
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Confirm Delete") },
+            text = { Text("Are you sure you want to delete \"${product.name}\"?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDelete()
+                        showDeleteDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MainColor)
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel", color = Color.Black)
+                }
+            }
+        )
+    }
 }
+
 
 @Composable
 fun EmptyInventoryView() {
@@ -281,7 +329,7 @@ fun EditProductDialog(
                         description = desc,
                         image = image
                     )
-                    productViewModel.updateProduct(product.productId,updated) { success, msg ->
+                    productViewModel.updateProduct(product.productId, updated) { success, msg ->
                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         if (success) onDismiss()
                     }
@@ -290,9 +338,13 @@ fun EditProductDialog(
             ) { Text("Update") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Color.Black) } },
-        title = { Text("Edit Product", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+        title = { Text("Edit Product", fontWeight = FontWeight.Bold) },
         text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState()).fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .fillMaxWidth()
+            ) {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     AsyncImage(
                         model = image,

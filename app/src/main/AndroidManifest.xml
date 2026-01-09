@@ -39,17 +39,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".view.NewProduct"
-            android:exported="true"
-            android:label="@string/title_activity_new_product"
-            android:theme="@style/Theme.HandmadeExpo" >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+<!--        <activity-->
+<!--            android:name=".view.NewProduct"-->
+<!--            android:exported="true"-->
+<!--            android:label="@string/title_activity_new_product"-->
+<!--            android:theme="@style/Theme.HandmadeExpo" >-->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.MAIN" />-->
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity> <!-- <activity -->
+<!--                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--            </intent-filter>-->
+<!--        </activity> &lt;!&ndash; <activity &ndash;&gt;-->
         <!-- android:name=".view.ProfileScreen" -->
         <!-- android:exported="true" -->
         <!-- android:label="@string/title_activity_profile_screen" -->
