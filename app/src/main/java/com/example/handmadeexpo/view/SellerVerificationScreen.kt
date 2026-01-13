@@ -11,11 +11,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import coil.compose.AsyncImage
 import com.example.handmadeexpo.model.SellerModel
 import com.example.handmadeexpo.viewmodel.AdminViewModel
 
@@ -25,7 +30,6 @@ fun SellerVerificationScreen(viewModel: AdminViewModel) {
     val context = LocalContext.current
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Tab Row
         TabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color(0xFFF5F5F5)
@@ -55,7 +59,6 @@ fun SellerVerificationScreen(viewModel: AdminViewModel) {
             )
         }
 
-        // Content
         when (selectedTab) {
             0 -> SellerList(
                 sellers = viewModel.pendingSellers,
@@ -141,9 +144,8 @@ fun SellerList(
         }
     }
 
-    // Details Dialog
     selectedSeller?.let { seller ->
-        SellerDetailsDialog(
+        SellerDetailsWithDocumentDialog(
             seller = seller,
             onDismiss = { selectedSeller = null }
         )
@@ -165,7 +167,6 @@ fun SellerVerificationCard(
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -184,7 +185,6 @@ fun SellerVerificationCard(
                     )
                 }
 
-                // Status Badge
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = when(status) {
@@ -209,30 +209,33 @@ fun SellerVerificationCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Seller Info
             InfoRow(icon = Icons.Default.Email, text = seller.sellerEmail)
             InfoRow(icon = Icons.Default.Phone, text = seller.sellerPhoneNumber)
             InfoRow(icon = Icons.Default.LocationOn, text = seller.sellerAddress)
             InfoRow(icon = Icons.Default.Badge, text = "PAN: ${seller.panNumber}")
 
+            if (seller.documentType.isNotEmpty()) {
+                InfoRow(
+                    icon = Icons.Default.Description,
+                    text = "Document: ${seller.documentType}"
+                )
+            }
+
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // View Details
                 OutlinedButton(
                     onClick = onViewDetails,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.Visibility, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Details")
+                    Text("View Details")
                 }
 
-                // Verify Button
                 if (onVerify != null) {
                     Button(
                         onClick = onVerify,
@@ -247,7 +250,6 @@ fun SellerVerificationCard(
                     }
                 }
 
-                // Reject Button
                 if (onReject != null) {
                     Button(
                         onClick = onReject,
@@ -288,41 +290,8 @@ fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String)
 }
 
 @Composable
-fun SellerDetailsDialog(
-    seller: SellerModel,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "Seller Details",
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column {
-                DetailItem("Shop Name", seller.shopName)
-                DetailItem("Owner Name", seller.fullName)
-                DetailItem("Email", seller.sellerEmail)
-                DetailItem("Phone", seller.sellerPhoneNumber)
-                DetailItem("Address", seller.sellerAddress)
-                DetailItem("PAN Number", seller.panNumber)
-                DetailItem("Document Type", seller.documentType.ifEmpty { "N/A" })
-                DetailItem("Verification Status", seller.verificationStatus)
-            }
-        },
-        confirmButton = {
-            Button(onClick = onDismiss) {
-                Text("Close")
-            }
-        }
-    )
-}
-
-@Composable
 fun DetailItem(label: String, value: String) {
-    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+    Column(modifier = Modifier.padding(vertical = 6.dp)) {
         Text(
             label,
             fontSize = 12.sp,
@@ -330,9 +299,254 @@ fun DetailItem(label: String, value: String) {
             fontWeight = FontWeight.Medium
         )
         Text(
-            value,
+            value.ifEmpty { "N/A" },
             fontSize = 14.sp,
             fontWeight = FontWeight.Normal
         )
+    }
+}
+
+@Composable
+fun SellerDetailsWithDocumentDialog(
+    seller: SellerModel,
+    onDismiss: () -> Unit
+) {
+    var showFullImage by remember { mutableStateOf(false) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.9f),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(20.dp)
+            ) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Seller Verification",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        )
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Default.Close, "Close")
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                }
+
+                item {
+                    Text(
+                        "Business Information",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color(0xFF4CAF50)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                item { DetailItem("Shop Name", seller.shopName) }
+                item { DetailItem("Owner Name", seller.fullName) }
+                item { DetailItem("Email", seller.sellerEmail) }
+                item { DetailItem("Phone", seller.sellerPhoneNumber) }
+                item { DetailItem("Address", seller.sellerAddress) }
+                item { DetailItem("PAN Number", seller.panNumber) }
+
+                if (seller.documentType.isNotEmpty() || seller.documentUrl.isNotEmpty()) {
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Verification Document",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = Color(0xFF4CAF50)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    item {
+                        if (seller.documentType.isNotEmpty()) {
+                            DetailItem("Document Type", seller.documentType)
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                    }
+
+                    if (seller.documentUrl.isNotEmpty()) {
+                        item {
+                            Text(
+                                "Document Image",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(300.dp),
+                                elevation = CardDefaults.cardElevation(4.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    AsyncImage(
+                                        model = seller.documentUrl,
+                                        contentDescription = "Verification Document",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit,
+                                        error = painterResource(android.R.drawable.ic_menu_report_image)
+                                    )
+
+                                    // Zoom button with better styling
+                                    IconButton(
+                                        onClick = { showFullImage = true },
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(12.dp)
+                                    ) {
+                                        Surface(
+                                            color = Color.Black.copy(alpha = 0.7f),
+                                            shape = RoundedCornerShape(20.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.ZoomIn,
+                                                "View Full Image",
+                                                tint = Color.White,
+                                                modifier = Modifier.padding(12.dp).size(24.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Info,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = Color.Gray
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "Tap zoom icon to view full image",
+                                    fontSize = 12.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                    } else {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color(0xFFFFF3E0)
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFF9800),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        "No verification document uploaded",
+                                        fontSize = 14.sp,
+                                        color = Color(0xFFE65100)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    DetailItem("Verification Status", seller.verificationStatus)
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4CAF50)
+                        )
+                    ) {
+                        Text("Close")
+                    }
+                }
+            }
+        }
+    }
+
+    if (showFullImage && seller.documentUrl.isNotEmpty()) {
+        FullImageDialog(
+            imageUrl = seller.documentUrl,
+            onDismiss = { showFullImage = false }
+        )
+    }
+}
+
+@Composable
+fun FullImageDialog(
+    imageUrl: String,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.9f),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Document Full View",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                    error = painterResource(android.R.drawable.ic_menu_report_image)
+                )
+
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                ) {
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.7f),
+                        shape = RoundedCornerShape(50)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            "Close",
+                            tint = Color.White,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
