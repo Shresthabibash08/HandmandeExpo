@@ -1,5 +1,7 @@
 package com.example.handmadeexpo.view
 
+import android.app.Activity
+import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.model.CartItem
+import com.example.handmadeexpo.model.OrderItem
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.CartViewModel
 
@@ -32,7 +36,9 @@ fun CartScreen(cartViewModel: CartViewModel, currentUserId: String) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<CartItem?>(null) }
 
-    // Use .value to avoid delegate errors if imports are missing
+    val context = LocalContext.current
+    val activity = context as? Activity
+
     val isLoading = cartViewModel.isLoading.value
 
     LaunchedEffect(currentUserId) {
@@ -42,7 +48,7 @@ fun CartScreen(cartViewModel: CartViewModel, currentUserId: String) {
     val cartItems = cartViewModel.cartItems
     val total = cartItems.sumOf { it.price * it.quantity }
 
-    // --- DELETE DIALOG ---
+    // DELETE DIALOG
     if (showDeleteDialog && itemToDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -75,15 +81,36 @@ fun CartScreen(cartViewModel: CartViewModel, currentUserId: String) {
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
-                // FIXED: Check !isLoading correctly
                 if (!isLoading && cartItems.isNotEmpty()) {
-                    CartBottomBar(total)
+                    CartBottomBar(
+                        total = total,
+                        onCheckoutClick = {
+                            // Convert CartItems to OrderItems
+                            val orderItems = ArrayList(cartItems.map { cartItem ->
+                                OrderItem(
+                                    productId = cartItem.productId,
+                                    productName = cartItem.name,
+                                    price = cartItem.price,
+                                    quantity = cartItem.quantity,
+                                    imageUrl = cartItem.image
+                                )
+                            })
+
+                            // Create intent to CheckoutActivity
+                            val intent = Intent(context, CheckoutActivity::class.java)
+                            intent.putExtra("cartItems", orderItems)
+                            intent.putExtra("isFromCart", true) // NEW: Flag to indicate from cart
+
+                            // Start CheckoutActivity
+                            context.startActivity(intent)
+                        }
+                    )
                 }
             }
         ) { paddingValues ->
 
             if (isLoading) {
-                // --- LOADING SCREEN ---
+                // LOADING SCREEN
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -93,7 +120,7 @@ fun CartScreen(cartViewModel: CartViewModel, currentUserId: String) {
                     CircularProgressIndicator(color = MainColor)
                 }
             } else {
-                // --- ACTUAL CONTENT ---
+                // ACTUAL CONTENT
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -118,7 +145,20 @@ fun CartScreen(cartViewModel: CartViewModel, currentUserId: String) {
                                     .fillMaxWidth(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("Your cart is empty", color = Color.Gray, fontSize = 18.sp)
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        "Your cart is empty",
+                                        color = Color.Gray,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "Add items to get started",
+                                        color = Color.Gray,
+                                        fontSize = 14.sp
+                                    )
+                                }
                             }
                         }
                     } else {
@@ -132,6 +172,10 @@ fun CartScreen(cartViewModel: CartViewModel, currentUserId: String) {
                                     showDeleteDialog = true
                                 }
                             )
+                        }
+
+                        item {
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
                 }
@@ -165,7 +209,8 @@ fun CartItemCard(
                 modifier = Modifier
                     .size(80.dp)
                     .clip(RoundedCornerShape(12.dp)),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                error = painterResource(R.drawable.img_1)
             )
 
             Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
@@ -181,16 +226,26 @@ fun CartItemCard(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(
-                                onClick = { if (item.quantity > 1) cartViewModel.updateQuantity(userId, item.productId, item.quantity - 1) {} },
+                                onClick = {
+                                    if (item.quantity > 1) {
+                                        cartViewModel.updateQuantity(userId, item.productId, item.quantity - 1) {}
+                                    }
+                                },
                                 modifier = Modifier.size(32.dp)
-                            ) { Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            ) {
+                                Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(16.dp))
+                            }
 
                             Text("${item.quantity}", fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp))
 
                             IconButton(
-                                onClick = { cartViewModel.updateQuantity(userId, item.productId, item.quantity + 1) {} },
+                                onClick = {
+                                    cartViewModel.updateQuantity(userId, item.productId, item.quantity + 1) {}
+                                },
                                 modifier = Modifier.size(32.dp)
-                            ) { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            }
                         }
                     }
                 }
@@ -207,7 +262,7 @@ fun CartItemCard(
 }
 
 @Composable
-fun CartBottomBar(total: Double) {
+fun CartBottomBar(total: Double, onCheckoutClick: () -> Unit) {
     Surface(shadowElevation = 12.dp, color = Color.White) {
         Row(
             modifier = Modifier
@@ -227,7 +282,7 @@ fun CartBottomBar(total: Double) {
             }
 
             Button(
-                onClick = { /* Navigate to Checkout */ },
+                onClick = onCheckoutClick,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(MainColor),
                 modifier = Modifier.height(50.dp).width(150.dp)
