@@ -44,9 +44,15 @@ class ProductRepoImpl : ProductRepo {
             return
         }
 
-        newRef.setValue(model.copy(productId = productId)).addOnCompleteListener { task ->
+        // NEW: Set verificationStatus to "Pending" by default
+        val productWithStatus = model.copy(
+            productId = productId,
+            verificationStatus = "Pending"
+        )
+
+        newRef.setValue(productWithStatus).addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                callback(true, "Product added successfully", productId)
+                callback(true, "Product added successfully (Pending verification)", productId)
             } else {
                 callback(false, task.exception?.message ?: "Unknown error while adding product", null)
             }
@@ -146,46 +152,53 @@ class ProductRepoImpl : ProductRepo {
         TODO("Not yet implemented")
     }
 
+    // UPDATED: Filter to show ONLY verified products for buyers
     override fun getAllProduct(callback: (Boolean, String, List<ProductModel>?) -> Unit) {
-        ref.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val products = mutableListOf<ProductModel>()
-                for (data in snapshot.children) {
-                    data.getValue(ProductModel::class.java)?.let { products.add(it) }
+        ref.orderByChild("verificationStatus")
+            .equalTo("Verified")
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val products = mutableListOf<ProductModel>()
+                    for (data in snapshot.children) {
+                        data.getValue(ProductModel::class.java)?.let { products.add(it) }
+                    }
+                    callback(true, "Verified products fetched", products)
                 }
-                callback(true, "Products fetched", products)
-            }
 
-            override fun onCancelled(error: DatabaseError) {
-                callback(false, error.message, emptyList())
-            }
-        })
+                override fun onCancelled(error: DatabaseError) {
+                    callback(false, error.message, emptyList())
+                }
+            })
     }
 
+    // UPDATED: Filter to show ONLY verified products in category
     override fun getProductByCategory(
         categoryId: String,
         callback: (Boolean, String, List<ProductModel>?) -> Unit
     ) {
-        ref.orderByChild("categoryId").equalTo(categoryId).addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                if (snapshot.exists()) {
-                    var allProducts = mutableListOf<ProductModel>()
-                    for (data in snapshot.children) {
-                        var product = data.getValue(ProductModel::class.java)
-                        if (product != null) {
-                            allProducts.add(product)
+        ref.orderByChild("categoryId")
+            .equalTo(categoryId)
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    if (snapshot.exists()) {
+                        val allProducts = mutableListOf<ProductModel>()
+                        for (data in snapshot.children) {
+                            val product = data.getValue(ProductModel::class.java)
+                            // NEW: Filter only verified products
+                            if (product != null && product.verificationStatus == "Verified") {
+                                allProducts.add(product)
+                            }
                         }
+                        callback(true, "Verified products in category fetched", allProducts)
+                    } else {
+                        callback(true, "No products found", emptyList())
                     }
-
-                    callback(true, "product fetched", allProducts)
                 }
-            }
 
-            override fun onCancelled(error: DatabaseError) {
-                callback(false, error.message, emptyList())
-            }
-
-        })
+                override fun onCancelled(error: DatabaseError) {
+                    callback(false, error.message, emptyList())
+                }
+            })
     }
 
     override fun uploadImage(context: Context, imageUri: Uri, callback: (String?) -> Unit) {
@@ -238,6 +251,7 @@ class ProductRepoImpl : ProductRepo {
         return fileName
     }
 
+    // Seller can see ALL their products (verified, pending, rejected)
     override fun getProductsBySeller(sellerId: String, callback: (List<ProductModel>) -> Unit) {
         ref.orderByChild("sellerId").equalTo(sellerId)
             .addListenerForSingleValueEvent(object : ValueEventListener {
@@ -260,7 +274,6 @@ class ProductRepoImpl : ProductRepo {
         rating: Int,
         callback: (Boolean) -> Unit
     ) {
-        // Fixed: Using the same "products" reference as the rest of the class
         ref.child(productId).runTransaction(object : Transaction.Handler {
             override fun doTransaction(currentData: MutableData): Transaction.Result {
                 val product = currentData.getValue(ProductModel::class.java)
