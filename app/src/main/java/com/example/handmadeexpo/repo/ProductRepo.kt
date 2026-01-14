@@ -3,6 +3,7 @@ package com.example.handmadeexpo.repo
 import android.content.Context
 import android.net.Uri
 import com.example.handmadeexpo.model.ProductModel
+import com.example.handmadeexpo.model.ReportModel
 
 interface ProductRepo {
 
@@ -43,6 +44,11 @@ interface ProductRepo {
         rating: Int,
         callback: (Boolean) -> Unit
     )
+
+    fun reportProduct(report: ReportModel, callback: (Boolean, String) -> Unit)
+    fun getReportedProducts(callback: (List<ReportModel>?, String) -> Unit)
+
+    fun updateReportStatus(reportId: String, status: String, callback: (Boolean) -> Unit)
 
 
 }

@@ -1,7 +1,6 @@
 package com.example.handmadeexpo.view
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -52,7 +51,10 @@ object ChatUtils {
 }
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    // --- 1. FIXED: Added this parameter to match DashboardActivity call ---
+    onReportClick: (String) -> Unit
+) {
     // 1. ViewModels
     val viewModel: ProductViewModel = viewModel(
         factory = ProductViewModelFactory(ProductRepoImpl())
@@ -119,7 +121,9 @@ fun HomeScreen() {
                     viewModel = viewModel,
                     onBackClick = { selectedProduct = null },
                     onChatClick = { isChatOpen = true },
-                    onNavigateToCart = { showCart = true }
+                    onNavigateToCart = { showCart = true },
+                    // --- 2. FIXED: Pass the ID to the callback ---
+                    onReportClick = { onReportClick(selectedProduct!!.productId) }
                 )
             }
 

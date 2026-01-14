@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -42,7 +43,8 @@ fun ProductDescriptionScreen(
     viewModel: ProductViewModel,
     onBackClick: () -> Unit,
     onChatClick: () -> Unit,
-    onNavigateToCart: () -> Unit
+    onNavigateToCart: () -> Unit,
+    onReportClick: () -> Unit // <--- NEW PARAMETER for Reporting
 ) {
     val context = LocalContext.current
 
@@ -125,6 +127,18 @@ fun ProductDescriptionScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
+                // --- NEW: Report Button Added Here ---
+                actions = {
+                    IconButton(onClick = onReportClick) {
+                        Icon(
+                            // Using standard Warning icon as a flag
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Report Product",
+                            tint = Color.Red
+                        )
+                    }
+                },
+                // -------------------------------------
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = CreamBackground)
             )
         },
@@ -169,7 +183,7 @@ fun ProductDescriptionScreen(
                         Text("Add to Cart", color = OrangeBrand, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
 
-                    // 3. Buy Now Button (Merged Data Keys)
+                    // 3. Buy Now Button
                     Button(
                         onClick = {
                             val intent = Intent(context, CheckoutActivity::class.java).apply {
@@ -177,7 +191,6 @@ fun ProductDescriptionScreen(
                                 putExtra("name", product.name)
                                 putExtra("price", product.price)
                                 putExtra("image", product.image)
-                                // Standardized keys for consistency
                                 putExtra("product_id", product.productId)
                                 putExtra("product_name", product.name)
                                 putExtra("product_price", product.price)

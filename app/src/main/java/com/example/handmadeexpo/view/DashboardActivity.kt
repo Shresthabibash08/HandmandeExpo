@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.repo.CartRepoImpl
@@ -55,7 +54,10 @@ fun DashboardBody(userId: String) {
     var changingPassword by remember { mutableStateOf(false) }
     var showAllSellers by remember { mutableStateOf(false) }
 
-    // (ChatID, SellerID, SellerName)
+    // --- NEW: Report Product State ---
+    var reportProductId by remember { mutableStateOf<String?>(null) }
+
+    // Chat State: (ChatID, SellerID, SellerName)
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
     // --- 2. INITIALIZE REPOS AND VIEWMODELS ---
@@ -73,56 +75,81 @@ fun DashboardBody(userId: String) {
         NavItem(Icons.Default.Person, "Profile")
     )
 
-    // Handle back button for the Chat flow
-    BackHandler(enabled = (selectedIndex == 1 && (activeChatData != null || showAllSellers))) {
-        if (activeChatData != null) {
-            activeChatData = null
-        } else if (showAllSellers) {
-            showAllSellers = false
+    // --- 3. BACK HANDLER LOGIC ---
+    // This ensures pressing "Back" closes overlays before exiting the app
+    val isChatActive = selectedIndex == 1 && (activeChatData != null || showAllSellers)
+    val isReporting = selectedIndex == 0 && reportProductId != null
+    val isProfileOverlay = selectedIndex == 3 && (editing || changingPassword)
+
+    BackHandler(enabled = isChatActive || isReporting || isProfileOverlay) {
+        when {
+            // Priority 1: Close Report Screen
+            isReporting -> reportProductId = null
+
+            // Priority 2: Close Chat Screen
+            activeChatData != null -> activeChatData = null
+
+            // Priority 3: Close "New Chat" List
+            showAllSellers -> showAllSellers = false
+
+            // Priority 4: Close Profile Edits
+            editing -> editing = false
+            changingPassword -> changingPassword = false
         }
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MainColor,
-                    titleContentColor = White12
-                ),
-                title = {
-                    val title = when {
-                        selectedIndex == 1 && activeChatData != null -> activeChatData!!.third
-                        selectedIndex == 1 && showAllSellers -> "Select Seller"
-                        selectedIndex == 1 -> "Messages"
-                        selectedIndex == 2 -> "My Cart"
-                        selectedIndex == 3 -> "Profile"
-                        else -> "Handmade Expo"
+            // We HIDE the Dashboard TopBar if we are in the Report Screen
+            // (Because ReportProductScreen has its own TopBar with a back arrow)
+            if (reportProductId == null) {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MainColor,
+                        titleContentColor = White12
+                    ),
+                    title = {
+                        val title = when {
+                            // Chat Title logic
+                            selectedIndex == 1 && activeChatData != null -> activeChatData!!.third
+                            selectedIndex == 1 && showAllSellers -> "Select Seller"
+                            selectedIndex == 1 -> "Messages"
+
+                            // Tab Titles
+                            selectedIndex == 2 -> "My Cart"
+                            selectedIndex == 3 -> "Profile"
+                            else -> "Handmade Expo"
+                        }
+                        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     }
-                    Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                }
-            )
+                )
+            }
         },
         bottomBar = {
-            NavigationBar {
-                listItems.forEachIndexed { index, item ->
-                    NavigationBarItem(
-                        selected = selectedIndex == index,
-                        onClick = {
-                            selectedIndex = index
-                            // Reset sub-states when switching tabs
-                            editing = false
-                            changingPassword = false
-                            showAllSellers = false
-                            if (index != 1) activeChatData = null
-                        },
-                        icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label) }
-                    )
+            // Hide Bottom Bar when inside a Chat or Reporting or Editing Profile
+            if (activeChatData == null && reportProductId == null && !editing && !changingPassword) {
+                NavigationBar {
+                    listItems.forEachIndexed { index, item ->
+                        NavigationBarItem(
+                            selected = selectedIndex == index,
+                            onClick = {
+                                selectedIndex = index
+                                // Reset sub-states when switching tabs
+                                editing = false
+                                changingPassword = false
+                                showAllSellers = false
+                                reportProductId = null
+                                if (index != 1) activeChatData = null
+                            },
+                            icon = { Icon(item.icon, contentDescription = item.label) },
+                            label = { Text(item.label) }
+                        )
+                    }
                 }
             }
         },
         floatingActionButton = {
-            // Only show "New Chat" button when on the Inbox tab and not currently in a chat
+            // Only show "New Chat" button when on Inbox tab and not currently in a chat
             if (selectedIndex == 1 && activeChatData == null && !showAllSellers) {
                 FloatingActionButton(
                     onClick = { showAllSellers = true },
@@ -136,8 +163,25 @@ fun DashboardBody(userId: String) {
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             when (selectedIndex) {
-                0 -> HomeScreen()
+                // --- HOME TAB ---
+                0 -> {
+                    if (reportProductId != null) {
+                        // Show Report Screen (Overlay)
+                        ReportProductScreen(
+                            productId = reportProductId!!,
+                            onBackClick = { reportProductId = null }
+                        )
+                    } else {
+                        // Show Home Screen
+                        HomeScreen(
+                            onReportClick = { productId ->
+                                reportProductId = productId
+                            }
+                        )
+                    }
+                }
 
+                // --- INBOX TAB ---
                 1 -> when {
                     activeChatData != null -> {
                         ChatScreen(
@@ -161,6 +205,7 @@ fun DashboardBody(userId: String) {
                     }
                 }
 
+                // --- CART TAB ---
                 2 -> {
                     CartScreen(
                         cartViewModel = cartViewModel,
@@ -168,6 +213,7 @@ fun DashboardBody(userId: String) {
                     )
                 }
 
+                // --- PROFILE TAB ---
                 3 -> when {
                     changingPassword -> {
                         ChangePasswordScreen(

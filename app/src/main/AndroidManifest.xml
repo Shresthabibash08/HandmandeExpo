@@ -18,15 +18,42 @@
         android:theme="@style/Theme.HandmadeExpo"
         tools:replace="android:fullBackupContent">
         <activity
+            android:name=".view.AdminReportScreen"
+            android:exported="true"
+            android:label="@string/title_activity_admin_report_screen"
+            android:theme="@style/Theme.HandmadeExpo">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".view.AdminReportListScreen"
+            android:exported="false"
+            android:label="@string/title_activity_admin_report_list_screen"
+            android:theme="@style/Theme.HandmadeExpo" />
+        <activity
+            android:name=".view.ReportProductScreen"
+            android:exported="true"
+            android:label="@string/title_activity_report_product_screen"
+            android:theme="@style/Theme.HandmadeExpo">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".view.SplashActivity"
             android:exported="true"
             android:label="@string/title_activity_splash"
             android:theme="@style/Theme.HandmadeExpo">
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
 
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
         <activity
             android:name=".view.CheckoutActivity"

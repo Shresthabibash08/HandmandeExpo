@@ -28,13 +28,13 @@ class AdminDashboardActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDashboardScreen(adminViewModel: AdminViewModel = viewModel()) {
+    // 0 = Home, 1 = Users, 2 = Products, 3 = Complaints
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Admin Dashboard", color = Color.White) },
-                // CHANGED: containerColor set to Green (0xFF4CAF50)
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = Color(0xFF4CAF50)
                 )
@@ -42,10 +42,30 @@ fun AdminDashboardScreen(adminViewModel: AdminViewModel = viewModel()) {
         },
         bottomBar = {
             NavigationBar {
-                NavigationBarItem(selected = selectedTab == 0, onClick = { selectedTab = 0 }, label = { Text("Home") }, icon = { Icon(Icons.Default.Home, null) })
-                NavigationBarItem(selected = selectedTab == 1, onClick = { selectedTab = 1 }, label = { Text("Users") }, icon = { Icon(Icons.Default.Person, null) })
-                NavigationBarItem(selected = selectedTab == 2, onClick = { selectedTab = 2 }, label = { Text("Products") }, icon = { Icon(Icons.Default.ShoppingBag, null) })
-                NavigationBarItem(selected = selectedTab == 3, onClick = { selectedTab = 3 }, label = { Text("Complaints") }, icon = { Icon(Icons.Default.Warning, null) })
+                NavigationBarItem(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    label = { Text("Home") },
+                    icon = { Icon(Icons.Default.Home, null) }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    label = { Text("Users") },
+                    icon = { Icon(Icons.Default.Person, null) }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    label = { Text("Products") },
+                    icon = { Icon(Icons.Default.ShoppingBag, null) }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 },
+                    label = { Text("Complaints") },
+                    icon = { Icon(Icons.Default.Warning, null) }
+                )
             }
         }
     ) { padding ->
@@ -58,9 +78,10 @@ fun AdminDashboardScreen(adminViewModel: AdminViewModel = viewModel()) {
                 )
                 1 -> AdminUserListScreen(adminViewModel)
                 2 -> AdminProductListScreen(adminViewModel)
-                3 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Complaints Section: Coming Soon", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                }
+
+                // --- CHANGED: Now shows the Report Screen ---
+                3 -> AdminReportScreen()
+                // --------------------------------------------
             }
         }
     }
@@ -77,16 +98,35 @@ fun AdminOverview(viewModel: AdminViewModel, onUserClick: () -> Unit, onProductC
         if (viewModel.isLoading) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = Color(0xFF4CAF50))
         } else {
-            // All cards are now clickable as requested
-            DashboardStatCard("Total Users", totalUsers.toString(), Color(0xFF6200EE), Modifier.fillMaxWidth().clickable { onUserClick() })
+            DashboardStatCard(
+                "Total Users",
+                totalUsers.toString(),
+                Color(0xFF6200EE),
+                Modifier.fillMaxWidth().clickable { onUserClick() }
+            )
             Spacer(Modifier.height(8.dp))
 
-            DashboardStatCard("Total Products", viewModel.products.size.toString(), Color(0xFF2196F3), Modifier.fillMaxWidth().clickable { onProductClick() })
+            DashboardStatCard(
+                "Total Products",
+                viewModel.products.size.toString(),
+                Color(0xFF2196F3),
+                Modifier.fillMaxWidth().clickable { onProductClick() }
+            )
             Spacer(Modifier.height(8.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                DashboardStatCard("Sellers", viewModel.sellers.size.toString(), Color(0xFFFF9800), Modifier.weight(1f).clickable { onUserClick() })
-                DashboardStatCard("Buyers", viewModel.buyers.size.toString(), Color(0xFF4CAF50), Modifier.weight(1f).clickable { onUserClick() })
+                DashboardStatCard(
+                    "Sellers",
+                    viewModel.sellers.size.toString(),
+                    Color(0xFFFF9800),
+                    Modifier.weight(1f).clickable { onUserClick() }
+                )
+                DashboardStatCard(
+                    "Buyers",
+                    viewModel.buyers.size.toString(),
+                    Color(0xFF4CAF50),
+                    Modifier.weight(1f).clickable { onUserClick() }
+                )
             }
         }
     }

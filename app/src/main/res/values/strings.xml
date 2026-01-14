@@ -20,5 +20,8 @@
     <string name="title_activity_checkout">CheckoutActivity</string>
     <string name="title_activity_admin_dashboard">AdminDashboardActivity</string>
     <string name="title_activity_splash">SplashActivity</string>
+    <string name="title_activity_report_product_screen">ReportProductScreen</string>
+    <string name="title_activity_admin_report_list_screen">AdminReportListScreen</string>
+    <string name="title_activity_admin_report_screen">AdminReportScreen</string>
 </resources>
 
