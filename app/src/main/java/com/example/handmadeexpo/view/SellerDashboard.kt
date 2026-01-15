@@ -57,12 +57,24 @@ fun SellerDashboardBody(sellerId: String) {
     // Triple stores: (ChatID, BuyerID, BuyerName)
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
+    // Fetch seller name for ChatScreen
+    var sellerName by remember { mutableStateOf("Seller") }
+
     val context = LocalContext.current
     val activity = context as? Activity
     val repo = remember { SellerRepoImpl() }
     val viewModel = remember { SellerViewModel(repo) }
 
-    // --- 2. FIREBASE LISTENER FOR BADGE ---
+    // --- 2. FETCH SELLER NAME ---
+    LaunchedEffect(sellerId) {
+        FirebaseDatabase.getInstance().getReference("sellers")
+            .child(sellerId).child("fullName").get()
+            .addOnSuccessListener { snapshot ->
+                sellerName = snapshot.value?.toString() ?: "Seller"
+            }
+    }
+
+    // --- 3. FIREBASE LISTENER FOR BADGE ---
     val inboxRef = remember { FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId) }
     LaunchedEffect(sellerId) {
         inboxRef.addValueEventListener(object : ValueEventListener {
@@ -73,7 +85,7 @@ fun SellerDashboardBody(sellerId: String) {
         })
     }
 
-    // --- 3. NAVIGATION ITEMS ---
+    // --- 4. NAVIGATION ITEMS ---
     data class NavItem(val icon: ImageVector, val label: String)
     val listItems = listOf(
         NavItem(Icons.Default.Home, "Home"),
@@ -96,7 +108,7 @@ fun SellerDashboardBody(sellerId: String) {
                 ),
                 title = {
                     val titleText = when {
-                        selectedIndex == 2 && activeChatData != null -> activeChatData!!.third
+                        selectedIndex == 2 && activeChatData != null -> "Chat with ${activeChatData!!.third}"
                         selectedIndex == 0 -> "HandMade Expo"
                         selectedIndex == 1 -> "My Inventory"
                         selectedIndex == 2 -> "Messages"
@@ -163,10 +175,20 @@ fun SellerDashboardBody(sellerId: String) {
                 1 -> InventoryScreen(sellerId)
                 2 -> {
                     if (activeChatData != null) {
-                        SellerReplyView(
-                            chatId = activeChatData!!.first,
-                            buyerId = activeChatData!!.second,
-                            sellerId = sellerId
+                        // FIXED: Using ChatScreen instead of SellerReplyView
+                        val chatId = activeChatData!!.first
+                        val buyerId = activeChatData!!.second
+                        val buyerName = activeChatData!!.third
+
+                        ChatScreen(
+                            chatId = chatId,
+                            sellerId = sellerId,              // Current seller ID
+                            sellerName = sellerName,          // Current seller name
+                            currentUserId = sellerId,         // Current user is the seller
+                            currentUserRole = "seller",       // ⚠️ CRITICAL: Must be "seller"
+                            buyerId = buyerId,                // Buyer they're chatting with
+                            buyerName = buyerName,            // Buyer's name
+                            onBackClick = { activeChatData = null }
                         )
                     } else {
                         ChatListContent(sellerId = sellerId) { chatId, buyerId, buyerName ->
