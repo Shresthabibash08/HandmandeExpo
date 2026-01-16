@@ -10,10 +10,8 @@ import com.google.firebase.database.*
 class BargainViewModel : ViewModel() {
     private val repository: BargainRepo = BargainImpl()
 
-    // This list will be observed by the UI
     val sellerBargains = mutableStateListOf<BargainModel>()
 
-    // For the Seller: Fetch all incoming requests for their products
     fun fetchBargainsForSeller(sellerId: String) {
         val dbRef = FirebaseDatabase.getInstance().getReference("Bargains")
         dbRef.addValueEventListener(object : ValueEventListener {
@@ -22,7 +20,6 @@ class BargainViewModel : ViewModel() {
                 snapshot.children.forEach { buyerNode ->
                     buyerNode.children.forEach { productNode ->
                         val bargain = productNode.getValue(BargainModel::class.java)
-                        // Show to seller if it belongs to them and is actionable
                         if (bargain?.sellerId == sellerId &&
                             (bargain.status == "Pending" || bargain.status == "Counter")) {
                             sellerBargains.add(bargain)
@@ -34,7 +31,6 @@ class BargainViewModel : ViewModel() {
         })
     }
 
-    // For the Buyer: Fetch their own bargains to update prices in the Cart
     fun fetchBargainsForBuyer(buyerId: String) {
         val dbRef = FirebaseDatabase.getInstance().getReference("Bargains").child(buyerId)
         dbRef.addValueEventListener(object : ValueEventListener {
@@ -51,23 +47,32 @@ class BargainViewModel : ViewModel() {
         })
     }
 
-    // Buyer sends a new bargain request
     fun requestBargain(bargain: BargainModel) {
-        repository.sendBargainRequest(bargain) { success ->
-            // You can add a LiveData or State for success/error messages here if needed
-        }
+        repository.sendBargainRequest(bargain) { _ -> }
     }
 
-    // Seller updates the bargain (Accept, Reject, or Counter)
+    // UPDATED: Logic to handle Buyer accepting the Seller's price
     fun updateStatus(
         buyerId: String,
         productId: String,
         status: String,
-        counterPrice: String = "",
-        sellerName: String = ""
+        priceToSet: String = "",
+        actorRole: String = "" // "Buyer" or "Seller"
     ) {
-        repository.updateBargainStatus(buyerId, productId, status, counterPrice, sellerName) { success ->
-            // You can add a LiveData or State for success/error messages here if needed
+        if (actorRole == "Buyer" && status == "Accepted") {
+            // Directly update Firebase so offeredPrice = counterPrice
+            val dbRef = FirebaseDatabase.getInstance().getReference("Bargains")
+                .child(buyerId)
+                .child(productId)
+
+            val updates = mapOf(
+                "status" to "Accepted",
+                "offeredPrice" to priceToSet
+            )
+            dbRef.updateChildren(updates)
+        } else {
+            // Seller's usual logic (Accept/Reject/Counter)
+            repository.updateBargainStatus(buyerId, productId, status, priceToSet, actorRole) { _ -> }
         }
     }
 }

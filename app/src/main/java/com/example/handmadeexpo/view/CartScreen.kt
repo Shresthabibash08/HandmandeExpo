@@ -45,7 +45,7 @@ fun CartScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<CartItem?>(null) }
 
-    // This map tracks which items have an "Accepted" bargain price
+    // Map to track agreed-upon prices for each product
     val acceptedPrices = remember { mutableStateMapOf<String, Double>() }
 
     val context = LocalContext.current
@@ -60,7 +60,7 @@ fun CartScreen(
 
     val cartItems = cartViewModel.cartItems
 
-    // The total automatically updates when acceptedPrices map changes
+    // Total calculated based on negotiated prices in the map
     val total = cartItems.sumOf { item ->
         val priceToUse = acceptedPrices[item.productId] ?: item.price.toDouble()
         priceToUse * item.quantity.toDouble()
@@ -82,7 +82,6 @@ fun CartScreen(
                         total = total,
                         onCheckoutClick = {
                             val orderItems = ArrayList(cartItems.map { cartItem ->
-                                // Use the negotiated price for the final order
                                 val finalPrice = acceptedPrices[cartItem.productId] ?: cartItem.price.toDouble()
                                 OrderItem(
                                     productId = cartItem.productId,
@@ -219,7 +218,9 @@ fun CartItemCard(
                             }
                             "Counter" -> {
                                 sellerCounterPrice = snapshot.child("counterPrice").value.toString()
-                                onPriceUpdate(item.price.toDouble()) // Use original until buyer clicks Accept
+                                // Keep showing original product price in display until Buyer hits 'Accept'
+                                currentDisplayPrice = item.price.toDouble()
+                                onPriceUpdate(item.price.toDouble())
                             }
                             else -> {
                                 currentDisplayPrice = item.price.toDouble()
@@ -228,6 +229,7 @@ fun CartItemCard(
                         }
                     } else {
                         bargainStatus = "None"
+                        currentDisplayPrice = item.price.toDouble()
                         onPriceUpdate(item.price.toDouble())
                     }
                 }
@@ -258,17 +260,26 @@ fun CartItemCard(
                         fontSize = 18.sp
                     )
                     if (bargainStatus == "Counter") {
-                        Text("Seller Countered: NRP $sellerCounterPrice", color = Color(0xFFFF9800), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("Seller's Offer: NRP $sellerCounterPrice", color = Color(0xFFFF9800), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 IconButton(onClick = onDeleteClick) { Icon(Icons.Default.Delete, null, tint = Color.Red) }
             }
 
             if (bargainStatus == "Counter") {
-                // BUYER INTERACTION ROW
+                // NEGOTIATION OPTIONS
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
-                        onClick = { bargainViewModel.updateStatus(userId, item.productId, "Accepted", sellerCounterPrice, "Buyer") },
+                        onClick = {
+                            // Corrected parameters: Passing the seller's counter price as the new final price
+                            bargainViewModel.updateStatus(
+                                buyerId = userId,
+                                productId = item.productId,
+                                status = "Accepted",
+                                priceToSet = sellerCounterPrice,
+                                actorRole = "Buyer"
+                            )
+                        },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
                         shape = RoundedCornerShape(8.dp)
@@ -312,7 +323,7 @@ fun CartItemCard(
         var offerAmount by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showBargainDialog = false },
-            title = { Text("Enter Your Offer") },
+            title = { Text(if(bargainStatus == "Counter") "New Counter Offer" else "Enter Your Offer") },
             confirmButton = {
                 Button(onClick = {
                     if (offerAmount.isNotEmpty()) {
@@ -329,7 +340,7 @@ fun CartItemCard(
             text = {
                 OutlinedTextField(
                     value = offerAmount,
-                    onValueChange = { if (it.all { c -> c.isDigit() }) offerAmount = it },
+                    onValueChange = { if (it.all { c -> c.isDigit() } ) offerAmount = it },
                     label = { Text("NRP Amount") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
