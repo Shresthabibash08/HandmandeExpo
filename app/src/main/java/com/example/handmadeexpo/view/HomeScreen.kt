@@ -1,6 +1,7 @@
 package com.example.handmadeexpo.view
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,12 +40,6 @@ import com.example.handmadeexpo.viewmodel.ProductViewModelFactory
 import com.example.handmadeexpo.viewmodel.CartViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.handmadeexpo.viewmodel.ReportViewModel
-import com.example.handmadeexpo.view.components.WarningBanner
 
 // Theme Colors
 val OrangeBrand = Color(0xFFE65100)
@@ -64,7 +59,6 @@ fun HomeScreen() {
     )
     val cartRepo = remember { CartRepoImpl() }
     val cartViewModel = remember { CartViewModel(cartRepo) }
-    val reportViewModel: ReportViewModel = viewModel()
 
     // 2. States
     val products by viewModel.filteredProducts.observeAsState(initial = emptyList())
@@ -76,20 +70,6 @@ fun HomeScreen() {
     var showCart by remember { mutableStateOf(false) }
 
     val currentUserId = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "Guest" }
-
-    // Check if user is banned from messaging
-    var isBanned by remember { mutableStateOf(false) }
-    var banExpiresAt by remember { mutableStateOf<Long?>(null) }
-    var showBanAlert by remember { mutableStateOf(false) }
-
-    LaunchedEffect(currentUserId) {
-        if (currentUserId != "Guest") {
-            reportViewModel.checkIfUserBanned(currentUserId) { banned, expiryTime ->
-                isBanned = banned
-                banExpiresAt = expiryTime
-            }
-        }
-    }
 
     // 3. Back Navigation Logic
     BackHandler(enabled = isChatOpen || selectedProduct != null || showCart) {
@@ -110,96 +90,24 @@ fun HomeScreen() {
                 )
             }
 
-            // B. CHAT SCREEN - Check if banned first
+            // B. CHAT SCREEN
             isChatOpen && selectedProduct != null -> {
-                if (isBanned) {
-                    // Show ban message instead of chat
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.White),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Block,
-                                contentDescription = "Blocked",
-                                modifier = Modifier.size(80.dp),
-                                tint = Color(0xFFD32F2F)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                "Messaging Temporarily Restricted",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFD32F2F),
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
+                val chatId = ChatUtils.generateChatId(currentUserId, selectedProduct!!.sellerId)
+                var sellerNameState by remember { mutableStateOf("Loading...") }
 
-                            banExpiresAt?.let { expiryTime ->
-                                val remainingTime = expiryTime - System.currentTimeMillis()
-                                val remainingDays = (remainingTime / (24 * 60 * 60 * 1000)).toInt()
-                                val remainingHours = ((remainingTime % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000)).toInt()
-
-                                Text(
-                                    "Time remaining: $remainingDays days, $remainingHours hours",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFD32F2F)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                "Due to multiple warnings from sellers, your messaging privileges have been temporarily suspended. Please review our community guidelines.",
-                                textAlign = TextAlign.Center,
-                                color = Color.Gray,
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Button(
-                                onClick = { isChatOpen = false },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = OrangeBrand
-                                )
-                            ) {
-                                Text("Go Back")
-                            }
-                        }
-                    }
-                } else {
-                    // Normal chat flow
-                    val chatId = ChatUtils.generateChatId(currentUserId, selectedProduct!!.sellerId)
-                    var sellerNameState by remember { mutableStateOf("Loading...") }
-                    var buyerNameState by remember { mutableStateOf("Buyer") }
-
-                    LaunchedEffect(selectedProduct!!.sellerId) {
-                        FirebaseDatabase.getInstance().getReference("sellers")
-                            .child(selectedProduct!!.sellerId).child("name").get()
-                            .addOnSuccessListener { sellerNameState = it.value?.toString() ?: "Seller" }
-                    }
-
-                    LaunchedEffect(currentUserId) {
-                        FirebaseDatabase.getInstance().getReference("buyers")
-                            .child(currentUserId).child("name").get()
-                            .addOnSuccessListener { buyerNameState = it.value?.toString() ?: "Buyer" }
-                    }
-
-                    ChatScreen(
-                        chatId = chatId,
-                        sellerId = selectedProduct!!.sellerId,
-                        sellerName = sellerNameState,
-                        currentUserId = currentUserId,
-                        currentUserRole = "buyer",
-                        buyerId = currentUserId,
-                        buyerName = buyerNameState,
-                        onBackClick = { isChatOpen = false }
-                    )
+                LaunchedEffect(selectedProduct!!.sellerId) {
+                    FirebaseDatabase.getInstance().getReference("sellers")
+                        .child(selectedProduct!!.sellerId).child("name").get()
+                        .addOnSuccessListener { sellerNameState = it.value?.toString() ?: "Seller" }
                 }
+
+                ChatScreen(
+                    chatId = chatId,
+                    sellerId = selectedProduct!!.sellerId,
+                    sellerName = sellerNameState,
+                    currentUserId = currentUserId,
+                    onBackClick = { isChatOpen = false }
+                )
             }
 
             // C. PRODUCT DESCRIPTION
@@ -210,95 +118,27 @@ fun HomeScreen() {
                     cartViewModel = cartViewModel,
                     viewModel = viewModel,
                     onBackClick = { selectedProduct = null },
-                    onChatClick = {
-                        if (isBanned) {
-                            showBanAlert = true
-                        } else {
-                            isChatOpen = true
-                        }
-                    },
+                    onChatClick = { isChatOpen = true },
                     onNavigateToCart = { showCart = true }
                 )
             }
 
             // D. MAIN HOME CONTENT
             else -> {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    // Show warning banner if user has warnings
-                    if (currentUserId != "Guest") {
-                        WarningBanner(userId = currentUserId)
+                MainHomeContent(
+                    products = products,
+                    sliderValue = sliderValue,
+                    maxPrice = maxPriceDisplay,
+                    onSliderChange = { viewModel.onSliderChange(it) },
+                    onCategorySelect = { viewModel.onCategorySelect(it) },
+                    onProductClick = { selectedProduct = it },
+                    onChatClick = { product ->
+                        selectedProduct = product
+                        isChatOpen = true
                     }
-
-                    MainHomeContent(
-                        products = products,
-                        sliderValue = sliderValue,
-                        maxPrice = maxPriceDisplay,
-                        onSliderChange = { viewModel.onSliderChange(it) },
-                        onCategorySelect = { viewModel.onCategorySelect(it) },
-                        onProductClick = { selectedProduct = it },
-                        onChatClick = { product ->
-                            if (isBanned) {
-                                showBanAlert = true
-                            } else {
-                                selectedProduct = product
-                                isChatOpen = true
-                            }
-                        }
-                    )
-                }
+                )
             }
         }
-    }
-
-    // Ban alert dialog
-    if (showBanAlert && isBanned) {
-        AlertDialog(
-            onDismissRequest = { showBanAlert = false },
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Block,
-                    contentDescription = "Blocked",
-                    modifier = Modifier.size(48.dp),
-                    tint = Color(0xFFD32F2F)
-                )
-            },
-            title = {
-                Text(
-                    "Messaging Restricted",
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFD32F2F)
-                )
-            },
-            text = {
-                Column {
-                    banExpiresAt?.let { expiryTime ->
-                        val remainingTime = expiryTime - System.currentTimeMillis()
-                        val remainingDays = (remainingTime / (24 * 60 * 60 * 1000)).toInt()
-                        val remainingHours = ((remainingTime % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000)).toInt()
-
-                        Text(
-                            "Your messaging privileges have been temporarily suspended due to multiple warnings.",
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-                        Text(
-                            "Time remaining: $remainingDays days, $remainingHours hours",
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFD32F2F)
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { showBanAlert = false },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFD32F2F)
-                    )
-                ) {
-                    Text("Understood")
-                }
-            }
-        )
     }
 }
 
