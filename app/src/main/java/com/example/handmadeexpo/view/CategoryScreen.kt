@@ -1,4 +1,3 @@
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -18,10 +17,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.model.ProductModel
-import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.view.OrangeBrand
 import com.example.handmadeexpo.view.ProductCard
-import com.example.handmadeexpo.view.SearchBarInput
 import com.example.handmadeexpo.viewmodel.ProductViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,10 +28,8 @@ fun CategoryScreen(
     viewModel: ProductViewModel,
     onBackClick: () -> Unit,
     onProductClick: (ProductModel) -> Unit
-
 ) {
-
-
+    // 1. Fetch data based on the selection
     LaunchedEffect(categoryName) {
         if (categoryName == "All") {
             viewModel.getAllProduct()
@@ -43,33 +38,49 @@ fun CategoryScreen(
         }
     }
 
-    val products by viewModel.allProductsCategory.observeAsState(null) // Start with null to detect "Loading"
+    // 2. IMPORTANT: Switch which LiveData we observe
+    // If "All", we watch 'allProducts'. If specific, we watch 'allProductsCategory'.
+    val productsState by if (categoryName == "All") {
+        viewModel.allProducts.observeAsState(null)
+    } else {
+        viewModel.allProductsCategory.observeAsState(null)
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
-
+        // --- TOP NAVIGATION BAR ---
         TopAppBar(
             title = { Text(categoryName, fontWeight = FontWeight.Bold) },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                 }
-            }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
         )
 
+        // --- CONTENT LOGIC ---
         when {
-            // Case 1: Data is still fetching (null)
-            products == null -> {
+            // State: Still Loading
+            productsState == null -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = OrangeBrand)
                 }
             }
-            // Case 2: Fetch finished but list is empty
-            products!!.isEmpty() -> {
+
+            // State: Loaded but No items found
+            productsState!!.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No products found in $categoryName", color = Color.Gray)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "No products found in $categoryName",
+                            color = Color.Gray,
+                            fontSize = 16.sp
+                        )
+                    }
                 }
             }
-            // Case 3: Data arrived successfully
+
+            // State: Data arrived successfully
             else -> {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
@@ -78,11 +89,11 @@ fun CategoryScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(products!!, key = { it.productId }) { product ->
+                    items(productsState!!, key = { it.productId }) { product ->
                         ProductCard(
                             product = product,
                             onClick = { onProductClick(product) },
-                            onChatClick = { /* chat logic */ }
+                            onChatClick = { /* Add chat navigation if needed */ }
                         )
                     }
                 }
