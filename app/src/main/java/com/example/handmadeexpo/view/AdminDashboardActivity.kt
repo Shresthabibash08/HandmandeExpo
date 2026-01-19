@@ -16,44 +16,30 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.handmadeexpo.viewmodel.AdminViewModel
 
 class AdminDashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Add error logging
-        Thread.setDefaultUncaughtExceptionHandler { _, e ->
-            Log.e("AdminDashboard", "Uncaught exception", e)
-        }
+        Log.d("AdminDashboard", "onCreate called")
 
         setContent {
-            AdminDashboardScreen()
+            // Create ViewModel manually to avoid composition issues
+            val viewModel = remember { AdminViewModel() }
+            AdminDashboardScreen(viewModel)
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminDashboardScreen(adminViewModel: AdminViewModel = viewModel()) {
+fun AdminDashboardScreen(adminViewModel: AdminViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
-    // Add error state
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    // Show error dialog if there's an error
-    if (errorMessage != null) {
-        AlertDialog(
-            onDismissRequest = { errorMessage = null },
-            title = { Text("Error") },
-            text = { Text(errorMessage ?: "Unknown error occurred") },
-            confirmButton = {
-                Button(onClick = { errorMessage = null }) {
-                    Text("OK")
-                }
-            }
-        )
+    // Log for debugging
+    LaunchedEffect(Unit) {
+        Log.d("AdminDashboard", "Screen composed")
     }
 
     Scaffold(
@@ -78,14 +64,12 @@ fun AdminDashboardScreen(adminViewModel: AdminViewModel = viewModel()) {
                     onClick = { selectedTab = 1 },
                     label = { Text("Verify") },
                     icon = {
-                        BadgedBox(
-                            badge = {
-                                val totalPending = adminViewModel.pendingSellers.size + adminViewModel.pendingProducts.size
-                                if (totalPending > 0) {
-                                    Badge { Text(totalPending.toString()) }
-                                }
+                        val totalPending = adminViewModel.pendingSellers.size + adminViewModel.pendingProducts.size
+                        if (totalPending > 0) {
+                            BadgedBox(badge = { Badge { Text(totalPending.toString()) } }) {
+                                Icon(Icons.Default.VerifiedUser, null)
                             }
-                        ) {
+                        } else {
                             Icon(Icons.Default.VerifiedUser, null)
                         }
                     }
@@ -102,18 +86,19 @@ fun AdminDashboardScreen(adminViewModel: AdminViewModel = viewModel()) {
                     label = { Text("Products") },
                     icon = { Icon(Icons.Default.ShoppingBag, null) }
                 )
+                NavigationBarItem(
+                    selected = selectedTab == 4,
+                    onClick = { selectedTab = 4 },
+                    label = { Text("Reports") },
+                    icon = { Icon(Icons.Default.Warning, null) }
+                )
             }
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
+        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (selectedTab) {
-                0 -> AdminOverview(
-                    adminViewModel,
-                    onVerificationClick = { selectedTab = 1 },
-                    onUserClick = { selectedTab = 2 },
-                    onProductClick = { selectedTab = 3 }
-                )
-                1 -> VerificationHub(adminViewModel)
+                0 -> AdminOverviewSimple(adminViewModel)
+                1 -> VerificationHubSimple(adminViewModel)
                 2 -> AdminUserListScreen(adminViewModel)
                 3 -> AdminProductListScreen(adminViewModel)
             }
@@ -122,56 +107,7 @@ fun AdminDashboardScreen(adminViewModel: AdminViewModel = viewModel()) {
 }
 
 @Composable
-fun VerificationHub(viewModel: AdminViewModel) {
-    var selectedVerificationTab by remember { mutableIntStateOf(0) }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = selectedVerificationTab) {
-            Tab(
-                selected = selectedVerificationTab == 0,
-                onClick = { selectedVerificationTab = 0 },
-                text = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Sellers")
-                        if (viewModel.pendingSellers.isNotEmpty()) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Badge { Text(viewModel.pendingSellers.size.toString()) }
-                        }
-                    }
-                }
-            )
-            Tab(
-                selected = selectedVerificationTab == 1,
-                onClick = { selectedVerificationTab = 1 },
-                text = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Products")
-                        if (viewModel.pendingProducts.isNotEmpty()) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Badge { Text(viewModel.pendingProducts.size.toString()) }
-                        }
-                    }
-                }
-            )
-        }
-
-        when (selectedVerificationTab) {
-            0 -> SellerVerificationScreen(viewModel)
-            1 -> ProductVerificationScreen(viewModel)
-        }
-    }
-}
-
-@Composable
-fun AdminOverview(
-    viewModel: AdminViewModel,
-    onVerificationClick: () -> Unit,
-    onUserClick: () -> Unit,
-    onProductClick: () -> Unit
-) {
-    val totalUsers = viewModel.sellers.size + viewModel.buyers.size
-    val totalPending = viewModel.pendingSellers.size + viewModel.pendingProducts.size
-
+fun AdminOverviewSimple(viewModel: AdminViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -180,6 +116,7 @@ fun AdminOverview(
         Text("System Statistics", fontWeight = FontWeight.Bold, fontSize = 20.sp)
         Spacer(Modifier.height(16.dp))
 
+        // Show loading or data
         if (viewModel.isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -188,87 +125,80 @@ fun AdminOverview(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = Color(0xFF4CAF50))
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Loading statistics...")
+                    Text("Loading data...", color = Color.Gray)
                 }
             }
         } else {
-            // Pending Verification Card
+            // Statistics Cards
+            val totalUsers = viewModel.sellers.size + viewModel.buyers.size
+            val totalPending = viewModel.pendingSellers.size + viewModel.pendingProducts.size
+
+            // Pending Card (if any)
             if (totalPending > 0) {
-                DashboardStatCard(
-                    "Pending Verification",
-                    totalPending.toString(),
-                    Color(0xFFFF9800),
-                    Modifier.fillMaxWidth().clickable { onVerificationClick() }
+                SimpleStatCard(
+                    label = "Pending Verification",
+                    count = totalPending.toString(),
+                    color = Color(0xFFFF9800)
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
             }
 
-            DashboardStatCard(
-                "Total Users",
-                totalUsers.toString(),
-                Color(0xFF6200EE),
-                Modifier.fillMaxWidth().clickable { onUserClick() }
+            // Total Users
+            SimpleStatCard(
+                label = "Total Users",
+                count = totalUsers.toString(),
+                color = Color(0xFF6200EE)
             )
-            Spacer(Modifier.height(8.dp))
-
-            DashboardStatCard(
-                "Total Products",
-                viewModel.products.size.toString(),
-                Color(0xFF2196F3),
-                Modifier.fillMaxWidth().clickable { onProductClick() }
-            )
-            Spacer(Modifier.height(8.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                DashboardStatCard(
-                    "Sellers",
-                    viewModel.sellers.size.toString(),
-                    Color(0xFFFF9800),
-                    Modifier.weight(1f).clickable { onUserClick() }
-                )
-                DashboardStatCard(
-                    "Buyers",
-                    viewModel.buyers.size.toString(),
-                    Color(0xFF4CAF50),
-                    Modifier.weight(1f).clickable { onUserClick() }
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // Verification Stats
-            Text("Verification Overview", fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Spacer(Modifier.height(12.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                VerificationStatCard(
-                    "Pending Sellers",
-                    viewModel.pendingSellers.size.toString(),
-                    Color(0xFFFF9800),
-                    Modifier.weight(1f)
+            // Total Products
+            SimpleStatCard(
+                label = "Total Products",
+                count = viewModel.products.size.toString(),
+                color = Color(0xFF2196F3)
+            )
+            Spacer(Modifier.height(12.dp))
+
+            // Sellers and Buyers Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                SimpleStatCard(
+                    label = "Sellers",
+                    count = viewModel.sellers.size.toString(),
+                    color = Color(0xFFFF9800),
+                    modifier = Modifier.weight(1f)
                 )
-                VerificationStatCard(
-                    "Pending Products",
-                    viewModel.pendingProducts.size.toString(),
-                    Color(0xFFFF9800),
-                    Modifier.weight(1f)
+                SimpleStatCard(
+                    label = "Buyers",
+                    count = viewModel.buyers.size.toString(),
+                    color = Color(0xFF4CAF50),
+                    modifier = Modifier.weight(1f)
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(24.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                VerificationStatCard(
-                    "Verified Sellers",
-                    viewModel.verifiedSellers.size.toString(),
-                    Color(0xFF4CAF50),
-                    Modifier.weight(1f)
+            // Verification Overview
+            Text("Verification Stats", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                SmallStatCard(
+                    label = "Pending\nSellers",
+                    count = viewModel.pendingSellers.size.toString(),
+                    color = Color(0xFFFF9800),
+                    modifier = Modifier.weight(1f)
                 )
-                VerificationStatCard(
-                    "Verified Products",
-                    viewModel.verifiedProducts.size.toString(),
-                    Color(0xFF4CAF50),
-                    Modifier.weight(1f)
+                SmallStatCard(
+                    label = "Pending\nProducts",
+                    count = viewModel.pendingProducts.size.toString(),
+                    color = Color(0xFFFF9800),
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -276,37 +206,111 @@ fun AdminOverview(
 }
 
 @Composable
-fun DashboardStatCard(label: String, count: String, color: Color, modifier: Modifier) {
+fun SimpleStatCard(
+    label: String,
+    count: String,
+    color: Color,
+    modifier: Modifier = Modifier.fillMaxWidth()
+) {
     Card(
         modifier = modifier.height(100.dp),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.1f)
+        ),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(
-            Modifier.fillMaxSize(),
-            Arrangement.Center,
-            Alignment.CenterHorizontally
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text(count, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = color)
-            Text(label, fontSize = 14.sp, color = Color.Gray)
+            Text(
+                count,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Text(
+                label,
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
         }
     }
 }
 
 @Composable
-fun VerificationStatCard(label: String, count: String, color: Color, modifier: Modifier) {
+fun SmallStatCard(
+    label: String,
+    count: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
     Card(
         modifier = modifier.height(80.dp),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.1f)
+        ),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(
-            Modifier.fillMaxSize(),
-            Arrangement.Center,
-            Alignment.CenterHorizontally
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text(count, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = color)
-            Text(label, fontSize = 12.sp, maxLines = 2, color = Color.Gray)
+            Text(
+                count,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Text(
+                label,
+                fontSize = 11.sp,
+                color = Color.Gray,
+                maxLines = 2
+            )
+        }
+    }
+}
+
+@Composable
+fun VerificationHubSimple(viewModel: AdminViewModel) {
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = selectedTab) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick = { selectedTab = 0 },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Sellers")
+                        if (viewModel.pendingSellers.isNotEmpty()) {
+                            Spacer(Modifier.width(8.dp))
+                            Badge { Text(viewModel.pendingSellers.size.toString()) }
+                        }
+                    }
+                }
+            )
+            Tab(
+                selected = selectedTab == 1,
+                onClick = { selectedTab = 1 },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Products")
+                        if (viewModel.pendingProducts.isNotEmpty()) {
+                            Spacer(Modifier.width(8.dp))
+                            Badge { Text(viewModel.pendingProducts.size.toString()) }
+                        }
+                    }
+                }
+            )
+        }
+
+        when (selectedTab) {
+            0 -> SellerVerificationScreen(viewModel)
+            1 -> ProductVerificationScreen(viewModel)
         }
     }
 }

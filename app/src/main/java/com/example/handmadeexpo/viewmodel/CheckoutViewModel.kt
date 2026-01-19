@@ -10,7 +10,7 @@ class CheckoutViewModel : ViewModel() {
 
     private val auth = FirebaseAuth.getInstance()
     private val database = FirebaseDatabase.getInstance()
-    private val ordersRef = database.getReference("orders")
+    private val ordersRef = database.getReference("Orders")
     private val productsRef = database.getReference("products")
     private val buyersRef = database.getReference("Buyer")
 
