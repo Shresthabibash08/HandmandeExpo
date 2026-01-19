@@ -7,9 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,37 +28,64 @@ fun AdminReportScreen() {
     val viewModel: AdminReportViewModel = viewModel()
     val reports by viewModel.reports.collectAsState()
     val context = LocalContext.current
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val tabTitles = listOf("Product Reports", "Seller Reports")
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .background(Color.White)
-    ) {
+    Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
+        // Header
         Text(
-            text = "Reported Products",
+            text = "Admin Dashboard",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(16.dp)
         )
 
-        if (reports.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No pending reports!", color = Color.Gray)
+        // Tabs
+        TabRow(selectedTabIndex = selectedTabIndex) {
+            tabTitles.forEachIndexed { i, title ->
+                Tab(
+                    selected = selectedTabIndex == i,
+                    onClick = { selectedTabIndex = i },
+                    text = { Text(title) }
+                )
+            }
+        }
+
+        // Filter Logic
+        val filtered = reports.filter {
+            if (selectedTabIndex == 0) it.reportType == "PRODUCT" else it.reportType == "SELLER"
+        }
+
+        // List Content
+        if (filtered.isEmpty()) {
+            Box(Modifier.fillMaxSize(), Alignment.Center) {
+                Text("No pending reports", color = Color.Gray)
             }
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(reports) { report ->
+            LazyColumn(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(filtered) { report ->
                     ReportItem(
                         report = report,
                         onAccept = {
-                            viewModel.acceptReport(report) { msg ->
-                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            // --- UPDATED LOGIC HERE ---
+                            if (report.reportType == "SELLER") {
+                                // Call the NEW ban function
+                                viewModel.banSeller(report) { msg ->
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                // Existing logic for products
+                                viewModel.acceptReport(report) { msg ->
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                }
                             }
                         },
                         onReject = {
-                            viewModel.rejectReport(report) { msg ->
-                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            viewModel.rejectReport(report) {
+                                Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
@@ -70,122 +96,115 @@ fun AdminReportScreen() {
 }
 
 @Composable
-fun ReportItem(
-    report: ReportModel,
-    onAccept: () -> Unit,
-    onReject: () -> Unit
-) {
-    // --- State to hold fetched names ---
-    var productName by remember { mutableStateOf("Loading Product...") }
-    var sellerName by remember { mutableStateOf("Loading Seller...") }
+fun ReportItem(report: ReportModel, onAccept: () -> Unit, onReject: () -> Unit) {
+    // State to hold fetched names
+    var targetName by remember { mutableStateOf("Loading...") }
+    var reporterName by remember { mutableStateOf("Loading...") }
 
-    // --- Fetch Logic ---
-    LaunchedEffect(report.productId) {
+    val isProduct = report.reportType == "PRODUCT"
+
+    // Fetch Data Logic
+    LaunchedEffect(report) {
         val db = FirebaseDatabase.getInstance()
 
-        // 1. Fetch Product to get Name and SellerID
-        db.getReference("products").child(report.productId).get()
-            .addOnSuccessListener { snapshot ->
-                if (snapshot.exists()) {
-                    val pName = snapshot.child("name").value.toString()
-                    val sId = snapshot.child("sellerId").value.toString()
-                    productName = pName
-
-                    // 2. Fetch Seller Name using SellerID
-                    // Note: Ensure this matches your DB node ("Seller" or "sellers")
-                    db.getReference("Seller").child(sId).get()
-                        .addOnSuccessListener { sellerSnap ->
-                            if (sellerSnap.exists()) {
-                                // Try getting shopName first, fallback to fullName
-                                val shop = sellerSnap.child("shopName").value?.toString()
-                                    ?: sellerSnap.child("fullName").value.toString()
-                                sellerName = shop
-                            } else {
-                                sellerName = "Unknown Seller"
-                            }
-                        }
+        // 1. FETCH REPORTER (The User who made the report)
+        if (report.reporterId.isNotEmpty()) {
+            // Check "Buyer" node first
+            db.getReference("Buyer").child(report.reporterId).get().addOnSuccessListener { snap ->
+                if (snap.exists()) {
+                    // CORRECTED: Explicitly fetching 'buyerName' as per your database structure
+                    reporterName = snap.child("buyerName").value?.toString() ?: "Unknown Buyer"
                 } else {
-                    productName = "Product Deleted/Not Found"
-                    sellerName = "N/A"
+                    // If not found in Buyer, check "Seller" node
+                    db.getReference("Seller").child(report.reporterId).get().addOnSuccessListener { sellerSnap ->
+                        if (sellerSnap.exists()) {
+                            reporterName = sellerSnap.child("shopName").value?.toString()
+                                ?: sellerSnap.child("fullName").value?.toString()
+                                        ?: "Seller"
+                        } else {
+                            reporterName = "User ID not found"
+                        }
+                    }
                 }
+            }.addOnFailureListener {
+                reporterName = "Error fetching name"
             }
+        } else {
+            reporterName = "Anonymous"
+        }
+
+        // 2. FETCH TARGET (The Product or Seller being reported)
+        if (isProduct) {
+            db.getReference("products").child(report.reportedId).get().addOnSuccessListener { snap ->
+                targetName = snap.child("name").value?.toString() ?: "Product Deleted"
+            }
+        } else {
+            db.getReference("Seller").child(report.reportedId).get().addOnSuccessListener { snap ->
+                targetName = snap.child("shopName").value?.toString()
+                    ?: snap.child("fullName").value?.toString()
+                            ?: "Unknown Shop"
+            }
+        }
     }
 
+    // UI Card
     Card(
-        elevation = CardDefaults.cardElevation(4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0F0)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0F0)), // Light Red background
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header: Reason & Date
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Info, contentDescription = null, tint = Color.Red, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Complaint", fontWeight = FontWeight.Bold, color = Color.Red)
-                }
-                // Optional: You can format timestamp here if needed
-                Text("ID: ${report.productId.take(6)}...", fontSize = 10.sp, color = Color.Gray)
+            // Card Header
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    if (isProduct) Icons.Default.ShoppingCart else Icons.Default.Person,
+                    contentDescription = null,
+                    tint = Color.Red
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    if (isProduct) "Product Report" else "Seller Report",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Red
+                )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // Reason Body
-            Text(
-                text = "\"${report.reason}\"",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-            )
+            // Reporter Info
+            Text("Reported By: $reporterName", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Text("Reporter ID: ${report.reporterId}", fontSize = 10.sp, color = Color.Gray)
 
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider()
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
 
-            // Details Section (Fetched Data)
-            DetailsRow(label = "Product Name:", value = productName)
-            DetailsRow(label = "Seller Name:", value = sellerName)
-            DetailsRow(label = "Product ID:", value = report.productId)
+            // Target Info
+            Text("Target: $targetName", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Text("Target ID: ${report.reportedId}", fontSize = 10.sp, color = Color.Gray)
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
+
+            // Reason
+            Text("Reason:", fontSize = 12.sp, color = Color.DarkGray, fontWeight = FontWeight.Bold)
+            Text("\"${report.reason}\"", fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+
+            Spacer(Modifier.height(16.dp))
 
             // Action Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = onReject,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Ignore")
                 }
-
                 Button(
                     onClick = onAccept,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
                 ) {
-                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Delete Item")
+                    Text(if (isProduct) "Delete Item" else "Ban Seller")
                 }
             }
         }
-    }
-}
-
-@Composable
-fun DetailsRow(label: String, value: String) {
-    Row(modifier = Modifier.padding(vertical = 2.dp)) {
-        Text(text = label, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = Color.DarkGray, modifier = Modifier.width(100.dp))
-        Text(text = value, fontSize = 13.sp, color = Color.Black)
     }
 }

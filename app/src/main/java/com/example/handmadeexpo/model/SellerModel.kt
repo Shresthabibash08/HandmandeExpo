@@ -9,10 +9,14 @@ data class SellerModel(
     val sellerAddress: String = "",
     val panNumber: String = "",
     val role: String = "seller",
+
     // --- VERIFICATION FIELDS ---
     val documentType: String = "",
     val documentUrl: String = "",
-    val verificationStatus: String = "Unverified"
+    val verificationStatus: String = "Unverified",
+
+    // --- NEW FIELD FOR BAN FUNCTIONALITY ---
+    val banned: Boolean = false  // <--- ADD THIS LINE
 ) {
     fun toMap(): Map<String, Any?> {
         return mapOf(
@@ -26,7 +30,8 @@ data class SellerModel(
             "role" to role,
             "documentType" to documentType,
             "documentUrl" to documentUrl,
-            "verificationStatus" to verificationStatus
+            "verificationStatus" to verificationStatus,
+            "banned" to banned // <--- ADD THIS LINE
         )
     }
 }

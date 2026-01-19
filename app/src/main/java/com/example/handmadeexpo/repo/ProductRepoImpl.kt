@@ -9,7 +9,6 @@ import android.provider.OpenableColumns
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
 import com.example.handmadeexpo.model.ProductModel
-import com.example.handmadeexpo.model.ReportModel // Make sure this is imported
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
@@ -21,10 +20,8 @@ import java.io.InputStream
 import java.util.concurrent.Executors
 
 class ProductRepoImpl : ProductRepo {
-    // 1. Initialize Database
     var database: FirebaseDatabase = FirebaseDatabase.getInstance()
     var ref: DatabaseReference = database.getReference("products")
-    var reportRef: DatabaseReference = database.getReference("reports") // New Reference for Reports
 
     private val cloudinary = Cloudinary(
         mapOf(
@@ -121,52 +118,7 @@ class ProductRepoImpl : ProductRepo {
         })
     }
 
-    // --- NEW: Report Logic (Adapted for Realtime Database) ---
-    override fun reportProduct(report: ReportModel, callback: (Boolean, String) -> Unit) {
-        val newReportRef = reportRef.push()
-        val reportId = newReportRef.key ?: return callback(false, "Failed to generate Report ID")
-
-        val finalReport = report.copy(reportId = reportId)
-
-        newReportRef.setValue(finalReport)
-            .addOnSuccessListener {
-                callback(true, "Report submitted successfully!")
-            }
-            .addOnFailureListener { e ->
-                callback(false, e.message ?: "Failed to submit report")
-            }
-    }
-
-    override fun getReportedProducts(callback: (List<ReportModel>?, String) -> Unit) {
-        reportRef.orderByChild("status").equalTo("Pending")
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val reports = mutableListOf<ReportModel>()
-                    for (child in snapshot.children) {
-                        child.getValue(ReportModel::class.java)?.let { reports.add(it) }
-                    }
-                    callback(reports, "Success")
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    callback(null, error.message)
-                }
-            })
-    }
-
-    override fun updateReportStatus(
-        reportId: String,
-        status: String,
-        callback: (Boolean) -> Unit
-    ) {
-        reportRef.child(reportId).child("status").setValue(status)
-            .addOnCompleteListener { task ->
-                callback(task.isSuccessful)
-            }
-    }
-
     override fun getAvailableProducts(callback: (Boolean, String, List<ProductModel>?) -> Unit) {
-        // Implemented basics to avoid crashes
         ref.orderByChild("available").equalTo(true).addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val products = mutableListOf<ProductModel>()
@@ -186,7 +138,7 @@ class ProductRepoImpl : ProductRepo {
         userId: String,
         callback: (List<ProductModel>) -> Unit
     ) {
-        TODO("Not yet implemented")
+        // Implement logic here if needed
     }
 
     override fun updateAvailability(
@@ -205,7 +157,7 @@ class ProductRepoImpl : ProductRepo {
         available: Boolean,
         callback: (Boolean, String) -> Unit
     ) {
-        TODO("Not yet implemented")
+        // Implement logic here if needed
     }
 
     override fun getAllProduct(callback: (Boolean, String, List<ProductModel>?) -> Unit) {
@@ -340,8 +292,6 @@ class ProductRepoImpl : ProductRepo {
             ) {
                 callback(committed && error == null)
             }
-
-
         })
     }
 }

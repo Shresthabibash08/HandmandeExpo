@@ -54,8 +54,9 @@ fun DashboardBody(userId: String) {
     var changingPassword by remember { mutableStateOf(false) }
     var showAllSellers by remember { mutableStateOf(false) }
 
-    // --- NEW: Report Product State ---
+    // --- REPORTING STATE ---
     var reportProductId by remember { mutableStateOf<String?>(null) }
+    var reportSellerId by remember { mutableStateOf<String?>(null) }
 
     // Chat State: (ChatID, SellerID, SellerName)
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
@@ -76,15 +77,16 @@ fun DashboardBody(userId: String) {
     )
 
     // --- 3. BACK HANDLER LOGIC ---
-    // This ensures pressing "Back" closes overlays before exiting the app
     val isChatActive = selectedIndex == 1 && (activeChatData != null || showAllSellers)
-    val isReporting = selectedIndex == 0 && reportProductId != null
+    val isReportingProduct = reportProductId != null
+    val isReportingSeller = reportSellerId != null
     val isProfileOverlay = selectedIndex == 3 && (editing || changingPassword)
 
-    BackHandler(enabled = isChatActive || isReporting || isProfileOverlay) {
+    BackHandler(enabled = isChatActive || isReportingProduct || isReportingSeller || isProfileOverlay) {
         when {
-            // Priority 1: Close Report Screen
-            isReporting -> reportProductId = null
+            // Priority 1: Close Report Screens
+            isReportingSeller -> reportSellerId = null
+            isReportingProduct -> reportProductId = null
 
             // Priority 2: Close Chat Screen
             activeChatData != null -> activeChatData = null
@@ -100,9 +102,7 @@ fun DashboardBody(userId: String) {
 
     Scaffold(
         topBar = {
-            // We HIDE the Dashboard TopBar if we are in the Report Screen
-            // (Because ReportProductScreen has its own TopBar with a back arrow)
-            if (reportProductId == null) {
+            if (reportProductId == null && reportSellerId == null) {
                 TopAppBar(
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MainColor,
@@ -110,12 +110,9 @@ fun DashboardBody(userId: String) {
                     ),
                     title = {
                         val title = when {
-                            // Chat Title logic
                             selectedIndex == 1 && activeChatData != null -> activeChatData!!.third
                             selectedIndex == 1 && showAllSellers -> "Select Seller"
                             selectedIndex == 1 -> "Messages"
-
-                            // Tab Titles
                             selectedIndex == 2 -> "My Cart"
                             selectedIndex == 3 -> "Profile"
                             else -> "Handmade Expo"
@@ -126,19 +123,18 @@ fun DashboardBody(userId: String) {
             }
         },
         bottomBar = {
-            // Hide Bottom Bar when inside a Chat or Reporting or Editing Profile
-            if (activeChatData == null && reportProductId == null && !editing && !changingPassword) {
+            if (activeChatData == null && reportProductId == null && reportSellerId == null && !editing && !changingPassword) {
                 NavigationBar {
                     listItems.forEachIndexed { index, item ->
                         NavigationBarItem(
                             selected = selectedIndex == index,
                             onClick = {
                                 selectedIndex = index
-                                // Reset sub-states when switching tabs
                                 editing = false
                                 changingPassword = false
                                 showAllSellers = false
                                 reportProductId = null
+                                reportSellerId = null
                                 if (index != 1) activeChatData = null
                             },
                             icon = { Icon(item.icon, contentDescription = item.label) },
@@ -149,7 +145,6 @@ fun DashboardBody(userId: String) {
             }
         },
         floatingActionButton = {
-            // Only show "New Chat" button when on Inbox tab and not currently in a chat
             if (selectedIndex == 1 && activeChatData == null && !showAllSellers) {
                 FloatingActionButton(
                     onClick = { showAllSellers = true },
@@ -162,84 +157,96 @@ fun DashboardBody(userId: String) {
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            when (selectedIndex) {
-                // --- HOME TAB ---
-                0 -> {
-                    if (reportProductId != null) {
-                        // Show Report Screen (Overlay)
-                        ReportProductScreen(
-                            productId = reportProductId!!,
-                            onBackClick = { reportProductId = null }
-                        )
-                    } else {
-                        // Show Home Screen
+            // --- GLOBAL OVERLAYS (REPORTING) ---
+            if (reportSellerId != null) {
+                ReportSellerScreen(
+                    sellerId = reportSellerId!!,
+                    onBackClick = { reportSellerId = null }
+                )
+            } else if (reportProductId != null) {
+                ReportProductScreen(
+                    productId = reportProductId!!,
+                    onBackClick = { reportProductId = null }
+                )
+            } else {
+                when (selectedIndex) {
+                    // --- HOME TAB ---
+                    0 -> {
                         HomeScreen(
-                            onReportClick = { productId ->
+                            // FIXED: Added missing parameters
+                            onReportProductClick = { productId ->
                                 reportProductId = productId
+                            },
+                            onReportSellerClick = { sellerId ->
+                                reportSellerId = sellerId
                             }
                         )
                     }
-                }
 
-                // --- INBOX TAB ---
-                1 -> when {
-                    activeChatData != null -> {
-                        ChatScreen(
-                            chatId = activeChatData!!.first,
-                            sellerId = activeChatData!!.second,
-                            sellerName = activeChatData!!.third,
-                            currentUserId = userId,
-                            onBackClick = { activeChatData = null }
-                        )
-                    }
-                    showAllSellers -> {
-                        AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
-                            activeChatData = Triple(chatId, sellerId, sellerName)
-                            showAllSellers = false
+                    // --- INBOX TAB ---
+                    1 -> when {
+                        activeChatData != null -> {
+                            ChatScreen(
+                                chatId = activeChatData!!.first,
+                                sellerId = activeChatData!!.second,
+                                sellerName = activeChatData!!.third,
+                                currentUserId = userId,
+                                onBackClick = { activeChatData = null },
+                                // FIXED: Added missing parameter
+                                onReportClick = { sellerIdToReport ->
+                                    reportSellerId = sellerIdToReport
+                                }
+                            )
                         }
-                    }
-                    else -> {
-                        BuyerChatListScreen(userId) { chatId, sellerId, sellerName ->
-                            activeChatData = Triple(chatId, sellerId, sellerName)
-                        }
-                    }
-                }
-
-                // --- CART TAB ---
-                2 -> {
-                    CartScreen(
-                        cartViewModel = cartViewModel,
-                        currentUserId = userId
-                    )
-                }
-
-                // --- PROFILE TAB ---
-                3 -> when {
-                    changingPassword -> {
-                        ChangePasswordScreen(
-                            viewModel = buyerViewModel,
-                            onBackClick = { changingPassword = false },
-                            onPasswordChanged = { changingPassword = false }
-                        )
-                    }
-                    editing -> {
-                        EditBuyerProfileScreen(
-                            viewModel = buyerViewModel,
-                            onBack = { editing = false }
-                        )
-                    }
-                    else -> {
-                        BuyerProfileScreen(
-                            viewModel = buyerViewModel,
-                            onEditClick = { editing = true },
-                            onChangePasswordClick = { changingPassword = true },
-                            onLogoutSuccess = {
-                                val intent = Intent(context, SignInActivity::class.java)
-                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                context.startActivity(intent)
-                                activity?.finish()
+                        showAllSellers -> {
+                            AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
+                                activeChatData = Triple(chatId, sellerId, sellerName)
+                                showAllSellers = false
                             }
+                        }
+                        else -> {
+                            BuyerChatListScreen(userId) { chatId, sellerId, sellerName ->
+                                activeChatData = Triple(chatId, sellerId, sellerName)
+                            }
+                        }
+                    }
+
+                    // --- CART TAB ---
+                    2 -> {
+                        CartScreen(
+                            cartViewModel = cartViewModel,
+                            currentUserId = userId
                         )
+                    }
+
+                    // --- PROFILE TAB ---
+                    3 -> when {
+                        changingPassword -> {
+                            ChangePasswordScreen(
+                                viewModel = buyerViewModel,
+                                onBackClick = { changingPassword = false },
+                                onPasswordChanged = { changingPassword = false }
+                            )
+                        }
+                        editing -> {
+                            EditBuyerProfileScreen(
+                                viewModel = buyerViewModel,
+                                onBack = { editing = false }
+                            )
+                        }
+                        else -> {
+                            BuyerProfileScreen(
+                                viewModel = buyerViewModel,
+                                onEditClick = { editing = true },
+                                onChangePasswordClick = { changingPassword = true },
+                                onLogoutSuccess = {
+                                    val intent = Intent(context, SignInActivity::class.java)
+                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    context.startActivity(intent)
+                                    activity?.finish()
+                                }
+                            )
+                        }
                     }
                 }
             }

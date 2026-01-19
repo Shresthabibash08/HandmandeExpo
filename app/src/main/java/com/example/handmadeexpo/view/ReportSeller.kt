@@ -16,13 +16,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.handmadeexpo.ui.theme.MainColor // Make sure this is imported
 import com.example.handmadeexpo.viewmodel.ReportViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReportProductScreen(
-    productId: String,
+fun ReportSellerScreen(
+    sellerId: String,
     onBackClick: () -> Unit
 ) {
     val viewModel: ReportViewModel = viewModel()
@@ -33,15 +32,13 @@ fun ReportProductScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Report Product", fontWeight = FontWeight.Bold) },
+                title = { Text("Report Seller", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         }
     ) { padding ->
@@ -54,7 +51,7 @@ fun ReportProductScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Is something wrong with this product?",
+                text = "Why are you reporting this seller?",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.align(Alignment.Start)
@@ -63,7 +60,7 @@ fun ReportProductScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Please let us know why you are reporting this item so we can review it.",
+                text = "Your report helps us keep the marketplace safe. Please be specific.",
                 fontSize = 14.sp,
                 color = Color.Gray,
                 modifier = Modifier.align(Alignment.Start)
@@ -74,65 +71,49 @@ fun ReportProductScreen(
             OutlinedTextField(
                 value = reason,
                 onValueChange = { reason = it },
-                label = { Text("Reason (e.g., Fake, Damaged, Offensive)") },
+                label = { Text("Reason (e.g., Scam, Harassment, Fake Items)") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp),
                 maxLines = 5,
-                shape = RoundedCornerShape(12.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent
-                )
+                shape = RoundedCornerShape(12.dp)
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- BUTTONS ROW ---
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // 1. CANCEL BUTTON
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
                     onClick = onBackClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(50.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
+                    modifier = Modifier.weight(1f).height(50.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Cancel")
+                    Text("Cancel", color = Color.Gray)
                 }
 
-                // 2. SUBMIT BUTTON
                 Button(
                     onClick = {
                         if (reason.isNotBlank()) {
                             isSubmitting = true
-                            // FIXED: Explicit types added to callback to prevent inference errors
-                            viewModel.submitReport(productId, reason) { success: Boolean, msg: String ->
+                            viewModel.reportSeller(sellerId, reason) { success, msg ->
                                 isSubmitting = false
                                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                 if (success) {
-                                    onBackClick() // Close screen on success
+                                    onBackClick()
                                 }
                             }
                         } else {
                             Toast.makeText(context, "Please write a reason", Toast.LENGTH_SHORT).show()
                         }
                     },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(50.dp),
+                    modifier = Modifier.weight(1f).height(50.dp),
                     enabled = !isSubmitting,
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MainColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)) // Red for Report
                 ) {
                     if (isSubmitting) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                     } else {
-                        Text("Submit Report")
+                        Text("Report Seller")
                     }
                 }
             }

@@ -23,5 +23,6 @@
     <string name="title_activity_report_product_screen">ReportProductScreen</string>
     <string name="title_activity_admin_report_list_screen">AdminReportListScreen</string>
     <string name="title_activity_admin_report_screen">AdminReportScreen</string>
+    <string name="title_activity_report_seller">ReportSeller</string>
 </resources>
 

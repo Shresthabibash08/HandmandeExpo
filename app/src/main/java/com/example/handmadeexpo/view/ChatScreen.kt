@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Warning // <--- Import for Report Icon
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,10 +21,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.handmadeexpo.repo.ChatRepoImpl
 import com.example.handmadeexpo.viewmodel.ChatViewModel
 import com.example.handmadeexpo.viewmodel.ChatViewModelFactory
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,19 +29,16 @@ fun ChatScreen(
     sellerId: String,
     sellerName: String,
     currentUserId: String,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onReportClick: (String) -> Unit // <--- 1. ADDED PARAMETER
 ) {
-    // FIX: Pass ChatRepoImpl() to the Factory to solve the "No value passed for parameter 'repo'" error
     val viewModel: ChatViewModel = viewModel(
         factory = ChatViewModelFactory(ChatRepoImpl())
     )
 
     var messageText by remember { mutableStateOf("") }
-
-    // Using collectAsState to sync with the Repository/ViewModel Flow
     val messages by viewModel.messages.collectAsState(initial = emptyList())
 
-    // Start listening for messages when the screen opens
     LaunchedEffect(chatId) {
         viewModel.listenForMessages(chatId)
     }
@@ -55,7 +49,17 @@ fun ChatScreen(
                 title = { Text(sellerName, fontSize = 18.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    // <--- 2. ADDED REPORT BUTTON
+                    IconButton(onClick = { onReportClick(sellerId) }) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Report User",
+                            tint = Color.Red // Red color to indicate warning/report
+                        )
                     }
                 }
             )
@@ -63,7 +67,7 @@ fun ChatScreen(
         bottomBar = {
             BottomAppBar(
                 containerColor = Color.White,
-                modifier = Modifier.imePadding() // Ensures keyboard doesn't cover input
+                modifier = Modifier.imePadding()
             ) {
                 Row(
                     modifier = Modifier.padding(8.dp),
@@ -88,7 +92,7 @@ fun ChatScreen(
                     }) {
                         Icon(
                             Icons.AutoMirrored.Filled.Send,
-                            contentDescription = null,
+                            contentDescription = "Send",
                             tint = Color(0xFFE65100)
                         )
                     }
