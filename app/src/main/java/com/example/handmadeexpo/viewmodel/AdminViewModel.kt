@@ -10,28 +10,28 @@ class AdminViewModel : ViewModel() {
     private val adminRepo: AdminRepo = AdminImpl()
     private val productRepo: ProductRepo = ProductRepoImpl()
 
-    // Your existing lists
+    // State lists
     val sellers = mutableStateListOf<SellerModel>()
     val buyers = mutableStateListOf<BuyerModel>()
     val products = mutableStateListOf<ProductModel>()
 
-    var searchQuery by mutableStateOf("")
     var isLoading by mutableStateOf(true)
 
     init { fetchData() }
 
     fun fetchData() {
         isLoading = true
-        // Assuming your Repo returns a list via callback
+        // Fetch Sellers
         adminRepo.getSellers { data ->
             sellers.clear()
             sellers.addAll(data)
-            // If buyers load fast, we can set loading false here or wait for both
         }
+        // Fetch Buyers
         adminRepo.getBuyers { data ->
             buyers.clear()
             buyers.addAll(data)
         }
+        // Fetch Products
         productRepo.getAllProduct { success, _, data ->
             if (success && data != null) {
                 products.clear()
@@ -42,26 +42,23 @@ class AdminViewModel : ViewModel() {
     }
 
     fun deleteProduct(id: String) {
-        productRepo.deleteProduct(id) { _, _ ->
-            fetchData() // Refresh list after delete
-        }
+        productRepo.deleteProduct(id) { _, _ -> fetchData() }
     }
 
     fun deleteUser(id: String, role: String) {
-        adminRepo.deleteUser(id, role) {
-            fetchData() // Refresh list after delete
-        }
+        adminRepo.deleteUser(id, role) { fetchData() }
     }
 
-    // --- NEW: Unban Function ---
+    // --- UNBAN USER FUNCTION ---
     fun unbanUser(id: String, role: String) {
         val db = FirebaseDatabase.getInstance()
+        // Determine correct Firebase node based on role
         val ref = if (role == "seller") db.getReference("Seller") else db.getReference("Buyer")
 
-        // Removing the 'banned' flag effectively unbans them
+        // Remove the 'banned' field to unban
         ref.child(id).child("banned").removeValue()
             .addOnSuccessListener {
-                fetchData() // REFRESH the list so they move from "Banned" tab to "Active"
+                fetchData() // Refresh list immediately to update UI
             }
     }
 }

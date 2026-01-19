@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Warning // Added for Warning Icon
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,7 +30,9 @@ fun AdminReportScreen() {
     val reports by viewModel.reports.collectAsState()
     val context = LocalContext.current
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabTitles = listOf("Product Reports", "Seller Reports")
+
+    // 1. ADD "Buyer Reports" TO TABS
+    val tabTitles = listOf("Product Reports", "Seller Reports", "Buyer Reports")
 
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         // Header
@@ -51,9 +54,13 @@ fun AdminReportScreen() {
             }
         }
 
-        // Filter Logic
+        // 2. UPDATE FILTER LOGIC
         val filtered = reports.filter {
-            if (selectedTabIndex == 0) it.reportType == "PRODUCT" else it.reportType == "SELLER"
+            when (selectedTabIndex) {
+                0 -> it.reportType == "PRODUCT"
+                1 -> it.reportType == "SELLER"
+                else -> it.reportType == "BUYER" // Show Buyer reports in 3rd tab
+            }
         }
 
         // List Content
@@ -70,16 +77,24 @@ fun AdminReportScreen() {
                     ReportItem(
                         report = report,
                         onAccept = {
-                            // --- UPDATED LOGIC HERE ---
-                            if (report.reportType == "SELLER") {
-                                // Call the NEW ban function
-                                viewModel.banSeller(report) { msg ->
-                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            // 3. HANDLE DIFFERENT BAN TYPES
+                            when (report.reportType) {
+                                "SELLER" -> {
+                                    viewModel.banSeller(report) { msg ->
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                    }
                                 }
-                            } else {
-                                // Existing logic for products
-                                viewModel.acceptReport(report) { msg ->
-                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                "BUYER" -> {
+                                    // Call the new banBuyer function
+                                    viewModel.banBuyer(report) { msg ->
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                else -> {
+                                    // Product Deletion
+                                    viewModel.acceptReport(report) { msg ->
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             }
                         },
@@ -97,99 +112,103 @@ fun AdminReportScreen() {
 
 @Composable
 fun ReportItem(report: ReportModel, onAccept: () -> Unit, onReject: () -> Unit) {
-    // State to hold fetched names
     var targetName by remember { mutableStateOf("Loading...") }
     var reporterName by remember { mutableStateOf("Loading...") }
 
+    // Helper booleans
     val isProduct = report.reportType == "PRODUCT"
+    val isBuyerReport = report.reportType == "BUYER"
 
-    // Fetch Data Logic
     LaunchedEffect(report) {
         val db = FirebaseDatabase.getInstance()
 
-        // 1. FETCH REPORTER (The User who made the report)
+        // --- 1. FETCH REPORTER NAME ---
+        // (If it's a Buyer Report, the reporter is a Seller. If it's a Seller Report, reporter is a Buyer)
         if (report.reporterId.isNotEmpty()) {
-            // Check "Buyer" node first
             db.getReference("Buyer").child(report.reporterId).get().addOnSuccessListener { snap ->
                 if (snap.exists()) {
-                    // CORRECTED: Explicitly fetching 'buyerName' as per your database structure
                     reporterName = snap.child("buyerName").value?.toString() ?: "Unknown Buyer"
                 } else {
-                    // If not found in Buyer, check "Seller" node
+                    // Check Seller node if not found in Buyer
                     db.getReference("Seller").child(report.reporterId).get().addOnSuccessListener { sellerSnap ->
                         if (sellerSnap.exists()) {
-                            reporterName = sellerSnap.child("shopName").value?.toString()
-                                ?: sellerSnap.child("fullName").value?.toString()
-                                        ?: "Seller"
+                            reporterName = sellerSnap.child("shopName").value?.toString() ?: "Seller"
                         } else {
                             reporterName = "User ID not found"
                         }
                     }
                 }
-            }.addOnFailureListener {
-                reporterName = "Error fetching name"
             }
         } else {
             reporterName = "Anonymous"
         }
 
-        // 2. FETCH TARGET (The Product or Seller being reported)
-        if (isProduct) {
-            db.getReference("products").child(report.reportedId).get().addOnSuccessListener { snap ->
-                targetName = snap.child("name").value?.toString() ?: "Product Deleted"
+        // --- 2. FETCH TARGET NAME (Who/What is being reported) ---
+        when (report.reportType) {
+            "PRODUCT" -> {
+                db.getReference("products").child(report.reportedId).get().addOnSuccessListener { snap ->
+                    targetName = snap.child("name").value?.toString() ?: "Product Deleted"
+                }
             }
-        } else {
-            db.getReference("Seller").child(report.reportedId).get().addOnSuccessListener { snap ->
-                targetName = snap.child("shopName").value?.toString()
-                    ?: snap.child("fullName").value?.toString()
-                            ?: "Unknown Shop"
+            "SELLER" -> {
+                db.getReference("Seller").child(report.reportedId).get().addOnSuccessListener { snap ->
+                    targetName = snap.child("shopName").value?.toString() ?: "Unknown Shop"
+                }
+            }
+            "BUYER" -> {
+                // NEW: Fetch Buyer Name for the target
+                db.getReference("Buyer").child(report.reportedId).get().addOnSuccessListener { snap ->
+                    targetName = snap.child("buyerName").value?.toString() ?: "Unknown Buyer"
+                }
             }
         }
     }
 
     // UI Card
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0F0)), // Light Red background
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0F0)),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Card Header
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (isProduct) Icons.Default.ShoppingCart else Icons.Default.Person,
-                    contentDescription = null,
-                    tint = Color.Red
-                )
+                // Update Icon based on type
+                val icon = when (report.reportType) {
+                    "PRODUCT" -> Icons.Default.ShoppingCart
+                    "BUYER" -> Icons.Default.Warning // Different icon for abusive buyers
+                    else -> Icons.Default.Person
+                }
+
+                Icon(icon, contentDescription = null, tint = Color.Red)
                 Spacer(Modifier.width(8.dp))
-                Text(
-                    if (isProduct) "Product Report" else "Seller Report",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Red
-                )
+
+                // Dynamic Title
+                val title = when (report.reportType) {
+                    "PRODUCT" -> "Product Report"
+                    "SELLER" -> "Seller Report"
+                    else -> "Abusive Buyer Report"
+                }
+
+                Text(title, fontWeight = FontWeight.Bold, color = Color.Red)
             }
 
             Spacer(Modifier.height(12.dp))
 
-            // Reporter Info
             Text("Reported By: $reporterName", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
             Text("Reporter ID: ${report.reporterId}", fontSize = 10.sp, color = Color.Gray)
 
             Spacer(Modifier.height(8.dp))
 
-            // Target Info
             Text("Target: $targetName", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
             Text("Target ID: ${report.reportedId}", fontSize = 10.sp, color = Color.Gray)
 
             Spacer(Modifier.height(12.dp))
 
-            // Reason
             Text("Reason:", fontSize = 12.sp, color = Color.DarkGray, fontWeight = FontWeight.Bold)
             Text("\"${report.reason}\"", fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
 
             Spacer(Modifier.height(16.dp))
 
-            // Action Buttons
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = onReject,
@@ -197,12 +216,20 @@ fun ReportItem(report: ReportModel, onAccept: () -> Unit, onReject: () -> Unit) 
                 ) {
                     Text("Ignore")
                 }
+
+                // Dynamic Button Text
+                val buttonText = when(report.reportType) {
+                    "PRODUCT" -> "Delete Item"
+                    "SELLER" -> "Ban Seller"
+                    else -> "Ban Buyer"
+                }
+
                 Button(
                     onClick = onAccept,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
                 ) {
-                    Text(if (isProduct) "Delete Item" else "Ban Seller")
+                    Text(buttonText)
                 }
             }
         }

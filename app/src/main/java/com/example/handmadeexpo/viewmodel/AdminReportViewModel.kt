@@ -6,7 +6,7 @@ import com.example.handmadeexpo.repo.ProductRepo
 import com.example.handmadeexpo.repo.ProductRepoImpl
 import com.example.handmadeexpo.repo.ReportRepo
 import com.example.handmadeexpo.repo.ReportRepoImpl
-import com.google.firebase.database.FirebaseDatabase // Import this
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -29,7 +29,7 @@ class AdminReportViewModel : ViewModel() {
         }
     }
 
-    // --- NEW FUNCTION: Ban Seller ---
+    // --- Ban Seller Function ---
     fun banSeller(report: ReportModel, callback: (String) -> Unit) {
         val db = FirebaseDatabase.getInstance()
 
@@ -38,7 +38,7 @@ class AdminReportViewModel : ViewModel() {
 
         db.getReference("Seller").child(report.reportedId).updateChildren(updates)
             .addOnSuccessListener {
-                // 2. Mark report as accepted/handled so it leaves the list
+                // 2. Mark report as accepted so it leaves the list
                 reportRepo.updateReportStatus(report.reportId, "Accepted - Banned") {
                     fetchReports()
                     callback("Seller has been BANNED successfully")
@@ -46,6 +46,27 @@ class AdminReportViewModel : ViewModel() {
             }
             .addOnFailureListener {
                 callback("Failed to ban seller: ${it.message}")
+            }
+    }
+
+    // --- NEW: Ban Buyer Function ---
+    fun banBuyer(report: ReportModel, callback: (String) -> Unit) {
+        val db = FirebaseDatabase.getInstance()
+
+        // 1. Set 'banned' to true in the Buyer's node
+        // Note: Ensure your database node is named "Buyer" (capitalized) to match your other files
+        val updates = mapOf<String, Any>("banned" to true)
+
+        db.getReference("Buyer").child(report.reportedId).updateChildren(updates)
+            .addOnSuccessListener {
+                // 2. Mark report as accepted
+                reportRepo.updateReportStatus(report.reportId, "Accepted - Banned") {
+                    fetchReports()
+                    callback("Buyer has been BANNED successfully")
+                }
+            }
+            .addOnFailureListener {
+                callback("Failed to ban buyer: ${it.message}")
             }
     }
 
@@ -62,7 +83,7 @@ class AdminReportViewModel : ViewModel() {
                 }
             }
         } else {
-            // For general accept without banning (optional, but usually we use banSeller now)
+            // Fallback for general acceptance if not using ban function
             reportRepo.updateReportStatus(report.reportId, "Accepted") {
                 fetchReports()
                 callback("Report Accepted")

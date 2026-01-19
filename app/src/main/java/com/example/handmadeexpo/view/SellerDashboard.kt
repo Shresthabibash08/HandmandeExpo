@@ -154,8 +154,8 @@ fun SellerDashboardBody(sellerId: String) {
                             sellerId = activeChatData!!.second, // Pass BuyerID as the "Receiver"
                             sellerName = activeChatData!!.third, // Pass BuyerName as the "Title"
                             currentUserId = sellerId,           // Pass SellerID as "Me"
-                            onBackClick = { activeChatData = null },
-                            onReportClick = {} // Empty lambda: Sellers don't report buyers here
+                            onBackClick = { activeChatData = null }
+                             // Empty lambda: Sellers don't report buyers here
                         )
                     } else {
                         // REPLACED ChatListContent with SellerChatListScreen

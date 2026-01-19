@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,26 +23,50 @@ import com.example.handmadeexpo.viewmodel.AdminViewModel
 
 @Composable
 fun AdminUserListScreen(viewModel: AdminViewModel) {
-    var tabIndex by remember { mutableIntStateOf(0) }
+    // State 1: Main Tab (0=Sellers, 1=Buyers, 2=Banned)
+    var mainTabIndex by remember { mutableIntStateOf(0) }
 
-    // States for Popups/Dialogs
+    // State 2: Sub Tab for Banned Section (0=Sellers, 1=Buyers)
+    var bannedTabIndex by remember { mutableIntStateOf(0) }
+
+    // Dialog States
     var selectedSeller by remember { mutableStateOf<SellerModel?>(null) }
     var selectedBuyer by remember { mutableStateOf<BuyerModel?>(null) }
     var userToDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
     var userToUnban by remember { mutableStateOf<Pair<String, String>?>(null) }
 
-    // --- FILTER LOGIC ---
-    // Make sure your SellerModel has: val banned: Boolean = false
+    // --- FILTER DATA ---
+    // Note: Ensure both BuyerModel and SellerModel have 'val banned: Boolean = false'
     val activeSellers = viewModel.sellers.filter { !it.banned }
+    val activeBuyers = viewModel.buyers.filter { !it.banned }
+
     val bannedSellers = viewModel.sellers.filter { it.banned }
-    val activeBuyers = viewModel.buyers // Assuming logic for banning buyers is not yet needed
+    val bannedBuyers = viewModel.buyers.filter { it.banned }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Tab Headers
-        TabRow(selectedTabIndex = tabIndex) {
-            Tab(selected = tabIndex == 0, onClick = { tabIndex = 0 }, text = { Text("Sellers") })
-            Tab(selected = tabIndex == 1, onClick = { tabIndex = 1 }, text = { Text("Buyers") })
-            Tab(selected = tabIndex == 2, onClick = { tabIndex = 2 }, text = { Text("Banned") })
+        // --- MAIN TABS ---
+        TabRow(selectedTabIndex = mainTabIndex) {
+            Tab(selected = mainTabIndex == 0, onClick = { mainTabIndex = 0 }, text = { Text("Sellers") })
+            Tab(selected = mainTabIndex == 1, onClick = { mainTabIndex = 1 }, text = { Text("Buyers") })
+            Tab(selected = mainTabIndex == 2, onClick = { mainTabIndex = 2 }, text = { Text("Banned") })
+        }
+
+        // --- SUB TABS (Visible only when 'Banned' is selected) ---
+        if (mainTabIndex == 2) {
+            TabRow(
+                selectedTabIndex = bannedTabIndex,
+                containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.primary,
+                indicator = { tabPositions ->
+                    TabRowDefaults.SecondaryIndicator(
+                        Modifier.tabIndicatorOffset(tabPositions[bannedTabIndex]),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            ) {
+                Tab(selected = bannedTabIndex == 0, onClick = { bannedTabIndex = 0 }, text = { Text("Banned Sellers", fontSize = 12.sp) })
+                Tab(selected = bannedTabIndex == 1, onClick = { bannedTabIndex = 1 }, text = { Text("Banned Buyers", fontSize = 12.sp) })
+            }
         }
 
         if (viewModel.isLoading) {
@@ -49,48 +74,60 @@ fun AdminUserListScreen(viewModel: AdminViewModel) {
         } else {
             LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
-                // TAB 0: Active Sellers
-                if (tabIndex == 0) {
+                // === TAB 0: ACTIVE SELLERS ===
+                if (mainTabIndex == 0) {
                     if (activeSellers.isEmpty()) item { EmptyState("No active sellers") }
                     items(activeSellers) { seller ->
                         UserRow(
                             name = seller.shopName,
                             email = seller.sellerEmail,
-                            icon = Icons.Default.Delete,
-                            iconColor = Color.Red,
+                            icon = Icons.Default.Delete, iconColor = Color.Red,
                             onAction = { userToDelete = seller.sellerId to "seller" },
                             onClick = { selectedSeller = seller }
                         )
                     }
                 }
 
-                // TAB 1: Buyers
-                else if (tabIndex == 1) {
-                    if (activeBuyers.isEmpty()) item { EmptyState("No buyers found") }
+                // === TAB 1: ACTIVE BUYERS ===
+                else if (mainTabIndex == 1) {
+                    if (activeBuyers.isEmpty()) item { EmptyState("No active buyers") }
                     items(activeBuyers) { buyer ->
                         UserRow(
                             name = buyer.buyerName,
                             email = buyer.buyerEmail,
-                            icon = Icons.Default.Delete,
-                            iconColor = Color.Red,
+                            icon = Icons.Default.Delete, iconColor = Color.Red,
                             onAction = { userToDelete = buyer.buyerId to "buyer" },
                             onClick = { selectedBuyer = buyer }
                         )
                     }
                 }
 
-                // TAB 2: Banned Users
+                // === TAB 2: BANNED USERS ===
                 else {
-                    if (bannedSellers.isEmpty()) item { EmptyState("No banned users found") }
-                    items(bannedSellers) { seller ->
-                        UserRow(
-                            name = "${seller.shopName} (BANNED)",
-                            email = seller.sellerEmail,
-                            icon = Icons.Default.Refresh, // Green Refresh Icon for UNBAN
-                            iconColor = Color(0xFF4CAF50), // Green Color
-                            onAction = { userToUnban = seller.sellerId to "seller" },
-                            onClick = { selectedSeller = seller }
-                        )
+                    if (bannedTabIndex == 0) {
+                        // --- Sub-section: Banned Sellers ---
+                        if (bannedSellers.isEmpty()) item { EmptyState("No banned sellers") }
+                        items(bannedSellers) { seller ->
+                            UserRow(
+                                name = "${seller.shopName} (BANNED)",
+                                email = seller.sellerEmail,
+                                icon = Icons.Default.Refresh, iconColor = Color(0xFF4CAF50), // Green for Unban
+                                onAction = { userToUnban = seller.sellerId to "seller" },
+                                onClick = { selectedSeller = seller }
+                            )
+                        }
+                    } else {
+                        // --- Sub-section: Banned Buyers ---
+                        if (bannedBuyers.isEmpty()) item { EmptyState("No banned buyers") }
+                        items(bannedBuyers) { buyer ->
+                            UserRow(
+                                name = "${buyer.buyerName} (BANNED)",
+                                email = buyer.buyerEmail,
+                                icon = Icons.Default.Refresh, iconColor = Color(0xFF4CAF50), // Green for Unban
+                                onAction = { userToUnban = buyer.buyerId to "buyer" },
+                                onClick = { selectedBuyer = buyer }
+                            )
+                        }
                     }
                 }
             }
@@ -99,13 +136,12 @@ fun AdminUserListScreen(viewModel: AdminViewModel) {
 
     // --- DIALOGS ---
 
-    // 1. Delete Confirmation
+    // Delete Confirmation
     if (userToDelete != null) {
         ConfirmationDialog(
             title = "Confirm Delete",
             message = "Are you sure you want to PERMANENTLY delete this user?",
-            confirmText = "Delete",
-            confirmColor = Color.Red,
+            confirmText = "Delete", confirmColor = Color.Red,
             onConfirm = {
                 viewModel.deleteUser(userToDelete!!.first, userToDelete!!.second)
                 userToDelete = null
@@ -114,13 +150,12 @@ fun AdminUserListScreen(viewModel: AdminViewModel) {
         )
     }
 
-    // 2. Unban Confirmation
+    // Unban Confirmation
     if (userToUnban != null) {
         ConfirmationDialog(
             title = "Unban User",
-            message = "Are you sure you want to reactivate this account? They will be able to login again.",
-            confirmText = "Unban",
-            confirmColor = Color(0xFF4CAF50),
+            message = "Are you sure you want to unban this user? They will be allowed to login again.",
+            confirmText = "Unban", confirmColor = Color(0xFF4CAF50),
             onConfirm = {
                 viewModel.unbanUser(userToUnban!!.first, userToUnban!!.second)
                 userToUnban = null
@@ -129,18 +164,20 @@ fun AdminUserListScreen(viewModel: AdminViewModel) {
         )
     }
 
-    // 3. User Details Popups
+    // Detail Popups
     selectedSeller?.let { seller ->
         UserDetailPopup("Seller Details", mapOf(
-            "Shop" to seller.shopName,
-            "Email" to seller.sellerEmail,
+            "Shop" to seller.shopName, "Email" to seller.sellerEmail,
             "Status" to if(seller.banned) "Banned" else "Active",
-            "Phone" to seller.sellerPhoneNumber,
-            "Address" to seller.sellerAddress
+            "Phone" to seller.sellerPhoneNumber, "Address" to seller.sellerAddress
         )) { selectedSeller = null }
     }
     selectedBuyer?.let { buyer ->
-        UserDetailPopup("Buyer Details", mapOf("Name" to buyer.buyerName, "Email" to buyer.buyerEmail, "Phone" to buyer.buyerPhoneNumber, "Address" to buyer.buyerAddress)) { selectedBuyer = null }
+        UserDetailPopup("Buyer Details", mapOf(
+            "Name" to buyer.buyerName, "Email" to buyer.buyerEmail,
+            "Status" to if(buyer.banned) "Banned" else "Active",
+            "Phone" to buyer.buyerPhoneNumber, "Address" to buyer.buyerAddress
+        )) { selectedBuyer = null }
     }
 }
 

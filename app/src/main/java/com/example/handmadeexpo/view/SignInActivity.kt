@@ -43,7 +43,6 @@ import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.ui.theme.Blue1
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
-// IMPORTANT IMPORTS
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 
@@ -222,16 +221,33 @@ fun SignInBody() {
                                     val userId = buyerViewModel.getCurrentUser()?.uid
                                     if (userId != null) {
                                         buyerViewModel.checkUserRole(userId) { role ->
+                                            val db = FirebaseDatabase.getInstance()
+
                                             when (role) {
                                                 "buyer" -> {
-                                                    val intent = Intent(context, DashboardActivity::class.java)
-                                                    intent.putExtra("userId", userId)
-                                                    context.startActivity(intent)
-                                                    activity?.finish()
+                                                    // --- NEW: CHECK IF BUYER IS BANNED ---
+                                                    db.getReference("Buyer").child(userId).get()
+                                                        .addOnSuccessListener { snapshot ->
+                                                            val isBanned = snapshot.child("banned").getValue(Boolean::class.java) ?: false
+
+                                                            if (isBanned) {
+                                                                // Buyer is BANNED
+                                                                FirebaseAuth.getInstance().signOut()
+                                                                Toast.makeText(context, "ACCOUNT SUSPENDED: Please contact admin.", Toast.LENGTH_LONG).show()
+                                                            } else {
+                                                                // Buyer is ACTIVE -> Go to Dashboard
+                                                                val intent = Intent(context, DashboardActivity::class.java)
+                                                                intent.putExtra("userId", userId)
+                                                                context.startActivity(intent)
+                                                                activity?.finish()
+                                                            }
+                                                        }
+                                                        .addOnFailureListener {
+                                                            Toast.makeText(context, "Error checking verification status", Toast.LENGTH_SHORT).show()
+                                                        }
                                                 }
                                                 "seller" -> {
-                                                    // --- NEW CHECK FOR BANNED STATUS ---
-                                                    val db = FirebaseDatabase.getInstance()
+                                                    // --- EXISTING: CHECK IF SELLER IS BANNED ---
                                                     db.getReference("Seller").child(userId).get()
                                                         .addOnSuccessListener { snapshot ->
                                                             // Check if "banned" is true
@@ -252,6 +268,12 @@ fun SignInBody() {
                                                         .addOnFailureListener {
                                                             Toast.makeText(context, "Error checking account status", Toast.LENGTH_SHORT).show()
                                                         }
+                                                }
+                                                "admin" -> {
+                                                    // Admin is never banned (usually)
+                                                    val intent = Intent(context, AdminDashboardActivity::class.java)
+                                                    context.startActivity(intent)
+                                                    activity?.finish()
                                                 }
                                                 else -> {
                                                     Toast.makeText(context, "User role not defined", Toast.LENGTH_SHORT).show()

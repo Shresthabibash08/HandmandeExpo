@@ -51,7 +51,6 @@ object ChatUtils {
 
 @Composable
 fun HomeScreen(
-    // FIXED: Added missing parameters
     onReportProductClick: (String) -> Unit,
     onReportSellerClick: (String) -> Unit
 ) {
@@ -92,15 +91,16 @@ fun HomeScreen(
                         .addOnSuccessListener { sellerNameState = it.value?.toString() ?: "Seller" }
                 }
 
+                // *** FIXED SECTION START ***
                 ChatScreen(
                     chatId = chatId,
                     sellerId = selectedProduct!!.sellerId,
                     sellerName = sellerNameState,
                     currentUserId = currentUserId,
-                    onBackClick = { isChatOpen = false },
-                    // FIXED: Passed seller report callback
-                    onReportClick = { sellerId -> onReportSellerClick(sellerId) }
+                    onBackClick = { isChatOpen = false }
+                    // REMOVED onReportClick (Fixes Issue 1)
                 )
+                // *** FIXED SECTION END ***
             }
             selectedProduct != null -> {
                 ProductDescriptionScreen(
@@ -111,7 +111,6 @@ fun HomeScreen(
                     onBackClick = { selectedProduct = null },
                     onChatClick = { isChatOpen = true },
                     onNavigateToCart = { showCart = true },
-                    // FIXED: Passed product report callback
                     onReportClick = { onReportProductClick(selectedProduct!!.productId) }
                 )
             }
@@ -139,7 +138,7 @@ fun MainHomeContent(
     sliderValue: Float,
     maxPrice: Double,
     onSliderChange: (Float) -> Unit,
-    onCategorySelect: (Double) -> Unit,
+    onCategorySelect: (Double) -> Unit, // This callback is now correctly defined
     onProductClick: (ProductModel) -> Unit,
     onChatClick: (ProductModel) -> Unit
 ) {
@@ -163,6 +162,8 @@ fun MainHomeContent(
                 )
                 CategoryList(categories)
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // Passed onCategorySelect correctly (Fixes Issue 2)
                 GradientPriceSliderSection(sliderValue, maxPrice, onSliderChange, onCategorySelect)
             }
         }
@@ -178,7 +179,36 @@ fun MainHomeContent(
         }
     }
 }
-// ... [The rest of HomeScreen.kt (ProductRow, ProductCard, etc.) remains unchanged] ...
+
+@Composable
+fun GradientPriceSliderSection(
+    value: Float,
+    max: Double,
+    onValueChange: (Float) -> Unit,
+    onCategorySelect: (Double) -> Unit // Included this parameter
+) {
+    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).shadow(1.dp, RoundedCornerShape(12.dp)), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Max Price", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("NRP ${max.toInt()}", color = OrangeBrand, fontWeight = FontWeight.Bold)
+            }
+            // Trigger onCategorySelect when slider interaction finishes if needed, or update viewmodel live
+            Slider(
+                value = value,
+                onValueChange = {
+                    onValueChange(it)
+                    // Optional: You can call onCategorySelect here if your viewmodel logic requires it
+                    // onCategorySelect(it.toDouble())
+                },
+                valueRange = 0f..100f,
+                colors = SliderDefaults.colors(thumbColor = OrangeBrand, activeTrackColor = OrangeBrand)
+            )
+        }
+    }
+}
+
+// ... (ProductRow, ProductCard, CategoryList, SearchBarInput, SectionHeader remain unchanged) ...
 @Composable
 fun ProductRow(
     products: List<ProductModel>,
@@ -254,17 +284,5 @@ fun SectionHeader(title: String, subtitle: String?, showArrow: Boolean) {
             subtitle?.let { Text(it, fontSize = 12.sp, color = Color.Gray) }
         }
         if (showArrow) { Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = OrangeBrand) }
-    }
-}
-@Composable
-fun GradientPriceSliderSection(value: Float, max: Double, onValueChange: (Float) -> Unit, onCategorySelect: (Double) -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).shadow(1.dp, RoundedCornerShape(12.dp)), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Max Price", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text("NRP ${max.toInt()}", color = OrangeBrand, fontWeight = FontWeight.Bold)
-            }
-            Slider(value = value, onValueChange = onValueChange, valueRange = 0f..100f, colors = SliderDefaults.colors(thumbColor = OrangeBrand, activeTrackColor = OrangeBrand))
-        }
     }
 }

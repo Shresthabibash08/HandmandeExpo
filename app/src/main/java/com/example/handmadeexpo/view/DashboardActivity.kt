@@ -54,7 +54,7 @@ fun DashboardBody(userId: String) {
     var changingPassword by remember { mutableStateOf(false) }
     var showAllSellers by remember { mutableStateOf(false) }
 
-    // --- REPORTING STATE ---
+    // --- REPORTING STATE (Used for Home Screen Reports) ---
     var reportProductId by remember { mutableStateOf<String?>(null) }
     var reportSellerId by remember { mutableStateOf<String?>(null) }
 
@@ -173,7 +173,6 @@ fun DashboardBody(userId: String) {
                     // --- HOME TAB ---
                     0 -> {
                         HomeScreen(
-                            // FIXED: Added missing parameters
                             onReportProductClick = { productId ->
                                 reportProductId = productId
                             },
@@ -186,17 +185,16 @@ fun DashboardBody(userId: String) {
                     // --- INBOX TAB ---
                     1 -> when {
                         activeChatData != null -> {
+                            // *** FIXED SECTION START ***
                             ChatScreen(
                                 chatId = activeChatData!!.first,
                                 sellerId = activeChatData!!.second,
                                 sellerName = activeChatData!!.third,
                                 currentUserId = userId,
-                                onBackClick = { activeChatData = null },
-                                // FIXED: Added missing parameter
-                                onReportClick = { sellerIdToReport ->
-                                    reportSellerId = sellerIdToReport
-                                }
+                                onBackClick = { activeChatData = null }
+                                // REMOVED onReportClick because ChatScreen now handles it internally!
                             )
+                            // *** FIXED SECTION END ***
                         }
                         showAllSellers -> {
                             AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
