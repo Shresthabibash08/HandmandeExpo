@@ -36,6 +36,7 @@ import com.example.handmadeexpo.repo.SellerRepoImpl
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.Offwhite12
 import com.example.handmadeexpo.viewmodel.SellerViewModel
+import com.example.handmadeexpo.utils.AdminEmailValidator
 
 class SellerRegistration : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,10 +63,11 @@ fun SellerRegisterScreen() {
     var phoneNumber by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    
+
     var passwordVisibility by remember { mutableStateOf(false) }
     var confirmPasswordVisibility by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+    var emailError by remember { mutableStateOf<String?>(null) }
 
     Scaffold { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
@@ -85,7 +87,7 @@ fun SellerRegisterScreen() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(30.dp))
-                
+
                 Image(
                     painter = painterResource(R.drawable.finallogo),
                     contentDescription = "Logo",
@@ -101,7 +103,7 @@ fun SellerRegisterScreen() {
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
                 )
-                
+
                 Text(
                     "Start selling your crafts to the world.",
                     fontSize = 16.sp,
@@ -121,7 +123,35 @@ fun SellerRegisterScreen() {
                 Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField("PAN Number", panNumber) { panNumber = it }
                 Spacer(modifier = Modifier.height(12.dp))
-                CustomTextField("Email", email) { email = it }
+
+                CustomTextField("Email", email) {
+                    email = it
+                    // First check if it's admin email
+                    if (AdminEmailValidator.isReservedEmail(it)) {
+                        emailError = AdminEmailValidator.getReservedEmailError()
+                    } else if (it.isNotBlank()) {
+                        // Then check if email exists in database
+                        AdminEmailValidator.isSellerEmailExists(it) { exists ->
+                            emailError = if (exists) {
+                                AdminEmailValidator.getDuplicateEmailError()
+                            } else {
+                                null
+                            }
+                        }
+                    } else {
+                        emailError = null
+                    }
+                }
+
+                if (emailError != null) {
+                    Text(
+                        text = emailError!!,
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField("Phone Number", phoneNumber) { phoneNumber = it }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -155,11 +185,13 @@ fun SellerRegisterScreen() {
                             panNumber.isBlank() -> Toast.makeText(context, "PAN number is required", Toast.LENGTH_SHORT).show()
                             !panNumber.matches(Regex("^[0-9]+$")) -> Toast.makeText(context, "PAN number must contain only digits", Toast.LENGTH_SHORT).show()
                             email.isBlank() -> Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
+                            AdminEmailValidator.isReservedEmail(email) -> Toast.makeText(context, AdminEmailValidator.getReservedEmailError(), Toast.LENGTH_SHORT).show()
+                            emailError != null -> Toast.makeText(context, emailError!!, Toast.LENGTH_SHORT).show()
                             phoneNumber.isBlank() -> Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
                             !phoneNumber.matches(Regex("^[0-9]{10}$")) -> Toast.makeText(context, "Phone number must be 10 digits", Toast.LENGTH_SHORT).show()
                             password.isBlank() -> Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
                             password != confirmPassword -> Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
-                            
+
                             else -> {
                                 isLoading = true
                                 viewModel.register(email, password) { success, msg, sellerId ->
@@ -196,7 +228,7 @@ fun SellerRegisterScreen() {
                     modifier = Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 16.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MainColor),
-                    enabled = !isLoading
+                    enabled = !isLoading && !AdminEmailValidator.isReservedEmail(email)
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))

@@ -39,6 +39,7 @@ import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.ui.theme.Offwhite12
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
+import com.example.handmadeexpo.utils.AdminEmailValidator
 
 class SignupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +63,7 @@ fun SignupBody() {
     var confirmVisibility by remember { mutableStateOf(false) }
     var address by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
+    var emailError by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
     val activity = context as? Activity
@@ -121,9 +123,35 @@ fun SignupBody() {
                 AppOutlinedTextField(
                     label = "Email",
                     value = email,
-                    onValueChange = { email = it },
+                    onValueChange = { newEmail ->
+                        email = newEmail
+                        // First check if it's admin email
+                        if (AdminEmailValidator.isReservedEmail(newEmail)) {
+                            emailError = AdminEmailValidator.getReservedEmailError()
+                        } else if (newEmail.isNotBlank()) {
+                            // Then check if email exists in database
+                            AdminEmailValidator.isBuyerEmailExists(newEmail) { exists ->
+                                emailError = if (exists) {
+                                    AdminEmailValidator.getDuplicateEmailError()
+                                } else {
+                                    null
+                                }
+                            }
+                        } else {
+                            emailError = null
+                        }
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
                 )
+
+                if (emailError != null) {
+                    Text(
+                        text = emailError!!,
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
 
                 AppOutlinedTextField(
                     label = "Phone Number",
@@ -178,6 +206,7 @@ fun SignupBody() {
                         when {
                             fullName.isBlank() -> Toast.makeText(context, "Full name required", Toast.LENGTH_SHORT).show()
                             email.isBlank() -> Toast.makeText(context, "Email required", Toast.LENGTH_SHORT).show()
+                            AdminEmailValidator.isReservedEmail(email) -> Toast.makeText(context, AdminEmailValidator.getReservedEmailError(), Toast.LENGTH_SHORT).show()
                             phoneNumber.length != 10 -> Toast.makeText(context, "Enter valid 10-digit phone", Toast.LENGTH_SHORT).show()
                             password.length < 6 -> Toast.makeText(context, "Password too short", Toast.LENGTH_SHORT).show()
                             password != confirmPassword -> Toast.makeText(context, "Passwords mismatch", Toast.LENGTH_SHORT).show()

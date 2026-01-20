@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.repo.CartRepoImpl
@@ -55,7 +54,11 @@ fun DashboardBody(userId: String) {
     var changingPassword by remember { mutableStateOf(false) }
     var showAllSellers by remember { mutableStateOf(false) }
 
-    // (ChatID, SellerID, SellerName)
+    // --- REPORTING STATE (Used for Home Screen Reports) ---
+    var reportProductId by remember { mutableStateOf<String?>(null) }
+    var reportSellerId by remember { mutableStateOf<String?>(null) }
+
+    // Chat State: (ChatID, SellerID, SellerName)
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
     // --- 2. INITIALIZE REPOS AND VIEWMODELS ---
@@ -73,56 +76,75 @@ fun DashboardBody(userId: String) {
         NavItem(Icons.Default.Person, "Profile")
     )
 
-    // Handle back button for the Chat flow
-    BackHandler(enabled = (selectedIndex == 1 && (activeChatData != null || showAllSellers))) {
-        if (activeChatData != null) {
-            activeChatData = null
-        } else if (showAllSellers) {
-            showAllSellers = false
+    // --- 3. BACK HANDLER LOGIC ---
+    val isChatActive = selectedIndex == 1 && (activeChatData != null || showAllSellers)
+    val isReportingProduct = reportProductId != null
+    val isReportingSeller = reportSellerId != null
+    val isProfileOverlay = selectedIndex == 3 && (editing || changingPassword)
+
+    BackHandler(enabled = isChatActive || isReportingProduct || isReportingSeller || isProfileOverlay) {
+        when {
+            // Priority 1: Close Report Screens
+            isReportingSeller -> reportSellerId = null
+            isReportingProduct -> reportProductId = null
+
+            // Priority 2: Close Chat Screen
+            activeChatData != null -> activeChatData = null
+
+            // Priority 3: Close "New Chat" List
+            showAllSellers -> showAllSellers = false
+
+            // Priority 4: Close Profile Edits
+            editing -> editing = false
+            changingPassword -> changingPassword = false
         }
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MainColor,
-                    titleContentColor = White12
-                ),
-                title = {
-                    val title = when {
-                        selectedIndex == 1 && activeChatData != null -> activeChatData!!.third
-                        selectedIndex == 1 && showAllSellers -> "Select Seller"
-                        selectedIndex == 1 -> "Messages"
-                        selectedIndex == 2 -> "My Cart"
-                        selectedIndex == 3 -> "Profile"
-                        else -> "Handmade Expo"
+            if (reportProductId == null && reportSellerId == null) {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MainColor,
+                        titleContentColor = White12
+                    ),
+                    title = {
+                        val title = when {
+                            selectedIndex == 1 && activeChatData != null -> activeChatData!!.third
+                            selectedIndex == 1 && showAllSellers -> "Select Seller"
+                            selectedIndex == 1 -> "Messages"
+                            selectedIndex == 2 -> "My Cart"
+                            selectedIndex == 3 -> "Profile"
+                            else -> "Handmade Expo"
+                        }
+                        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     }
-                    Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                }
-            )
+                )
+            }
         },
         bottomBar = {
-            NavigationBar {
-                listItems.forEachIndexed { index, item ->
-                    NavigationBarItem(
-                        selected = selectedIndex == index,
-                        onClick = {
-                            selectedIndex = index
-                            // Reset sub-states when switching tabs
-                            editing = false
-                            changingPassword = false
-                            showAllSellers = false
-                            if (index != 1) activeChatData = null
-                        },
-                        icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label) }
-                    )
+            if (activeChatData == null && reportProductId == null && reportSellerId == null && !editing && !changingPassword) {
+                NavigationBar {
+                    listItems.forEachIndexed { index, item ->
+                        NavigationBarItem(
+                            selected = selectedIndex == index,
+                            onClick = {
+                                selectedIndex = index
+                                editing = false
+                                changingPassword = false
+                                showAllSellers = false
+                                reportProductId = null
+                                reportSellerId = null
+                                if (index != 1) activeChatData = null
+                            },
+                            icon = { Icon(item.icon, contentDescription = item.label) },
+                            label = { Text(item.label) }
+                        )
+                    }
                 }
             }
         },
         floatingActionButton = {
-            // Only show "New Chat" button when on the Inbox tab and not currently in a chat
             if (selectedIndex == 1 && activeChatData == null && !showAllSellers) {
                 FloatingActionButton(
                     onClick = { showAllSellers = true },
@@ -135,65 +157,94 @@ fun DashboardBody(userId: String) {
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            when (selectedIndex) {
-                0 -> HomeScreen()
-
-                1 -> when {
-                    activeChatData != null -> {
-                        ChatScreen(
-                            chatId = activeChatData!!.first,
-                            sellerId = activeChatData!!.second,
-                            sellerName = activeChatData!!.third,
-                            currentUserId = userId,
-                            onBackClick = { activeChatData = null }
-                        )
-                    }
-                    showAllSellers -> {
-                        AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
-                            activeChatData = Triple(chatId, sellerId, sellerName)
-                            showAllSellers = false
-                        }
-                    }
-                    else -> {
-                        BuyerChatListScreen(userId) { chatId, sellerId, sellerName ->
-                            activeChatData = Triple(chatId, sellerId, sellerName)
-                        }
-                    }
-                }
-
-                2 -> {
-                    CartScreen(
-                        cartViewModel = cartViewModel,
-                        currentUserId = userId
-                    )
-                }
-
-                3 -> when {
-                    changingPassword -> {
-                        ChangePasswordScreen(
-                            viewModel = buyerViewModel,
-                            onBackClick = { changingPassword = false },
-                            onPasswordChanged = { changingPassword = false }
-                        )
-                    }
-                    editing -> {
-                        EditBuyerProfileScreen(
-                            viewModel = buyerViewModel,
-                            onBack = { editing = false }
-                        )
-                    }
-                    else -> {
-                        BuyerProfileScreen(
-                            viewModel = buyerViewModel,
-                            onEditClick = { editing = true },
-                            onChangePasswordClick = { changingPassword = true },
-                            onLogoutSuccess = {
-                                val intent = Intent(context, SignInActivity::class.java)
-                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                context.startActivity(intent)
-                                activity?.finish()
+            // --- GLOBAL OVERLAYS (REPORTING) ---
+            if (reportSellerId != null) {
+                ReportSellerScreen(
+                    sellerId = reportSellerId!!,
+                    onBackClick = { reportSellerId = null }
+                )
+            } else if (reportProductId != null) {
+                ReportProductScreen(
+                    productId = reportProductId!!,
+                    onBackClick = { reportProductId = null }
+                )
+            } else {
+                when (selectedIndex) {
+                    // --- HOME TAB ---
+                    0 -> {
+                        HomeScreen(
+                            onReportProductClick = { productId ->
+                                reportProductId = productId
+                            },
+                            onReportSellerClick = { sellerId ->
+                                reportSellerId = sellerId
                             }
                         )
+                    }
+
+                    // --- INBOX TAB ---
+                    1 -> when {
+                        activeChatData != null -> {
+                            // *** FIXED SECTION START ***
+                            ChatScreen(
+                                chatId = activeChatData!!.first,
+                                sellerId = activeChatData!!.second,
+                                sellerName = activeChatData!!.third,
+                                currentUserId = userId,
+                                onBackClick = { activeChatData = null }
+                                // REMOVED onReportClick because ChatScreen now handles it internally!
+                            )
+                            // *** FIXED SECTION END ***
+                        }
+                        showAllSellers -> {
+                            AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
+                                activeChatData = Triple(chatId, sellerId, sellerName)
+                                showAllSellers = false
+                            }
+                        }
+                        else -> {
+                            BuyerChatListScreen(userId) { chatId, sellerId, sellerName ->
+                                activeChatData = Triple(chatId, sellerId, sellerName)
+                            }
+                        }
+                    }
+
+                    // --- CART TAB ---
+                    2 -> {
+                        CartScreen(
+                            cartViewModel = cartViewModel,
+                            currentUserId = userId
+                        )
+                    }
+
+                    // --- PROFILE TAB ---
+                    3 -> when {
+                        changingPassword -> {
+                            ChangePasswordScreen(
+                                viewModel = buyerViewModel,
+                                onBackClick = { changingPassword = false },
+                                onPasswordChanged = { changingPassword = false }
+                            )
+                        }
+                        editing -> {
+                            EditBuyerProfileScreen(
+                                viewModel = buyerViewModel,
+                                onBack = { editing = false }
+                            )
+                        }
+                        else -> {
+                            BuyerProfileScreen(
+                                viewModel = buyerViewModel,
+                                onEditClick = { editing = true },
+                                onChangePasswordClick = { changingPassword = true },
+                                onLogoutSuccess = {
+                                    val intent = Intent(context, SignInActivity::class.java)
+                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    context.startActivity(intent)
+                                    activity?.finish()
+                                }
+                            )
+                        }
                     }
                 }
             }

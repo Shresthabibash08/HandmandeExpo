@@ -9,19 +9,12 @@ import android.provider.OpenableColumns
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
 import com.example.handmadeexpo.model.ProductModel
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.MutableData
-import com.google.firebase.database.Transaction
-import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.*
 import java.io.InputStream
 import java.util.concurrent.Executors
 
 class ProductRepoImpl : ProductRepo {
     var database: FirebaseDatabase = FirebaseDatabase.getInstance()
-
     var ref: DatabaseReference = database.getReference("products")
 
     private val cloudinary = Cloudinary(
@@ -44,9 +37,15 @@ class ProductRepoImpl : ProductRepo {
             return
         }
 
-        newRef.setValue(model.copy(productId = productId)).addOnCompleteListener { task ->
+        // Set verificationStatus to "Pending" by default
+        val productWithStatus = model.copy(
+            productId = productId,
+            verificationStatus = "Pending"
+        )
+
+        newRef.setValue(productWithStatus).addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                callback(true, "Product added successfully", productId)
+                callback(true, "Product added successfully (Pending verification)", productId)
             } else {
                 callback(false, task.exception?.message ?: "Unknown error while adding product", null)
             }
@@ -87,9 +86,9 @@ class ProductRepoImpl : ProductRepo {
         ref.child(productID).addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 if (snapshot.exists()) {
-                    var dataa = snapshot.getValue(ProductModel::class.java)
-                    if (dataa != null) {
-                        callback(true, "product fetched", dataa)
+                    val product = snapshot.getValue(ProductModel::class.java)
+                    if (product != null) {
+                        callback(true, "Product fetched", product)
                     }
                 }
             }
@@ -100,34 +99,69 @@ class ProductRepoImpl : ProductRepo {
         })
     }
 
-    override fun getAllProductByCategory(
-        category: String,
-        callback: (Boolean, String, List<ProductModel?>) -> Unit
+    // Filter to show ONLY verified products for general browsing
+    override fun getAllProduct(callback: (Boolean, String, List<ProductModel>?) -> Unit) {
+        ref.orderByChild("verificationStatus")
+            .equalTo("Verified")
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val products = mutableListOf<ProductModel>()
+                    for (data in snapshot.children) {
+                        data.getValue(ProductModel::class.java)?.let { products.add(it) }
+                    }
+                    callback(true, "Verified products fetched", products)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    callback(false, error.message, emptyList())
+                }
+            })
+    }
+
+    // Resolved Merge: Category filter with Verification check
+    override fun getProductByCategory(
+        categoryId: String,
+        callback: (Boolean, String, List<ProductModel>?) -> Unit
     ) {
-        ref.orderByChild("category").equalTo(category).addListenerForSingleValueEvent(object : ValueEventListener {
+        ref.orderByChild("categoryId")
+            .equalTo(categoryId)
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val allProducts = mutableListOf<ProductModel>()
+                    if (snapshot.exists()) {
+                        for (data in snapshot.children) {
+                            val product = data.getValue(ProductModel::class.java)
+                            // Filter only verified products for this category view
+                            if (product != null && product.verificationStatus == "Verified") {
+                                allProducts.add(product)
+                            }
+                        }
+                        callback(true, "Verified products in category fetched", allProducts)
+                    } else {
+                        callback(true, "No products found", emptyList())
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    callback(false, error.message, emptyList())
+                }
+            })
+    }
+
+    override fun getAvailableProducts(callback: (Boolean, String, List<ProductModel>?) -> Unit) {
+        ref.orderByChild("available").equalTo(true).addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val products = mutableListOf<ProductModel>()
                 for (data in snapshot.children) {
                     data.getValue(ProductModel::class.java)?.let { products.add(it) }
                 }
-                callback(true, "Products fetched by category", products)
+                callback(true, "Available products fetched", products)
             }
 
             override fun onCancelled(error: DatabaseError) {
-                callback(false, error.message, emptyList())
+                callback(false, error.message, null)
             }
         })
-    }
-
-    override fun getAvailableProducts(callback: (Boolean, String, List<ProductModel>?) -> Unit) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getAllProductByUser(
-        userId: String,
-        callback: (List<ProductModel>) -> Unit
-    ) {
-        TODO("Not yet implemented")
     }
 
     override fun updateAvailability(
@@ -135,107 +169,10 @@ class ProductRepoImpl : ProductRepo {
         available: Boolean,
         callback: (Boolean, String) -> Unit
     ) {
-        TODO("Not yet implemented")
-    }
-
-    override fun updateRating(
-        productId: String,
-        available: Boolean,
-        callback: (Boolean, String) -> Unit
-    ) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getAllProduct(callback: (Boolean, String, List<ProductModel>?) -> Unit) {
-        ref.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val products = mutableListOf<ProductModel>()
-                for (data in snapshot.children) {
-                    data.getValue(ProductModel::class.java)?.let { products.add(it) }
-                }
-                callback(true, "Products fetched", products)
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                callback(false, error.message, emptyList())
-            }
-        })
-    }
-
-    override fun getProductByCategory(
-        categoryId: String,
-        callback: (Boolean, String, List<ProductModel>?) -> Unit
-    ) {
-        ref.orderByChild("categoryId").equalTo(categoryId).addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                if (snapshot.exists()) {
-                    var allProducts = mutableListOf<ProductModel>()
-                    for (data in snapshot.children) {
-                        var product = data.getValue(ProductModel::class.java)
-                        if (product != null) {
-                            allProducts.add(product)
-                        }
-                    }
-
-                    callback(true, "product fetched", allProducts)
-                }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                callback(false, error.message, emptyList())
-            }
-
-        })
-    }
-
-    override fun uploadImage(context: Context, imageUri: Uri, callback: (String?) -> Unit) {
-        val executor = Executors.newSingleThreadExecutor()
-        executor.execute {
-            try {
-                val inputStream: InputStream? = context.contentResolver.openInputStream(imageUri)
-                var fileName = getFileNameFromUri(context, imageUri)
-
-                fileName = fileName?.substringBeforeLast(".") ?: "uploaded_image"
-
-                val response = cloudinary.uploader().upload(
-                    inputStream, ObjectUtils.asMap(
-                        "public_id", fileName,
-                        "resource_type", "image"
-                    )
-                )
-
-                var imageUrl = response["url"] as String?
-
-                imageUrl = imageUrl?.replace("http://", "https://")
-
-                Handler(Looper.getMainLooper()).post {
-                    callback(imageUrl)
-                }
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Handler(Looper.getMainLooper()).post {
-                    callback(null)
-                }
-            }
+        ref.child(productId).child("available").setValue(available).addOnCompleteListener {
+            if(it.isSuccessful) callback(true, "Availability Updated")
+            else callback(false, it.exception?.message ?: "Error")
         }
-    }
-
-    override fun getFileNameFromUri(
-        context: Context,
-        uri: Uri
-    ): String? {
-        var fileName: String? = null
-        val cursor: Cursor? = context.contentResolver.query(uri, null, null, null, null)
-        cursor?.use {
-            if (it.moveToFirst()) {
-                val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                if (nameIndex != -1) {
-                    fileName = it.getString(nameIndex)
-                }
-            }
-        }
-        return fileName
     }
 
     override fun getProductsBySeller(sellerId: String, callback: (List<ProductModel>) -> Unit) {
@@ -255,12 +192,45 @@ class ProductRepoImpl : ProductRepo {
             })
     }
 
-    override fun rateProduct(
-        productId: String,
-        rating: Int,
-        callback: (Boolean) -> Unit
-    ) {
-        // Fixed: Using the same "products" reference as the rest of the class
+    override fun uploadImage(context: Context, imageUri: Uri, callback: (String?) -> Unit) {
+        val executor = Executors.newSingleThreadExecutor()
+        executor.execute {
+            try {
+                val inputStream: InputStream? = context.contentResolver.openInputStream(imageUri)
+                var fileName = getFileNameFromUri(context, imageUri)
+                fileName = fileName?.substringBeforeLast(".") ?: "uploaded_image"
+
+                val response = cloudinary.uploader().upload(
+                    inputStream, ObjectUtils.asMap(
+                        "public_id", fileName,
+                        "resource_type", "image"
+                    )
+                )
+
+                var imageUrl = response["url"] as String?
+                imageUrl = imageUrl?.replace("http://", "https://")
+
+                Handler(Looper.getMainLooper()).post { callback(imageUrl) }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Handler(Looper.getMainLooper()).post { callback(null) }
+            }
+        }
+    }
+
+    override fun getFileNameFromUri(context: Context, uri: Uri): String? {
+        var fileName: String? = null
+        val cursor: Cursor? = context.contentResolver.query(uri, null, null, null, null)
+        cursor?.use {
+            if (it.moveToFirst()) {
+                val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (nameIndex != -1) fileName = it.getString(nameIndex)
+            }
+        }
+        return fileName
+    }
+
+    override fun rateProduct(productId: String, rating: Int, callback: (Boolean) -> Unit) {
         ref.child(productId).runTransaction(object : Transaction.Handler {
             override fun doTransaction(currentData: MutableData): Transaction.Result {
                 val product = currentData.getValue(ProductModel::class.java)
@@ -275,13 +245,14 @@ class ProductRepoImpl : ProductRepo {
                 return Transaction.success(currentData)
             }
 
-            override fun onComplete(
-                error: DatabaseError?,
-                committed: Boolean,
-                snapshot: DataSnapshot?
-            ) {
+            override fun onComplete(error: DatabaseError?, committed: Boolean, snapshot: DataSnapshot?) {
                 callback(committed && error == null)
             }
         })
     }
+
+    // Placeholder methods for interface compatibility
+    override fun getAllProductByUser(userId: String, callback: (List<ProductModel>) -> Unit) {}
+    override fun updateRating(productId: String, available: Boolean, callback: (Boolean, String) -> Unit) {}
+    override fun getAllProductByCategory(category: String, callback: (Boolean, String, List<ProductModel?>) -> Unit) {}
 }
