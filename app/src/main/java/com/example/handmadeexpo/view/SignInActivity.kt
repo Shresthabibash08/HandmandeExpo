@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -25,25 +24,27 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Black
 import androidx.compose.ui.graphics.Color.Companion.Blue
-import androidx.compose.ui.graphics.Color.Companion.Gray
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.repo.BuyerRepoImpl
-import com.example.handmadeexpo.ui.theme.Blue1
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
+
+// Admin credentials 
+object AdminCredentials {
+    const val ADMIN_EMAIL = "admin@handmadeexpo.com"
+    const val ADMIN_PASSWORD = "Handmade@Expo2024#Secure"
+}
 
 class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -146,9 +147,10 @@ fun SignInBody() {
                     Text(
                         text = "Forgot password?",
                         modifier = Modifier
-                            .align(Alignment.CenterEnd)
+                            .fillMaxWidth()
                             .padding(end = 24.dp, top = 8.dp)
                             .clickable { context.startActivity(Intent(context, ForgetPasswordActivity::class.java)) },
+                        textAlign = androidx.compose.ui.text.style.TextAlign.End,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -162,7 +164,18 @@ fun SignInBody() {
                                 Toast.makeText(context, "Fields cannot be empty", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
+
                             isLoading = true
+
+                            // 1. Check for Hardcoded Admin first
+                            if (email == AdminCredentials.ADMIN_EMAIL && password == AdminCredentials.ADMIN_PASSWORD) {
+                                context.startActivity(Intent(context, AdminDashboardActivity::class.java))
+                                activity?.finish()
+                                isLoading = false
+                                return@Button
+                            }
+
+                            // 2. Regular Buyer/Seller Firebase login
                             buyerViewModel.login(email, password) { success, msg ->
                                 if (success) {
                                     val userId = buyerViewModel.getCurrentUser()?.uid
@@ -182,13 +195,15 @@ fun SignInBody() {
                         colors = ButtonDefaults.buttonColors(containerColor = MainColor),
                         enabled = !isLoading
                     ) {
-                        if (isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                        else Text("Sign In", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        if (isLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                        } else {
+                            Text("Sign In", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Registration Links
                     RegistrationFooter(context)
                 }
             }
@@ -196,7 +211,6 @@ fun SignInBody() {
     }
 }
 
-// Helper function to handle the complex logic of routing
 private fun handleUserRouting(userId: String, viewModel: BuyerViewModel, context: android.content.Context, activity: Activity?, onComplete: () -> Unit) {
     viewModel.checkUserRole(userId) { role ->
         val db = FirebaseDatabase.getInstance()

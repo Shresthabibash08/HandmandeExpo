@@ -1,5 +1,7 @@
 package com.example.handmadeexpo.view
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -13,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,6 +40,10 @@ class AdminDashboardActivity : ComponentActivity() {
 fun AdminDashboardScreen(adminViewModel: AdminViewModel) {
     // Tab Index: 0=Home, 1=Verify, 2=Users, 3=Products, 4=Reports
     var selectedTab by remember { mutableIntStateOf(0) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val activity = context as? Activity
 
     // Log for debugging
     LaunchedEffect(Unit) {
@@ -49,7 +56,12 @@ fun AdminDashboardScreen(adminViewModel: AdminViewModel) {
                 title = { Text("Admin Dashboard", color = Color.White) },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = Color(0xFF4CAF50)
-                )
+                ),
+                actions = {
+                    IconButton(onClick = { showLogoutDialog = true }) {
+                        Icon(Icons.Default.ExitToApp, contentDescription = "Logout", tint = Color.White)
+                    }
+                }
             )
         },
         bottomBar = {
@@ -110,6 +122,40 @@ fun AdminDashboardScreen(adminViewModel: AdminViewModel) {
             }
         }
     }
+
+    if (showLogoutDialog) {
+        AdminLogoutConfirmationDialog(
+            onConfirm = {
+                val intent = Intent(context, SignInActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                context.startActivity(intent)
+                activity?.finish()
+            },
+            onDismiss = { showLogoutDialog = false }
+        )
+    }
+}
+
+@Composable
+fun AdminLogoutConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirm Logout") },
+        text = { Text("Are you sure you want to logout from Admin Dashboard?") },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+            ) {
+                Text("Logout")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
