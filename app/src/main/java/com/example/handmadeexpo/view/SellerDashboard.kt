@@ -18,11 +18,9 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.repo.SellerRepoImpl
 import com.example.handmadeexpo.ui.theme.MainColor
@@ -38,8 +36,10 @@ class SellerDashboard : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
         // Get the current logged-in user ID safely
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+        
         setContent {
             SellerDashboardBody(currentUserId)
         }
@@ -58,29 +58,46 @@ fun SellerDashboardBody(sellerId: String) {
     var changingPassword by remember { mutableStateOf(false) }
     var chatCount by remember { mutableIntStateOf(0) }
 
+    // State to hold the seller's name fetched from Firebase
+    var sellerName by remember { mutableStateOf("Seller") }
+
     // Triple stores: (ChatID, BuyerID, BuyerName)
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
     val sellerRepo = remember { SellerRepoImpl() }
     val sellerViewModel = remember { SellerViewModel(sellerRepo) }
 
-    // --- Firebase Listener for Chat Badge ---
+    // --- FIREBASE LISTENERS ---
+
+    // 1. Fetch Seller Name (Needed for Bargain/Home logic)
+    LaunchedEffect(sellerId) {
+        if (sellerId.isNotEmpty()) {
+            FirebaseDatabase.getInstance().getReference("Sellers").child(sellerId).child("name")
+                .get().addOnSuccessListener { snapshot ->
+                    sellerName = snapshot.value?.toString() ?: "Seller"
+                }
+        }
+    }
+
+    // 2. Badge Listener for Incoming Chats
     val inboxRef = remember { FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId) }
     LaunchedEffect(sellerId) {
-        val listener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                chatCount = snapshot.childrenCount.toInt()
+        if (sellerId.isNotEmpty()) {
+            val listener = object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    chatCount = snapshot.childrenCount.toInt()
+                }
+                override fun onCancelled(error: DatabaseError) {}
             }
-            override fun onCancelled(error: DatabaseError) {}
+            inboxRef.addValueEventListener(listener)
         }
-        inboxRef.addValueEventListener(listener)
     }
 
     // --- Navigation Items ---
     data class NavItem(val icon: ImageVector, val label: String)
     val listItems = listOf(
         NavItem(Icons.Default.Home, "Home"),
-        NavItem(Icons.AutoMirrored.Filled.List, "Inventory"), // Changed to 'List' icon for compatibility
+        NavItem(Icons.AutoMirrored.Filled.List, "Inventory"),
         NavItem(Icons.AutoMirrored.Filled.Chat, "Chats"),
         NavItem(Icons.Default.Person, "Profile")
     )
@@ -103,7 +120,7 @@ fun SellerDashboardBody(sellerId: String) {
                 ),
                 title = {
                     val titleText = when {
-                        selectedIndex == 2 && activeChatData != null -> activeChatData!!.third // Show Buyer Name
+                        selectedIndex == 2 && activeChatData != null -> activeChatData!!.third 
                         selectedIndex == 0 -> "Seller Dashboard"
                         selectedIndex == 1 -> "My Inventory"
                         selectedIndex == 2 -> "Messages"
@@ -114,7 +131,6 @@ fun SellerDashboardBody(sellerId: String) {
             )
         },
         bottomBar = {
-            // Hide bottom bar when in sub-screens
             if (activeChatData == null && !editing && !changingPassword) {
                 NavigationBar {
                     listItems.forEachIndexed { index, item ->
@@ -144,51 +160,54 @@ fun SellerDashboardBody(sellerId: String) {
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             when (selectedIndex) {
-                0 -> SellerHomeScreen(sellerId = sellerId)
-                1 -> InventoryScreen(sellerId = sellerId)
+                0 -> SellerHomeScreen(sellerId = sellerId, sellerName = sellerName)
+
+                1 -> InventoryScreen(sellerId)
+
                 2 -> {
                     if (activeChatData != null) {
-                        // REPLACED SellerReplyView with Shared ChatScreen
                         ChatScreen(
                             chatId = activeChatData!!.first,
-                            sellerId = activeChatData!!.second, // Pass BuyerID as the "Receiver"
-                            sellerName = activeChatData!!.third, // Pass BuyerName as the "Title"
-                            currentUserId = sellerId,           // Pass SellerID as "Me"
+                            sellerId = activeChatData!!.second, // BuyerID as Receiver
+                            sellerName = activeChatData!!.third, // BuyerName as Title
+                            currentUserId = sellerId,            // Seller as "Me"
                             onBackClick = { activeChatData = null }
-                             // Empty lambda: Sellers don't report buyers here
                         )
                     } else {
-                        // REPLACED ChatListContent with SellerChatListScreen
                         SellerChatListScreen(sellerId) { chatId, buyerId, buyerName ->
                             activeChatData = Triple(chatId, buyerId, buyerName)
                         }
                     }
                 }
                 3 -> {
-                    if (changingPassword) {
-                        SellerChangePasswordScreen(
-                            viewModel = sellerViewModel,
-                            onBackClick = { changingPassword = false },
-                            onPasswordChanged = { changingPassword = false }
-                        )
-                    } else if (editing) {
-                        EditSellerProfileScreen(
-                            viewModel = sellerViewModel,
-                            onBack = { editing = false }
-                        )
-                    } else {
-                        SellerProfileScreen(
-                            sellerId = sellerId,
-                            onEditProfileClick = { editing = true },
-                            onChangePasswordClick = { changingPassword = true },
-                            onLogoutSuccess = {
-                                val intent = Intent(context, SignInActivity::class.java)
-                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                context.startActivity(intent)
-                                activity?.finish()
-                            },
-                            viewModel = sellerViewModel
-                        )
+                    when {
+                        changingPassword -> {
+                            SellerChangePasswordScreen(
+                                viewModel = sellerViewModel,
+                                onBackClick = { changingPassword = false },
+                                onPasswordChanged = { changingPassword = false }
+                            )
+                        }
+                        editing -> {
+                            EditSellerProfileScreen(
+                                viewModel = sellerViewModel,
+                                onBack = { editing = false }
+                            )
+                        }
+                        else -> {
+                            SellerProfileScreen(
+                                sellerId = sellerId,
+                                onEditProfileClick = { editing = true },
+                                onChangePasswordClick = { changingPassword = true },
+                                onLogoutSuccess = {
+                                    val intent = Intent(context, SignInActivity::class.java)
+                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    context.startActivity(intent)
+                                    activity?.finish()
+                                },
+                                viewModel = sellerViewModel
+                            )
+                        }
                     }
                 }
             }

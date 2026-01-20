@@ -2,6 +2,7 @@ package com.example.handmadeexpo.view
 
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
@@ -44,7 +46,7 @@ fun ProductDescriptionScreen(
     onBackClick: () -> Unit,
     onChatClick: () -> Unit,
     onNavigateToCart: () -> Unit,
-    onReportClick: () -> Unit // <--- NEW PARAMETER for Reporting
+    onReportClick: () -> Unit 
 ) {
     val context = LocalContext.current
 
@@ -58,6 +60,7 @@ fun ProductDescriptionScreen(
     var hasRated by remember { mutableStateOf(false) }
     var showRatingDialog by remember { mutableStateOf(false) }
     var showCartAddedMessage by remember { mutableStateOf(false) }
+    var showSellerDetails by remember { mutableStateOf(false) }
 
     // Calculate average rating dynamically
     val averageRating = if (product.ratingCount > 0) {
@@ -127,18 +130,15 @@ fun ProductDescriptionScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                // --- NEW: Report Button Added Here ---
                 actions = {
                     IconButton(onClick = onReportClick) {
                         Icon(
-                            // Using standard Warning icon as a flag
                             imageVector = Icons.Default.Warning,
                             contentDescription = "Report Product",
                             tint = Color.Red
                         )
                     }
                 },
-                // -------------------------------------
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = CreamBackground)
             )
         },
@@ -158,7 +158,7 @@ fun ProductDescriptionScreen(
                         onClick = onChatClick,
                         modifier = Modifier.size(50.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
+                        border = BorderStroke(1.dp, OrangeBrand)
                     ) {
                         Icon(Icons.Default.Chat, contentDescription = "Chat", tint = OrangeBrand)
                     }
@@ -166,19 +166,23 @@ fun ProductDescriptionScreen(
                     // 2. Add to Cart Button
                     OutlinedButton(
                         onClick = {
-                            val cartItem = CartItem.fromProduct(product, currentUserId)
-                            cartViewModel.addToCart(cartItem) { success ->
-                                if (success) {
-                                    showCartAddedMessage = true
-                                    Toast.makeText(context, "Added to cart", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "Failed to add", Toast.LENGTH_SHORT).show()
+                            if (product.stock > 0) {
+                                val cartItem = CartItem.fromProduct(product, currentUserId)
+                                cartViewModel.addToCart(cartItem) { success ->
+                                    if (success) {
+                                        showCartAddedMessage = true
+                                        Toast.makeText(context, "Added to cart", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "Failed to add", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
+                            } else {
+                                Toast.makeText(context, "Product is out of stock", Toast.LENGTH_SHORT).show()
                             }
                         },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
+                        border = BorderStroke(1.dp, OrangeBrand)
                     ) {
                         Text("Add to Cart", color = OrangeBrand, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
@@ -186,16 +190,20 @@ fun ProductDescriptionScreen(
                     // 3. Buy Now Button
                     Button(
                         onClick = {
-                            val intent = Intent(context, CheckoutActivity::class.java).apply {
-                                putExtra("productId", product.productId)
-                                putExtra("name", product.name)
-                                putExtra("price", product.price)
-                                putExtra("image", product.image)
-                                putExtra("product_id", product.productId)
-                                putExtra("product_name", product.name)
-                                putExtra("product_price", product.price)
+                            if (product.stock > 0) {
+                                val intent = Intent(context, CheckoutActivity::class.java).apply {
+                                    putExtra("productId", product.productId)
+                                    putExtra("name", product.name)
+                                    putExtra("price", product.price)
+                                    putExtra("image", product.image)
+                                    putExtra("product_id", product.productId)
+                                    putExtra("product_name", product.name)
+                                    putExtra("product_price", product.price)
+                                }
+                                context.startActivity(intent)
+                            } else {
+                                Toast.makeText(context, "Product is out of stock", Toast.LENGTH_SHORT).show()
                             }
-                            context.startActivity(intent)
                         },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
@@ -277,79 +285,110 @@ fun ProductDescriptionScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // 3. Rating & Feedback Section
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        repeat(5) { index ->
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null,
-                                tint = if (index < averageRating.toInt()) Color(0xFFFFB300) else Color.LightGray,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = String.format("%.1f (%d Reviews)", averageRating, product.ratingCount),
-                            color = TextGray,
-                            fontSize = 14.sp
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    repeat(5) { index ->
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = if (index < averageRating.toInt()) Color(0xFFFFB300) else Color.LightGray,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = String.format("%.1f (%d Reviews)", averageRating, product.ratingCount),
+                        color = TextGray,
+                        fontSize = 14.sp
+                    )
+                }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                    if (!hasRated) {
-                        OutlinedButton(
-                            onClick = { showRatingDialog = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
-                        ) {
-                            Icon(Icons.Default.Star, contentDescription = null, tint = OrangeBrand, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Rate this Product", color = OrangeBrand)
-                        }
-                    } else {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFF2E7D32), modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Thank you for rating!", color = Color(0xFF2E7D32), fontWeight = FontWeight.Medium)
-                            }
-                        }
+                if (!hasRated) {
+                    OutlinedButton(
+                        onClick = { showRatingDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, OrangeBrand)
+                    ) {
+                        Icon(Icons.Default.Star, null, tint = OrangeBrand, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Rate this Product", color = OrangeBrand)
                     }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 4. View Seller Details Button
+                OutlinedButton(
+                    onClick = { showSellerDetails = true },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.5.dp, OrangeBrand),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeBrand)
+                ) {
+                    Icon(Icons.Default.Store, null, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("View Seller Details", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp), thickness = 0.5.dp)
 
-                // 4. Description
+                // 5. Description
                 Text(text = "Description", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = product.description.ifEmpty { "This premium handmade product is part of our exclusive Expo collection." },
+                    text = product.description.ifEmpty { "Premium handmade collection product." },
                     fontSize = 16.sp, color = TextGray, lineHeight = 24.sp
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // 5. Stock Status
+                // 6. Stock Status
                 Text(text = "Stock Information", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = if (product.stock > 0) "Available: ${product.stock} items in stock" else "Currently out of stock",
-                    fontSize = 16.sp,
-                    color = if (product.stock > 0) Color(0xFF2E7D32) else Color.Red,
-                    fontWeight = FontWeight.Medium
-                )
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = when {
+                            product.stock == 0 -> Color(0xFFFFEBEE)
+                            product.stock < 5 -> Color(0xFFFFF3E0)
+                            else -> Color(0xFFE8F5E9)
+                        }
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                        Text(
+                            text = when {
+                                product.stock == 0 -> "⚠️ Out of Stock"
+                                product.stock < 5 -> "⚡ Only ${product.stock} left!"
+                                else -> "✅ In Stock (${product.stock} available)"
+                            },
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = when {
+                                product.stock == 0 -> Color(0xFFC62828)
+                                product.stock < 5 -> Color(0xFFE65100)
+                                else -> Color(0xFF2E7D32)
+                            }
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(40.dp))
             }
         }
+    }
+
+    if (showSellerDetails) {
+        SellerDetailsScreen(
+            sellerId = product.sellerId,
+            onBackClick = { showSellerDetails = false },
+            onContactClick = {
+                showSellerDetails = false
+                onChatClick()
+            }
+        )
     }
 }
