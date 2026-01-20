@@ -40,6 +40,7 @@ import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.ui.theme.Blue1
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
+import com.google.firebase.database.FirebaseDatabase
 
 class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,6 +58,7 @@ fun SignInBody() {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var visibility by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val activity = context as? Activity
@@ -124,9 +126,10 @@ fun SignInBody() {
                         colors = TextFieldDefaults.colors(
                             focusedIndicatorColor = Blue1,
                             unfocusedIndicatorColor = Color.Transparent
-                        )
+                        ),
+                        enabled = !isLoading
                     )
-                    
+
                     Spacer(modifier = Modifier.height(20.dp))
 
                     OutlinedTextField(
@@ -138,7 +141,7 @@ fun SignInBody() {
                             IconButton(onClick = { visibility = !visibility }) {
                                 Icon(
                                     painter = painterResource(
-                                        if (visibility) R.drawable.baseline_visibility_off_24 
+                                        if (visibility) R.drawable.baseline_visibility_off_24
                                         else R.drawable.baseline_visibility_24
                                     ),
                                     contentDescription = null
@@ -150,9 +153,10 @@ fun SignInBody() {
                         colors = TextFieldDefaults.colors(
                             focusedIndicatorColor = Blue1,
                             unfocusedIndicatorColor = Color.Transparent
-                        )
+                        ),
+                        enabled = !isLoading
                     )
-                    
+
                     Spacer(modifier = Modifier.height(20.dp))
 
                     Row(
@@ -175,6 +179,8 @@ fun SignInBody() {
                                 return@Button
                             }
 
+                            isLoading = true
+
                             buyerViewModel.login(email, password) { success, msg ->
                                 if (success) {
                                     val userId = buyerViewModel.getCurrentUser()?.uid
@@ -182,26 +188,84 @@ fun SignInBody() {
                                         buyerViewModel.checkUserRole(userId) { role ->
                                             when (role) {
                                                 "buyer" -> {
+                                                    // Buyers can login directly
+                                                    isLoading = false
                                                     val intent = Intent(context, DashboardActivity::class.java)
                                                     intent.putExtra("userId", userId)
                                                     context.startActivity(intent)
                                                     activity?.finish()
                                                 }
                                                 "seller" -> {
-                                                    val intent = Intent(context, SellerDashboard::class.java)
-                                                    intent.putExtra("userId", userId)
-                                                    context.startActivity(intent)
-                                                    activity?.finish()
+                                                    // Check seller verification status
+                                                    FirebaseDatabase.getInstance()
+                                                        .getReference("Seller")
+                                                        .child(userId)
+                                                        .get()
+                                                        .addOnSuccessListener { snapshot ->
+                                                            isLoading = false
+                                                            val verificationStatus = snapshot.child("verificationStatus")
+                                                                .getValue(String::class.java) ?: "Unverified"
+
+                                                            when (verificationStatus) {
+                                                                "Verified" -> {
+                                                                    // Allow verified sellers to login
+                                                                    val intent = Intent(context, SellerDashboard::class.java)
+                                                                    intent.putExtra("userId", userId)
+                                                                    context.startActivity(intent)
+                                                                    activity?.finish()
+                                                                }
+                                                                "Pending" -> {
+                                                                    // FIXED: Added callback parameter
+                                                                    buyerViewModel.logout { _, _ -> }
+                                                                    Toast.makeText(
+                                                                        context,
+                                                                        "Your account is pending admin verification. Please wait for approval.",
+                                                                        Toast.LENGTH_LONG
+                                                                    ).show()
+                                                                }
+                                                                "Rejected" -> {
+                                                                    // FIXED: Added callback parameter
+                                                                    buyerViewModel.logout { _, _ -> }
+                                                                    Toast.makeText(
+                                                                        context,
+                                                                        "Your account has been rejected by admin. Please contact support.",
+                                                                        Toast.LENGTH_LONG
+                                                                    ).show()
+                                                                }
+                                                                else -> {
+                                                                    // FIXED: Added callback parameter
+                                                                    buyerViewModel.logout { _, _ -> }
+                                                                    Toast.makeText(
+                                                                        context,
+                                                                        "Account not verified. Please complete verification.",
+                                                                        Toast.LENGTH_LONG
+                                                                    ).show()
+                                                                }
+                                                            }
+                                                        }
+                                                        .addOnFailureListener { exception ->
+                                                            isLoading = false
+                                                            // FIXED: Added callback parameter
+                                                            buyerViewModel.logout { _, _ -> }
+                                                            Toast.makeText(
+                                                                context,
+                                                                "Error checking verification status: ${exception.message}",
+                                                                Toast.LENGTH_SHORT
+                                                            ).show()
+                                                        }
                                                 }
                                                 else -> {
+                                                    isLoading = false
                                                     Toast.makeText(context, "User role not defined", Toast.LENGTH_SHORT).show()
                                                 }
                                             }
                                         }
                                     } else {
+                                        isLoading = false
                                         Toast.makeText(context, "User not found", Toast.LENGTH_SHORT).show()
                                     }
                                 } else {
+                                    isLoading = false
                                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                 }
                             }
@@ -211,9 +275,17 @@ fun SignInBody() {
                             .height(95.dp)
                             .padding(horizontal = 20.dp, vertical = 20.dp),
                         shape = RoundedCornerShape(20.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MainColor)
+                        colors = ButtonDefaults.buttonColors(containerColor = MainColor),
+                        enabled = !isLoading
                     ) {
-                        Text("Sign In", fontSize = 15.sp)
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Text("Sign In", fontSize = 15.sp)
+                        }
                     }
 
                     Row(

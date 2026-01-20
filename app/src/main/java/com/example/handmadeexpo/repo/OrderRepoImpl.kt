@@ -35,7 +35,7 @@ class OrderRepoImpl : OrderRepo {
         // 3. Add ID and UserID to the order object
         val finalOrder = order.copy(
             orderId = orderId,
-            userId = currentUser.uid
+            buyerId = currentUser.uid
         )
 
         // 4. Save to Realtime Database

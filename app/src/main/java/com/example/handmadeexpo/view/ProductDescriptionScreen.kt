@@ -2,6 +2,7 @@ package com.example.handmadeexpo.view
 
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -56,6 +58,7 @@ fun ProductDescriptionScreen(
     var hasRated by remember { mutableStateOf(false) }
     var showRatingDialog by remember { mutableStateOf(false) }
     var showCartAddedMessage by remember { mutableStateOf(false) }
+    var showSellerDetails by remember { mutableStateOf(false) } // NEW: Seller details state
 
     // Calculate average rating dynamically
     val averageRating = if (product.ratingCount > 0) {
@@ -144,51 +147,72 @@ fun ProductDescriptionScreen(
                         onClick = onChatClick,
                         modifier = Modifier.size(50.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
+                        border = BorderStroke(1.dp, OrangeBrand)
                     ) {
                         Icon(Icons.Default.Chat, contentDescription = "Chat", tint = OrangeBrand)
                     }
 
-                    // 2. Add to Cart Button
+                    // 2. Add to Cart Button (FIXED - Always shows "Add to Cart")
                     OutlinedButton(
                         onClick = {
-                            val cartItem = CartItem.fromProduct(product, currentUserId)
-                            cartViewModel.addToCart(cartItem) { success ->
-                                if (success) {
-                                    showCartAddedMessage = true
-                                    Toast.makeText(context, "Added to cart", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "Failed to add", Toast.LENGTH_SHORT).show()
+                            // Stock validation before adding
+                            if (product.stock > 0) {
+                                val cartItem = CartItem.fromProduct(product, currentUserId)
+                                cartViewModel.addToCart(cartItem) { success ->
+                                    if (success) {
+                                        showCartAddedMessage = true
+                                        Toast.makeText(context, "Added to cart", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "Failed to add", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
+                            } else {
+                                Toast.makeText(context, "Product is out of stock", Toast.LENGTH_SHORT).show()
                             }
                         },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
+                        border = BorderStroke(1.dp, OrangeBrand)
                     ) {
-                        Text("Add to Cart", color = OrangeBrand, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        // Always show "Add to Cart" text
+                        Text(
+                            "Add to Cart",
+                            color = OrangeBrand,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
                     }
 
-                    // 3. Buy Now Button (Merged Data Keys)
+                    // 3. Buy Now Button (FIXED - Always enabled)
                     Button(
                         onClick = {
-                            val intent = Intent(context, CheckoutActivity::class.java).apply {
-                                putExtra("productId", product.productId)
-                                putExtra("name", product.name)
-                                putExtra("price", product.price)
-                                putExtra("image", product.image)
-                                // Standardized keys for consistency
-                                putExtra("product_id", product.productId)
-                                putExtra("product_name", product.name)
-                                putExtra("product_price", product.price)
+                            // Stock validation before checkout
+                            if (product.stock > 0) {
+                                val intent = Intent(context, CheckoutActivity::class.java).apply {
+                                    putExtra("productId", product.productId)
+                                    putExtra("name", product.name)
+                                    putExtra("price", product.price)
+                                    putExtra("image", product.image)
+                                    // Standardized keys for consistency
+                                    putExtra("product_id", product.productId)
+                                    putExtra("product_name", product.name)
+                                    putExtra("product_price", product.price)
+                                }
+                                context.startActivity(intent)
+                            } else {
+                                Toast.makeText(context, "Product is out of stock", Toast.LENGTH_SHORT).show()
                             }
-                            context.startActivity(intent)
                         },
                         modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = OrangeBrand)
                     ) {
-                        Text("Buy Now", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(
+                            "Buy Now",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
                     }
                 }
             }
@@ -289,7 +313,7 @@ fun ProductDescriptionScreen(
                             onClick = { showRatingDialog = true },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, OrangeBrand)
+                            border = BorderStroke(1.dp, OrangeBrand)
                         ) {
                             Icon(Icons.Default.Star, contentDescription = null, tint = OrangeBrand, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
@@ -314,6 +338,33 @@ fun ProductDescriptionScreen(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // NEW: View Seller Details Button
+                OutlinedButton(
+                    onClick = { showSellerDetails = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.5.dp, OrangeBrand),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = OrangeBrand
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Store,
+                        contentDescription = "Seller",
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        "View Seller Details",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
                 HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp), thickness = 0.5.dp)
 
                 // 4. Description
@@ -329,14 +380,54 @@ fun ProductDescriptionScreen(
                 // 5. Stock Status
                 Text(text = "Stock Information", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = if (product.stock > 0) "Available: ${product.stock} items in stock" else "Currently out of stock",
-                    fontSize = 16.sp,
-                    color = if (product.stock > 0) Color(0xFF2E7D32) else Color.Red,
-                    fontWeight = FontWeight.Medium
-                )
+
+                // Enhanced stock display with color coding
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = when {
+                            product.stock == 0 -> Color(0xFFFFEBEE) // Light red
+                            product.stock < 5 -> Color(0xFFFFF3E0) // Light orange
+                            else -> Color(0xFFE8F5E9) // Light green
+                        }
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = when {
+                                product.stock == 0 -> "⚠️ Out of Stock"
+                                product.stock < 5 -> "⚡ Only ${product.stock} items left!"
+                                else -> "✅ In Stock (${product.stock} available)"
+                            },
+                            fontSize = 15.sp,
+                            color = when {
+                                product.stock == 0 -> Color(0xFFC62828)
+                                product.stock < 5 -> Color(0xFFE65100)
+                                else -> Color(0xFF2E7D32)
+                            },
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(40.dp))
             }
         }
+    }
+
+    // NEW: Show Seller Details Screen as Full Screen Overlay
+    if (showSellerDetails) {
+        SellerDetailsScreen(
+            sellerId = product.sellerId,
+            onBackClick = { showSellerDetails = false },
+            onContactClick = {
+                showSellerDetails = false
+                onChatClick() // Navigate to chat with seller
+            }
+        )
     }
 }
