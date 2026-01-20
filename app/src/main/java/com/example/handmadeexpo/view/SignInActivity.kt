@@ -146,7 +146,7 @@ fun SignInBody() {
                     Text(
                         text = "Forgot password?",
                         modifier = Modifier
-                            .align(Alignment.End)
+                            .align(Alignment.CenterEnd)
                             .padding(end = 24.dp, top = 8.dp)
                             .clickable { context.startActivity(Intent(context, ForgetPasswordActivity::class.java)) },
                         fontSize = 14.sp,
@@ -218,7 +218,7 @@ private fun handleUserRouting(userId: String, viewModel: BuyerViewModel, context
                 db.getReference("Seller").child(userId).get().addOnSuccessListener { snapshot ->
                     val isBanned = snapshot.child("banned").getValue(Boolean::class.java) ?: false
                     val status = snapshot.child("verificationStatus").getValue(String::class.java) ?: "Unverified"
-                    
+
                     if (isBanned) {
                         FirebaseAuth.getInstance().signOut()
                         Toast.makeText(context, "ACCOUNT SUSPENDED", Toast.LENGTH_LONG).show()
@@ -250,7 +250,7 @@ fun RegistrationFooter(context: android.content.Context) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Row {
             Text("New to Handmade Expo? ", fontSize = 14.sp)
-            Text("Register as Buyer", color = Blue, fontWeight = FontWeight.Bold, 
+            Text("Register as Buyer", color = Blue, fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable { context.startActivity(Intent(context, SignupActivity::class.java)) })
         }
         Spacer(modifier = Modifier.height(8.dp))

@@ -274,16 +274,4 @@ fun VerificationHubSimple(viewModel: AdminViewModel) {
     }
 }
 
-@Composable
-fun AdminReportScreen() {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("Reports & Complaints", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-        Text("No active reports to display.", color = Color.Gray, fontSize = 14.sp)
-    }
-}
+
