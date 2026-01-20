@@ -41,6 +41,12 @@ import com.example.handmadeexpo.ui.theme.Blue1
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
 
+// Admin credentials (change these to your desired strong credentials)
+object AdminCredentials {
+    const val ADMIN_EMAIL = "admin@handmadeexpo.com"
+    const val ADMIN_PASSWORD = "Handmade@Expo2024#Secure"
+}
+
 class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -126,7 +132,7 @@ fun SignInBody() {
                             unfocusedIndicatorColor = Color.Transparent
                         )
                     )
-                    
+
                     Spacer(modifier = Modifier.height(20.dp))
 
                     OutlinedTextField(
@@ -138,7 +144,7 @@ fun SignInBody() {
                             IconButton(onClick = { visibility = !visibility }) {
                                 Icon(
                                     painter = painterResource(
-                                        if (visibility) R.drawable.baseline_visibility_off_24 
+                                        if (visibility) R.drawable.baseline_visibility_off_24
                                         else R.drawable.baseline_visibility_24
                                     ),
                                     contentDescription = null
@@ -152,7 +158,7 @@ fun SignInBody() {
                             unfocusedIndicatorColor = Color.Transparent
                         )
                     )
-                    
+
                     Spacer(modifier = Modifier.height(20.dp))
 
                     Row(
@@ -175,6 +181,15 @@ fun SignInBody() {
                                 return@Button
                             }
 
+                            // Check if admin credentials
+                            if (email == AdminCredentials.ADMIN_EMAIL && password == AdminCredentials.ADMIN_PASSWORD) {
+                                val intent = Intent(context, AdminDashboardActivity::class.java)
+                                context.startActivity(intent)
+                                activity?.finish()
+                                return@Button
+                            }
+
+                            // Regular buyer/seller login
                             buyerViewModel.login(email, password) { success, msg ->
                                 if (success) {
                                     val userId = buyerViewModel.getCurrentUser()?.uid
