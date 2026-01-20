@@ -2,6 +2,9 @@ package com.example.handmadeexpo.view
 
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.rotate
+
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -84,7 +87,7 @@ fun SellerHomeScreen(
         containerColor = Color(0xFFF5F5F5)
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            
+
             // Only show Tabs if we are in the Dashboard (not Bargain section)
             if (!showBargainSection) {
                 TabRow(
@@ -319,7 +322,7 @@ fun SellerProductCard(product: ProductModel) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(product.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1)
                     Text("NRP ${product.price.toInt()}", color = Orange, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                    
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         repeat(5) { index ->
                             Icon(
@@ -390,5 +393,3 @@ fun BargainShortcutCard(count: Int, onClick: () -> Unit) {
     }
 }
 
-// Extension to rotate the back arrow icon to point right
-private fun Modifier.rotate(degrees: Float) = this.then(androidx.compose.ui.draw.rotate(degrees))
