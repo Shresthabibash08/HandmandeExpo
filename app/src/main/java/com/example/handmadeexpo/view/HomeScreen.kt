@@ -1,5 +1,6 @@
 package com.example.handmadeexpo.view
 
+import CategoryScreen
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -54,7 +55,9 @@ fun HomeScreen(
     onReportProductClick: (String) -> Unit,
     onReportSellerClick: (String) -> Unit
 ) {
-    val viewModel: ProductViewModel = viewModel(factory = ProductViewModelFactory(ProductRepoImpl()))
+    val viewModel: ProductViewModel = viewModel(
+        factory = ProductViewModelFactory(ProductRepoImpl())
+    )
     val cartRepo = remember { CartRepoImpl() }
     val cartViewModel = remember { CartViewModel(cartRepo) }
 
@@ -63,16 +66,19 @@ fun HomeScreen(
     val maxPriceDisplay by viewModel.maxPriceDisplay.observeAsState(100000.0)
 
     var selectedProduct by remember { mutableStateOf<ProductModel?>(null) }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
     var isChatOpen by remember { mutableStateOf(false) }
     var showCart by remember { mutableStateOf(false) }
 
     val currentUserId = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "Guest" }
 
-    BackHandler(enabled = isChatOpen || selectedProduct != null || showCart) {
+    // Handle system back button for nested screens
+    BackHandler(enabled = isChatOpen || selectedProduct != null || showCart || selectedCategory != null) {
         when {
             showCart -> showCart = false
             isChatOpen -> isChatOpen = false
-            else -> selectedProduct = null
+            selectedProduct != null -> selectedProduct = null
+            selectedCategory != null -> selectedCategory = null
         }
     }
 
@@ -91,16 +97,21 @@ fun HomeScreen(
                         .addOnSuccessListener { sellerNameState = it.value?.toString() ?: "Seller" }
                 }
 
-                // *** FIXED SECTION START ***
                 ChatScreen(
                     chatId = chatId,
                     sellerId = selectedProduct!!.sellerId,
                     sellerName = sellerNameState,
                     currentUserId = currentUserId,
                     onBackClick = { isChatOpen = false }
-                    // REMOVED onReportClick (Fixes Issue 1)
                 )
-                // *** FIXED SECTION END ***
+            }
+            selectedCategory != null && selectedProduct == null -> {
+                CategoryScreen(
+                    categoryName = selectedCategory!!,
+                    viewModel = viewModel,
+                    onBackClick = { selectedCategory = null },
+                    onProductClick = { selectedProduct = it }
+                )
             }
             selectedProduct != null -> {
                 ProductDescriptionScreen(
@@ -125,6 +136,9 @@ fun HomeScreen(
                     onChatClick = { product ->
                         selectedProduct = product
                         isChatOpen = true
+                    },
+                    onCategoryClick = { categoryName ->
+                        selectedCategory = categoryName
                     }
                 )
             }
@@ -138,14 +152,21 @@ fun MainHomeContent(
     sliderValue: Float,
     maxPrice: Double,
     onSliderChange: (Float) -> Unit,
-    onCategorySelect: (Double) -> Unit, // This callback is now correctly defined
+    onCategorySelect: (Double) -> Unit,
     onProductClick: (ProductModel) -> Unit,
-    onChatClick: (ProductModel) -> Unit
+    onChatClick: (ProductModel) -> Unit,
+    onCategoryClick: (String) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val categories = listOf(
-        "All" to R.drawable.img_2, "Painting" to R.drawable.img_1,
-        "Bag" to R.drawable.img_3, "Craft" to R.drawable.img_4
+        "All" to R.drawable.all,
+        "Statue" to R.drawable.statue,
+        "Wooden Mask" to R.drawable.masks,
+        "Singing Bowl" to R.drawable.bowls,
+        "Painting" to R.drawable.painting,
+        "Thanka" to R.drawable.thankas,
+        "Wall Decor" to R.drawable.walldecore,
+        "Others" to R.drawable.others
     )
     val filteredList = products.filter { it.name.contains(searchQuery, ignoreCase = true) }
 
@@ -160,10 +181,11 @@ fun MainHomeContent(
                     color = MainColor,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
-                CategoryList(categories)
+
+                CategoryList(categories = categories, onCategoryClick = onCategoryClick)
+
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Passed onCategorySelect correctly (Fixes Issue 2)
                 GradientPriceSliderSection(sliderValue, maxPrice, onSliderChange, onCategorySelect)
             }
         }
@@ -181,25 +203,61 @@ fun MainHomeContent(
 }
 
 @Composable
+fun CategoryList(
+    categories: List<Pair<String, Int>>,
+    onCategoryClick: (String) -> Unit
+) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        items(categories) { (name, imageRes) ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.clickable { onCategoryClick(name) }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(55.dp)
+                        .background(CreamBackground, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = imageRes),
+                        contentDescription = name,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
+                Text(name, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            }
+        }
+    }
+}
+
+@Composable
 fun GradientPriceSliderSection(
     value: Float,
     max: Double,
     onValueChange: (Float) -> Unit,
-    onCategorySelect: (Double) -> Unit // Included this parameter
+    onCategorySelect: (Double) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).shadow(1.dp, RoundedCornerShape(12.dp)), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .shadow(1.dp, RoundedCornerShape(12.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Max Price", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Text("NRP ${max.toInt()}", color = OrangeBrand, fontWeight = FontWeight.Bold)
             }
-            // Trigger onCategorySelect when slider interaction finishes if needed, or update viewmodel live
             Slider(
                 value = value,
                 onValueChange = {
                     onValueChange(it)
-                    // Optional: You can call onCategorySelect here if your viewmodel logic requires it
-                    // onCategorySelect(it.toDouble())
+                    onCategorySelect(it.toDouble()) 
                 },
                 valueRange = 0f..100f,
                 colors = SliderDefaults.colors(thumbColor = OrangeBrand, activeTrackColor = OrangeBrand)
@@ -208,7 +266,6 @@ fun GradientPriceSliderSection(
     }
 }
 
-// ... (ProductRow, ProductCard, CategoryList, SearchBarInput, SectionHeader remain unchanged) ...
 @Composable
 fun ProductRow(
     products: List<ProductModel>,
@@ -224,6 +281,7 @@ fun ProductRow(
         }
     }
 }
+
 @Composable
 fun ProductCard(
     product: ProductModel,
@@ -231,14 +289,19 @@ fun ProductCard(
     onChatClick: (ProductModel) -> Unit
 ) {
     Card(
-        modifier = Modifier.width(160.dp).clickable { onClick(product) },
+        modifier = Modifier
+            .width(160.dp)
+            .clickable { onClick(product) },
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA))
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
             AsyncImage(
                 model = product.image,
                 contentDescription = null,
-                modifier = Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(8.dp)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop
             )
             Text(product.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -249,40 +312,50 @@ fun ProductCard(
             ) {
                 Text("NRP ${product.price.toInt()}", color = OrangeBrand, fontWeight = FontWeight.Bold)
                 IconButton(onClick = { onChatClick(product) }, modifier = Modifier.size(24.dp)) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.Chat, contentDescription = null, tint = OrangeBrand, modifier = Modifier.size(18.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = null,
+                        tint = OrangeBrand,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }
     }
 }
-@Composable
-fun CategoryList(categories: List<Pair<String, Int>>) {
-    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        items(categories) { (name, imageRes) ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(modifier = Modifier.size(55.dp).background(CreamBackground, CircleShape), contentAlignment = Alignment.Center) {
-                    Image(painter = painterResource(id = imageRes), contentDescription = name, modifier = Modifier.size(30.dp))
-                }
-                Text(name, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-            }
-        }
-    }
-}
+
 @Composable
 fun SearchBarInput(query: String, onQueryChange: (String) -> Unit) {
     TextField(
-        value = query, onValueChange = onQueryChange, placeholder = { Text("Search items...") }, leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-        modifier = Modifier.fillMaxWidth().padding(16.dp).clip(RoundedCornerShape(12.dp)),
-        colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent)
+        value = query,
+        onValueChange = onQueryChange,
+        placeholder = { Text("Search items...") },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clip(RoundedCornerShape(12.dp)),
+        colors = TextFieldDefaults.colors(
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent
+        )
     )
 }
+
 @Composable
 fun SectionHeader(title: String, subtitle: String?, showArrow: Boolean) {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             subtitle?.let { Text(it, fontSize = 12.sp, color = Color.Gray) }
         }
-        if (showArrow) { Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = OrangeBrand) }
+        if (showArrow) {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = OrangeBrand)
+        }
     }
 }
