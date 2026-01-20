@@ -1,7 +1,6 @@
 package com.example.handmadeexpo.view
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -14,7 +13,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,20 +29,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
 import com.example.handmadeexpo.repo.BuyerRepoImpl
-import com.example.handmadeexpo.ui.theme.Blue1
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 
-// Admin credentials (change these to your desired strong credentials)
+// Admin credentials 
 object AdminCredentials {
     const val ADMIN_EMAIL = "admin@handmadeexpo.com"
     const val ADMIN_PASSWORD = "Handmade@Expo2024#Secure"
@@ -63,219 +62,216 @@ fun SignInBody() {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var visibility by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val activity = context as? Activity
 
     Scaffold { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
+            // Background
             Image(
                 painter = painterResource(R.drawable.img_1),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .padding(padding),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 item {
-                    Spacer(modifier = Modifier.height(50.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Image(
-                            painter = painterResource(R.drawable.logo),
-                            contentDescription = "Logo",
-                            modifier = Modifier
-                                .size(177.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(60.dp))
+
+                    // Logo
+                    Image(
+                        painter = painterResource(R.drawable.logo),
+                        contentDescription = "Logo",
+                        modifier = Modifier
+                            .size(150.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+
                     Text(
-                        "Handmade Expo",
-                        modifier = Modifier.fillMaxWidth(),
+                        text = "Handmade Expo",
+                        modifier = Modifier.padding(top = 16.dp),
                         style = TextStyle(
                             color = Black,
                             fontWeight = FontWeight.ExtraBold,
-                            textAlign = TextAlign.Center,
-                            fontSize = 32.sp
+                            fontSize = 30.sp
                         )
                     )
 
-                    Text(
-                        "Welcome Back!",
-                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                        style = TextStyle(
-                            color = Black,
-                            fontWeight = FontWeight.SemiBold,
-                            textAlign = TextAlign.Center,
-                            fontSize = 20.sp
-                        )
-                    )
+                    Spacer(modifier = Modifier.height(32.dp))
 
-                    Spacer(modifier = Modifier.height(20.dp))
-
+                    // Email Field
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
+                        label = { Text("Email") },
+                        singleLine = true,
+                        enabled = !isLoading,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                         shape = RoundedCornerShape(12.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp),
-                        placeholder = { Text("Email/Phone") },
-                        colors = TextFieldDefaults.colors(
-                            focusedIndicatorColor = Blue1,
-                            unfocusedIndicatorColor = Color.Transparent
-                        )
+                        leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null, tint = MainColor) }
                     )
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
+                    // Password Field
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        shape = RoundedCornerShape(12.dp),
+                        label = { Text("Password") },
+                        singleLine = true,
+                        enabled = !isLoading,
                         visualTransformation = if (!visibility) PasswordVisualTransformation() else VisualTransformation.None,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, tint = MainColor) },
                         trailingIcon = {
                             IconButton(onClick = { visibility = !visibility }) {
                                 Icon(
-                                    painter = painterResource(
-                                        if (visibility) R.drawable.baseline_visibility_off_24
-                                        else R.drawable.baseline_visibility_24
-                                    ),
+                                    painter = painterResource(if (visibility) R.drawable.baseline_visibility_off_24 else R.drawable.baseline_visibility_24),
                                     contentDescription = null
                                 )
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp),
-                        placeholder = { Text("*********") },
-                        colors = TextFieldDefaults.colors(
-                            focusedIndicatorColor = Blue1,
-                            unfocusedIndicatorColor = Color.Transparent
-                        )
+                        }
                     )
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    // Forgot Password
+                    Text(
+                        text = "Forgot password?",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 24.dp, top = 8.dp)
+                            .clickable { context.startActivity(Intent(context, ForgetPasswordActivity::class.java)) },
+                        textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        Text(
-                            "Forgot password?", fontSize = 16.sp,
-                            modifier = Modifier.clickable {
-                                val intent = Intent(context, ForgetPasswordActivity::class.java)
-                                activity?.startActivity(intent)
-                            }
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(32.dp))
 
+                    // Sign In Button
                     Button(
                         onClick = {
                             if (email.isBlank() || password.isBlank()) {
-                                Toast.makeText(context, "Email and password required", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Fields cannot be empty", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
 
-                            // Check if admin credentials
+                            isLoading = true
+
+                            // 1. Check for Hardcoded Admin first
                             if (email == AdminCredentials.ADMIN_EMAIL && password == AdminCredentials.ADMIN_PASSWORD) {
-                                val intent = Intent(context, AdminDashboardActivity::class.java)
-                                context.startActivity(intent)
+                                context.startActivity(Intent(context, AdminDashboardActivity::class.java))
                                 activity?.finish()
+                                isLoading = false
                                 return@Button
                             }
 
-                            // Regular buyer/seller login
+                            // 2. Regular Buyer/Seller Firebase login
                             buyerViewModel.login(email, password) { success, msg ->
                                 if (success) {
                                     val userId = buyerViewModel.getCurrentUser()?.uid
                                     if (userId != null) {
-                                        buyerViewModel.checkUserRole(userId) { role ->
-                                            when (role) {
-                                                "buyer" -> {
-                                                    val intent = Intent(context, DashboardActivity::class.java)
-                                                    intent.putExtra("userId", userId)
-                                                    context.startActivity(intent)
-                                                    activity?.finish()
-                                                }
-                                                "seller" -> {
-                                                    val intent = Intent(context, SellerDashboard::class.java)
-                                                    intent.putExtra("userId", userId)
-                                                    context.startActivity(intent)
-                                                    activity?.finish()
-                                                }
-                                                else -> {
-                                                    Toast.makeText(context, "User role not defined", Toast.LENGTH_SHORT).show()
-                                                }
-                                            }
+                                        handleUserRouting(userId, buyerViewModel, context, activity) {
+                                            isLoading = false
                                         }
-                                    } else {
-                                        Toast.makeText(context, "User not found", Toast.LENGTH_SHORT).show()
                                     }
                                 } else {
+                                    isLoading = false
                                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                 }
                             }
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(95.dp)
-                            .padding(horizontal = 20.dp, vertical = 20.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MainColor)
+                        modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 24.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MainColor),
+                        enabled = !isLoading
                     ) {
-                        Text("Sign In", fontSize = 15.sp)
+                        if (isLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                        } else {
+                            Text("Sign In", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(start = 30.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        Text("Don't have an account? Register as buyer", fontSize = 16.sp, color = Black)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Sign Up",
-                            color = Blue,
-                            fontSize = 16.sp,
-                            modifier = Modifier.clickable {
-                                val intent = Intent(context, SignupActivity::class.java)
-                                activity?.startActivity(intent)
-                                activity?.finish()
-                            }
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(start = 30.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        Text("Don't have an account? Register as seller", fontSize = 16.sp, color = Black)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Sign Up",
-                            color = Blue,
-                            fontSize = 16.sp,
-                            modifier = Modifier.clickable {
-                                val intent = Intent(context, SellerRegistration::class.java)
-                                activity?.startActivity(intent)
-                                activity?.finish()
-                            }
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    RegistrationFooter(context)
                 }
             }
         }
     }
 }
 
-@Preview(showBackground = true)
+private fun handleUserRouting(userId: String, viewModel: BuyerViewModel, context: android.content.Context, activity: Activity?, onComplete: () -> Unit) {
+    viewModel.checkUserRole(userId) { role ->
+        val db = FirebaseDatabase.getInstance()
+        when (role) {
+            "buyer" -> {
+                db.getReference("Buyer").child(userId).get().addOnSuccessListener { snapshot ->
+                    val isBanned = snapshot.child("banned").getValue(Boolean::class.java) ?: false
+                    if (isBanned) {
+                        FirebaseAuth.getInstance().signOut()
+                        Toast.makeText(context, "ACCOUNT SUSPENDED", Toast.LENGTH_LONG).show()
+                    } else {
+                        context.startActivity(Intent(context, DashboardActivity::class.java))
+                        activity?.finish()
+                    }
+                    onComplete()
+                }
+            }
+            "seller" -> {
+                db.getReference("Seller").child(userId).get().addOnSuccessListener { snapshot ->
+                    val isBanned = snapshot.child("banned").getValue(Boolean::class.java) ?: false
+                    val status = snapshot.child("verificationStatus").getValue(String::class.java) ?: "Unverified"
+
+                    if (isBanned) {
+                        FirebaseAuth.getInstance().signOut()
+                        Toast.makeText(context, "ACCOUNT SUSPENDED", Toast.LENGTH_LONG).show()
+                    } else if (status == "Verified") {
+                        context.startActivity(Intent(context, SellerDashboard::class.java))
+                        activity?.finish()
+                    } else {
+                        FirebaseAuth.getInstance().signOut()
+                        Toast.makeText(context, "Status: $status. Please wait for admin approval.", Toast.LENGTH_LONG).show()
+                    }
+                    onComplete()
+                }
+            }
+            "admin" -> {
+                context.startActivity(Intent(context, AdminDashboardActivity::class.java))
+                activity?.finish()
+                onComplete()
+            }
+            else -> {
+                Toast.makeText(context, "Role not found", Toast.LENGTH_SHORT).show()
+                onComplete()
+            }
+        }
+    }
+}
+
 @Composable
-fun SignInPreview() {
-    SignInBody()
+fun RegistrationFooter(context: android.content.Context) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Row {
+            Text("New to Handmade Expo? ", fontSize = 14.sp)
+            Text("Register as Buyer", color = Blue, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable { context.startActivity(Intent(context, SignupActivity::class.java)) })
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row {
+            Text("Want to sell? ", fontSize = 14.sp)
+            Text("Join as Seller", color = Blue, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable { context.startActivity(Intent(context, SellerRegistration::class.java)) })
+        }
+    }
 }

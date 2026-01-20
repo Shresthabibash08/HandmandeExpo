@@ -86,8 +86,16 @@ class ProductViewModel(private val repo: ProductRepo) : ViewModel() {
     }
 
     fun getProductByCategory(categoryId: String) {
+        _allProductsCategory.postValue(emptyList())
+
+        _loading.postValue(true)
         repo.getProductByCategory(categoryId) { success, _, data ->
-            _allProductsCategory.postValue(if (success) data ?: emptyList() else emptyList())
+            _loading.postValue(false)
+            if (success) {
+                _allProductsCategory.postValue(data ?: emptyList())
+            } else {
+                _allProductsCategory.postValue(emptyList())
+            }
         }
     }
 

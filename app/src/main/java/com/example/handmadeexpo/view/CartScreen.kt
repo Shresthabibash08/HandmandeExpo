@@ -1,14 +1,15 @@
 package com.example.handmadeexpo.view
 
+import android.app.Activity
+import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,33 +17,143 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.handmadeexpo.R
+import com.example.handmadeexpo.model.BargainModel
 import com.example.handmadeexpo.model.CartItem
+import com.example.handmadeexpo.model.OrderItem
 import com.example.handmadeexpo.ui.theme.MainColor
+import com.example.handmadeexpo.viewmodel.BargainViewModel
 import com.example.handmadeexpo.viewmodel.CartViewModel
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 @Composable
-fun CartScreen(cartViewModel: CartViewModel, currentUserId: String) {
-
+fun CartScreen(
+    cartViewModel: CartViewModel,
+    currentUserId: String,
+    bargainViewModel: BargainViewModel = viewModel()
+) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<CartItem?>(null) }
 
-    // Use .value to avoid delegate errors if imports are missing
+    // Map to track agreed-upon prices for each product (from nirajan branch)
+    val acceptedPrices = remember { mutableStateMapOf<String, Double>() }
+
+    val context = LocalContext.current
+    val activity = context as? Activity
     val isLoading = cartViewModel.isLoading.value
+    var currentUserName by remember { mutableStateOf("Customer") }
 
     LaunchedEffect(currentUserId) {
         cartViewModel.loadCart(currentUserId)
+        FirebaseDatabase.getInstance().getReference("Buyers").child(currentUserId).child("name")
+            .get().addOnSuccessListener { currentUserName = it.value?.toString() ?: "Customer" }
     }
 
     val cartItems = cartViewModel.cartItems
-    val total = cartItems.sumOf { it.price * it.quantity }
 
-    // --- DELETE DIALOG ---
+    // Total calculated based on negotiated prices (from nirajan branch)
+    val total = cartItems.sumOf { item ->
+        val priceToUse = acceptedPrices[item.productId] ?: item.price.toDouble()
+        priceToUse * item.quantity.toDouble()
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Image(
+            painter = painterResource(id = R.drawable.bg7),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+
+        Scaffold(
+            containerColor = Color.Transparent,
+            bottomBar = {
+                if (!isLoading && cartItems.isNotEmpty()) {
+                    CartBottomBar(
+                        total = total,
+                        onCheckoutClick = {
+                            val orderItems = ArrayList(cartItems.map { cartItem ->
+                                val finalPrice = acceptedPrices[cartItem.productId] ?: cartItem.price.toDouble()
+                                OrderItem(
+                                    productId = cartItem.productId,
+                                    productName = cartItem.name,
+                                    price = finalPrice,
+                                    quantity = cartItem.quantity,
+                                    imageUrl = cartItem.image
+                                )
+                            })
+
+                            val intent = Intent(context, CheckoutActivity::class.java).apply {
+                                putExtra("cartItems", orderItems)
+                                putExtra("isFromCart", true)
+                            }
+                            context.startActivity(intent)
+                        }
+                    )
+                }
+            }
+        ) { paddingValues ->
+            if (isLoading) {
+                Box(Modifier.fillMaxSize().padding(paddingValues), Alignment.Center) {
+                    CircularProgressIndicator(color = MainColor)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(horizontal = 16.dp)
+                ) {
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("My Cart", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MainColor)
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    if (cartItems.isEmpty()) {
+                        item {
+                            Box(Modifier.fillParentMaxHeight(0.7f).fillMaxWidth(), Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Your cart is empty", color = Color.Gray, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("Add items to get started", color = Color.Gray, fontSize = 14.sp)
+                                }
+                            }
+                        }
+                    } else {
+                        items(cartItems, key = { it.productId }) { item ->
+                            CartItemCard(
+                                item = item,
+                                cartViewModel = cartViewModel,
+                                bargainViewModel = bargainViewModel,
+                                userId = currentUserId,
+                                userName = currentUserName,
+                                onPriceUpdate = { newPrice -> acceptedPrices[item.productId] = newPrice },
+                                onDeleteClick = {
+                                    itemToDelete = item
+                                    showDeleteDialog = true
+                                }
+                            )
+                        }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
+                    }
+                }
+            }
+        }
+    }
+
+    // Consolidated Delete Dialog
     if (showDeleteDialog && itemToDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -62,177 +173,196 @@ fun CartScreen(cartViewModel: CartViewModel, currentUserId: String) {
             }
         )
     }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Background Image
-        Image(
-            painter = painterResource(id = R.drawable.bg7),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-        )
-
-        Scaffold(
-            containerColor = Color.Transparent,
-            bottomBar = {
-                // FIXED: Check !isLoading correctly
-                if (!isLoading && cartItems.isNotEmpty()) {
-                    CartBottomBar(total)
-                }
-            }
-        ) { paddingValues ->
-
-            if (isLoading) {
-                // --- LOADING SCREEN ---
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = MainColor)
-                }
-            } else {
-                // --- ACTUAL CONTENT ---
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(16.dp)
-                ) {
-                    item {
-                        Text(
-                            text = "My Cart",
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MainColor,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
-                    }
-
-                    if (cartItems.isEmpty()) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillParentMaxHeight(0.7f)
-                                    .fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Your cart is empty", color = Color.Gray, fontSize = 18.sp)
-                            }
-                        }
-                    } else {
-                        items(cartItems) { item ->
-                            CartItemCard(
-                                item = item,
-                                cartViewModel = cartViewModel,
-                                userId = currentUserId,
-                                onDeleteClick = {
-                                    itemToDelete = item
-                                    showDeleteDialog = true
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 @Composable
 fun CartItemCard(
     item: CartItem,
     cartViewModel: CartViewModel,
+    bargainViewModel: BargainViewModel,
     userId: String,
+    userName: String,
+    onPriceUpdate: (Double) -> Unit,
     onDeleteClick: () -> Unit
 ) {
+    var showBargainDialog by remember { mutableStateOf(false) }
+    var bargainStatus by remember { mutableStateOf("None") }
+    var currentDisplayPrice by remember { mutableStateOf(item.price.toDouble()) }
+    var sellerCounterPrice by remember { mutableStateOf("") }
+
+    LaunchedEffect(item.productId) {
+        FirebaseDatabase.getInstance().reference.child("Bargains").child(userId).child(item.productId)
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    if (snapshot.exists()) {
+                        val status = snapshot.child("status").value.toString()
+                        bargainStatus = status
+                        when (status) {
+                            "Accepted" -> {
+                                val price = snapshot.child("offeredPrice").value.toString().toDoubleOrNull() ?: item.price.toDouble()
+                                currentDisplayPrice = price
+                                onPriceUpdate(price)
+                            }
+                            "Counter" -> {
+                                sellerCounterPrice = snapshot.child("counterPrice").value.toString()
+                                currentDisplayPrice = item.price.toDouble()
+                                onPriceUpdate(item.price.toDouble())
+                            }
+                            else -> {
+                                currentDisplayPrice = item.price.toDouble()
+                                onPriceUpdate(item.price.toDouble())
+                            }
+                        }
+                    } else {
+                        bargainStatus = "None"
+                        currentDisplayPrice = item.price.toDouble()
+                        onPriceUpdate(item.price.toDouble())
+                    }
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            })
+    }
+
     Card(
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.9f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.95f)),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AsyncImage(
-                model = item.image,
-                contentDescription = item.name,
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                contentScale = ContentScale.Crop
-            )
+        Column(Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AsyncImage(
+                    model = item.image,
+                    contentDescription = null,
+                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(R.drawable.img_1)
+                )
 
-            Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text(item.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1)
-                Text("Rs ${item.price}", color = MainColor, fontWeight = FontWeight.SemiBold)
+                Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                    Text(item.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1)
+                    Text(
+                        text = "NRP ${currentDisplayPrice.toInt()}",
+                        color = if (bargainStatus == "Accepted") Color(0xFF4CAF50) else MainColor,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                    if (bargainStatus == "Counter") {
+                        Text("Seller's Offer: NRP $sellerCounterPrice", color = Color(0xFFFF9800), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                IconButton(onClick = onDeleteClick) { Icon(Icons.Default.Delete, null, tint = Color.Red) }
+            }
 
-                Spacer(modifier = Modifier.height(8.dp))
+            if (bargainStatus == "Counter") {
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            bargainViewModel.updateStatus(userId, item.productId, "Accepted", sellerCounterPrice, "Buyer")
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) { Text("Accept NRP $sellerCounterPrice", fontSize = 11.sp) }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFF0F0F0)
-                    ) {
+                    OutlinedButton(
+                        onClick = { showBargainDialog = true },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) { Text("Counter Again", fontSize = 11.sp) }
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFF0F0F0)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(
-                                onClick = { if (item.quantity > 1) cartViewModel.updateQuantity(userId, item.productId, item.quantity - 1) {} },
-                                modifier = Modifier.size(32.dp)
-                            ) { Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            IconButton(modifier = Modifier.size(32.dp), onClick = {
+                                if (item.quantity > 1) cartViewModel.updateQuantity(userId, item.productId, item.quantity - 1) {}
+                            }) { Icon(Icons.Default.Remove, null, modifier = Modifier.size(16.dp)) }
 
                             Text("${item.quantity}", fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp))
 
-                            IconButton(
-                                onClick = { cartViewModel.updateQuantity(userId, item.productId, item.quantity + 1) {} },
-                                modifier = Modifier.size(32.dp)
-                            ) { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            IconButton(modifier = Modifier.size(32.dp), onClick = {
+                                cartViewModel.updateQuantity(userId, item.productId, item.quantity + 1) {}
+                            }) { Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp)) }
+                        }
+                    }
+
+                    Spacer(Modifier.weight(1f))
+
+                    when (bargainStatus) {
+                        "Pending" -> Text("Waiting for Seller...", color = Color.Gray, fontSize = 12.sp)
+                        "Accepted" -> Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF4CAF50))
+                        else -> {
+                            IconButton(onClick = { showBargainDialog = true }) {
+                                Icon(Icons.Default.Gavel, null, tint = MainColor)
+                            }
                         }
                     }
                 }
             }
-
-            IconButton(
-                onClick = onDeleteClick,
-                colors = IconButtonDefaults.iconButtonColors(contentColor = Color(0xFFE57373))
-            ) {
-                Icon(Icons.Default.Delete, contentDescription = "Remove Item")
-            }
         }
+    }
+
+    if (showBargainDialog) {
+        var offerAmount by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showBargainDialog = false },
+            title = { Text(if(bargainStatus == "Counter") "New Counter Offer" else "Enter Your Offer") },
+            text = {
+                OutlinedTextField(
+                    value = offerAmount,
+                    onValueChange = { if (it.all { c -> c.isDigit() } ) offerAmount = it },
+                    label = { Text("NRP Amount") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (offerAmount.isNotEmpty()) {
+                        val bargain = BargainModel(
+                            productId = item.productId, buyerId = userId, buyerName = userName,
+                            sellerId = item.sellerId, productName = item.name, originalPrice = item.price.toString(),
+                            offeredPrice = offerAmount, status = "Pending"
+                        )
+                        bargainViewModel.requestBargain(bargain)
+                        showBargainDialog = false
+                    }
+                }) { Text("Send Offer") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBargainDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 
 @Composable
-fun CartBottomBar(total: Double) {
-    Surface(shadowElevation = 12.dp, color = Color.White) {
+fun CartBottomBar(total: Double, onCheckoutClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shadowElevation = 12.dp, 
+        color = Color.White
+    ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
+            modifier = Modifier.padding(20.dp).navigationBarsPadding(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Text("Total Amount", fontSize = 14.sp, color = Color.Gray)
+                Text("Total Amount", color = Color.Gray, fontSize = 14.sp)
                 Text(
-                    text = "Rs ${"%.2f".format(total)}",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
+                    text = "NRP ${total.toInt()}", 
+                    fontWeight = FontWeight.Bold, 
+                    fontSize = 22.sp, 
                     color = MainColor
                 )
             }
-
             Button(
-                onClick = { /* Navigate to Checkout */ },
+                onClick = onCheckoutClick,
+                colors = ButtonDefaults.buttonColors(containerColor = MainColor),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(MainColor),
                 modifier = Modifier.height(50.dp).width(150.dp)
             ) {
-                Text("Checkout", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Checkout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
