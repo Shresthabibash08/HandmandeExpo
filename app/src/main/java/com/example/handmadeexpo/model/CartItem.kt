@@ -3,6 +3,7 @@ package com.example.handmadeexpo.model
 data class CartItem(
     val productId: String = "",
     val userId: String = "",
+    val sellerId: String = "", // Add this field
     val name: String = "",
     val price: Double = 0.0,
     val image: String = "",
@@ -12,6 +13,7 @@ data class CartItem(
         fun fromProduct(product: ProductModel, userId: String) = CartItem(
             productId = product.productId,
             userId = userId,
+            sellerId = product.sellerId, // Make sure to pass the sellerId here
             name = product.name,
             price = product.price,
             image = product.image,

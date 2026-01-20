@@ -54,7 +54,7 @@ fun SellerProfileScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var isLoggingOut by remember { mutableStateOf(false) }
 
-    // Fetch Data automatically whenever the sellerId changes or screen launches
+    // Fetch Data automatically
     LaunchedEffect(sellerId) {
         if (sellerId.isNotEmpty()) {
             viewModel.getSellerDetailsById(sellerId)
@@ -71,7 +71,7 @@ fun SellerProfileScreen(
                 Button(
                     onClick = {
                         isLoggingOut = true
-                        viewModel.logout { success, message ->
+                        viewModel.logout { success, _ ->
                             isLoggingOut = false
                             showLogoutDialog = false
                             if (success) {

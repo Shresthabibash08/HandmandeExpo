@@ -41,7 +41,6 @@ import com.example.handmadeexpo.viewmodel.CartViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 
-// Theme Colors
 val OrangeBrand = Color(0xFFE65100)
 val CreamBackground = Color(0xFFFFF8E1)
 
@@ -52,7 +51,10 @@ object ChatUtils {
 }
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    onReportProductClick: (String) -> Unit,
+    onReportSellerClick: (String) -> Unit
+) {
     val viewModel: ProductViewModel = viewModel(
         factory = ProductViewModelFactory(ProductRepoImpl())
     )
@@ -70,6 +72,7 @@ fun HomeScreen() {
 
     val currentUserId = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "Guest" }
 
+    // Handle system back button for nested screens
     BackHandler(enabled = isChatOpen || selectedProduct != null || showCart || selectedCategory != null) {
         when {
             showCart -> showCart = false
@@ -118,7 +121,8 @@ fun HomeScreen() {
                     viewModel = viewModel,
                     onBackClick = { selectedProduct = null },
                     onChatClick = { isChatOpen = true },
-                    onNavigateToCart = { showCart = true }
+                    onNavigateToCart = { showCart = true },
+                    onReportClick = { onReportProductClick(selectedProduct!!.productId) }
                 )
             }
             else -> {
@@ -181,6 +185,7 @@ fun MainHomeContent(
                 CategoryList(categories = categories, onCategoryClick = onCategoryClick)
 
                 Spacer(modifier = Modifier.height(16.dp))
+
                 GradientPriceSliderSection(sliderValue, maxPrice, onSliderChange, onCategorySelect)
             }
         }
@@ -197,11 +202,10 @@ fun MainHomeContent(
     }
 }
 
-// --- UPDATED CATEGORY LIST ---
 @Composable
 fun CategoryList(
     categories: List<Pair<String, Int>>,
-    onCategoryClick: (String) -> Unit // Added missing parameter
+    onCategoryClick: (String) -> Unit
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
@@ -210,7 +214,7 @@ fun CategoryList(
         items(categories) { (name, imageRes) ->
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.clickable { onCategoryClick(name) } // Added Click listener
+                modifier = Modifier.clickable { onCategoryClick(name) }
             ) {
                 Box(
                     modifier = Modifier
@@ -226,6 +230,38 @@ fun CategoryList(
                 }
                 Text(name, fontSize = 11.sp, fontWeight = FontWeight.Medium)
             }
+        }
+    }
+}
+
+@Composable
+fun GradientPriceSliderSection(
+    value: Float,
+    max: Double,
+    onValueChange: (Float) -> Unit,
+    onCategorySelect: (Double) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .shadow(1.dp, RoundedCornerShape(12.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Max Price", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("NRP ${max.toInt()}", color = OrangeBrand, fontWeight = FontWeight.Bold)
+            }
+            Slider(
+                value = value,
+                onValueChange = {
+                    onValueChange(it)
+                    onCategorySelect(it.toDouble()) 
+                },
+                valueRange = 0f..100f,
+                colors = SliderDefaults.colors(thumbColor = OrangeBrand, activeTrackColor = OrangeBrand)
+            )
         }
     }
 }
@@ -253,14 +289,19 @@ fun ProductCard(
     onChatClick: (ProductModel) -> Unit
 ) {
     Card(
-        modifier = Modifier.width(160.dp).clickable { onClick(product) },
+        modifier = Modifier
+            .width(160.dp)
+            .clickable { onClick(product) },
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA))
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
             AsyncImage(
                 model = product.image,
                 contentDescription = null,
-                modifier = Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(8.dp)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop
             )
             Text(product.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -286,10 +327,14 @@ fun ProductCard(
 @Composable
 fun SearchBarInput(query: String, onQueryChange: (String) -> Unit) {
     TextField(
-        value = query, onValueChange = onQueryChange,
+        value = query,
+        onValueChange = onQueryChange,
         placeholder = { Text("Search items...") },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-        modifier = Modifier.fillMaxWidth().padding(16.dp).clip(RoundedCornerShape(12.dp)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clip(RoundedCornerShape(12.dp)),
         colors = TextFieldDefaults.colors(
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent
@@ -300,7 +345,9 @@ fun SearchBarInput(query: String, onQueryChange: (String) -> Unit) {
 @Composable
 fun SectionHeader(title: String, subtitle: String?, showArrow: Boolean) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -309,32 +356,6 @@ fun SectionHeader(title: String, subtitle: String?, showArrow: Boolean) {
         }
         if (showArrow) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = OrangeBrand)
-        }
-    }
-}
-
-@Composable
-fun GradientPriceSliderSection(
-    value: Float,
-    max: Double,
-    onValueChange: (Float) -> Unit,
-    onCategorySelect: (Double) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).shadow(1.dp, RoundedCornerShape(12.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Max Price", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text("NRP ${max.toInt()}", color = OrangeBrand, fontWeight = FontWeight.Bold)
-            }
-            Slider(
-                value = value,
-                onValueChange = onValueChange,
-                valueRange = 0f..100f,
-                colors = SliderDefaults.colors(thumbColor = OrangeBrand, activeTrackColor = OrangeBrand)
-            )
         }
     }
 }
