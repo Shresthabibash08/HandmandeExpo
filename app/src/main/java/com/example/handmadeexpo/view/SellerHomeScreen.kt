@@ -9,9 +9,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-// Corrected import for AutoMirrored icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -38,14 +38,17 @@ import com.example.handmadeexpo.viewmodel.ProductViewModel
 @Composable
 fun SellerHomeScreen(
     sellerId: String,
-    sellerName: String, // Ensure you pass the seller's name from your navigation/activity
+    sellerName: String,
     bargainViewModel: BargainViewModel = viewModel()
 ) {
     val productViewModel: ProductViewModel = remember {
         ProductViewModel(ProductRepoImpl())
     }
 
+    // State for toggling between Dashboard and Bargain List
     var showBargainSection by remember { mutableStateOf(false) }
+    // State for Tabs (Verified vs Pending/Rejected)
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(sellerId) {
         productViewModel.getProductsBySeller(sellerId)
@@ -53,6 +56,12 @@ fun SellerHomeScreen(
     }
 
     val sellerProducts by productViewModel.sellerProducts.observeAsState(emptyList())
+
+    // Filter Logic
+    val verifiedProducts = sellerProducts.filter { it.verificationStatus == "Verified" }
+    val pendingProducts = sellerProducts.filter { it.verificationStatus == "Pending" }
+    val rejectedProducts = sellerProducts.filter { it.verificationStatus == "Rejected" }
+    val nonVerifiedProducts = pendingProducts + rejectedProducts
 
     Scaffold(
         topBar = {
@@ -74,61 +83,130 @@ fun SellerHomeScreen(
         },
         containerColor = Color(0xFFF5F5F5)
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            
+            // Only show Tabs if we are in the Dashboard (not Bargain section)
             if (!showBargainSection) {
-                // --- INVENTORY SECTION ---
-                item {
-                    BargainShortcutCard(
-                        count = bargainViewModel.sellerBargains.size,
-                        onClick = { showBargainSection = true }
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = Color(0xFFF5F5F5)
+                ) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Verified")
+                                if (verifiedProducts.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Badge { Text(verifiedProducts.size.toString()) }
+                                }
+                            }
+                        }
                     )
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    Text("Your Inventory", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Pending/Rejected")
+                                if (nonVerifiedProducts.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Badge(containerColor = Color(0xFFFF9800)) {
+                                        Text(nonVerifiedProducts.size.toString())
+                                    }
+                                }
+                            }
+                        }
+                    )
                 }
+            }
 
-                items(sellerProducts) { product ->
-                    SellerProductCard(product)
-                }
-            } else {
-                // --- BARGAIN LIST SECTION ---
-                if (bargainViewModel.sellerBargains.isEmpty()) {
-                    item {
-                        Box(Modifier.fillParentMaxHeight(0.8f).fillMaxWidth(), Alignment.Center) {
-                            Text("No pending bargain offers", color = Color.Gray)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+            ) {
+                if (showBargainSection) {
+                    // --- BARGAIN LIST SECTION ---
+                    if (bargainViewModel.sellerBargains.isEmpty()) {
+                        item {
+                            Box(Modifier.fillParentMaxHeight(0.8f).fillMaxWidth(), Alignment.Center) {
+                                Text("No pending bargain offers", color = Color.Gray)
+                            }
+                        }
+                    } else {
+                        items(bargainViewModel.sellerBargains) { bargain ->
+                            BargainRequestCard(
+                                bargain = bargain,
+                                onAccept = {
+                                    bargainViewModel.updateStatus(bargain.buyerId, bargain.productId, "Accepted", "", sellerName)
+                                },
+                                onReject = {
+                                    bargainViewModel.updateStatus(bargain.buyerId, bargain.productId, "Rejected", "", sellerName)
+                                },
+                                onCounter = { counterPrice ->
+                                    bargainViewModel.updateStatus(bargain.buyerId, bargain.productId, "Counter", counterPrice, sellerName)
+                                }
+                            )
                         }
                     }
                 } else {
-                    items(bargainViewModel.sellerBargains) { bargain ->
-                        BargainRequestCard(
-                            bargain = bargain,
-                            onAccept = {
-                                bargainViewModel.updateStatus(
-                                    bargain.buyerId, bargain.productId, "Accepted", "", sellerName
-                                )
-                            },
-                            onReject = {
-                                bargainViewModel.updateStatus(
-                                    bargain.buyerId, bargain.productId, "Rejected", "", sellerName
-                                )
-                            },
-                            onCounter = { counterPrice ->
-                                bargainViewModel.updateStatus(
-                                    bargain.buyerId, bargain.productId, "Counter", counterPrice, sellerName
-                                )
-                            }
+                    // --- DASHBOARD / INVENTORY SECTION ---
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        BargainShortcutCard(
+                            count = bargainViewModel.sellerBargains.size,
+                            onClick = { showBargainSection = true }
                         )
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
+
+                    when (selectedTab) {
+                        0 -> { // Verified Tab
+                            if (verifiedProducts.isEmpty()) {
+                                item {
+                                    EmptyState(
+                                        icon = Icons.Default.CheckCircle,
+                                        message = "No verified products yet",
+                                        subMessage = "Products will appear here once admin approves them"
+                                    )
+                                }
+                            } else {
+                                items(verifiedProducts) { product ->
+                                    SellerProductCard(product)
+                                }
+                            }
+                        }
+                        1 -> { // Pending/Rejected Tab
+                            if (nonVerifiedProducts.isEmpty()) {
+                                item {
+                                    EmptyState(
+                                        icon = Icons.Default.HourglassEmpty,
+                                        message = "No pending or rejected products",
+                                        subMessage = "All your products are verified!"
+                                    )
+                                }
+                            } else {
+                                if (pendingProducts.isNotEmpty()) {
+                                    item {
+                                        Text("Pending Verification (${pendingProducts.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                                    }
+                                    items(pendingProducts) { product -> SellerProductCard(product) }
+                                }
+                                if (rejectedProducts.isNotEmpty()) {
+                                    item {
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Text("Rejected (${rejectedProducts.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Red, modifier = Modifier.padding(bottom = 8.dp))
+                                    }
+                                    items(rejectedProducts) { product -> SellerProductCard(product) }
+                                }
+                            }
+                        }
                     }
                 }
+                item { Spacer(modifier = Modifier.height(80.dp)) }
             }
-            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 }
@@ -205,32 +283,85 @@ fun BargainRequestCard(
 }
 
 @Composable
+fun EmptyState(icon: androidx.compose.ui.graphics.vector.ImageVector, message: String, subMessage: String) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 60.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(80.dp), tint = Color.Gray.copy(alpha = 0.5f))
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(message, fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+        Text(subMessage, fontSize = 14.sp, color = Color.Gray.copy(alpha = 0.7f))
+    }
+}
+
+@Composable
 fun SellerProductCard(product: ProductModel) {
+    val averageRating = if (product.ratingCount > 0) {
+        product.totalRating.toFloat() / product.ratingCount
+    } else 0f
+
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            AsyncImage(
-                model = product.image,
-                contentDescription = null,
-                modifier = Modifier.size(70.dp).clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(product.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text("NRP ${product.price}", color = Orange, fontWeight = FontWeight.SemiBold)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text("Sold: ${product.sold}", fontSize = 12.sp)
-                Text(
-                    "Stock: ${product.stock}",
-                    fontSize = 12.sp,
-                    color = if (product.stock < 10) Color.Red else Color(0xFF4CAF50)
+        Column {
+            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                AsyncImage(
+                    model = product.image,
+                    contentDescription = product.name,
+                    modifier = Modifier.size(70.dp).clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
                 )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(product.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1)
+                    Text("NRP ${product.price.toInt()}", color = Orange, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        repeat(5) { index ->
+                            Icon(
+                                imageVector = if (index < averageRating.toInt()) Icons.Filled.Star else Icons.Outlined.Star,
+                                contentDescription = null,
+                                tint = if (index < averageRating.toInt()) Color(0xFFFFB300) else Color.LightGray,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(if (product.ratingCount > 0) String.format("%.1f (%d)", averageRating, product.ratingCount) else "No ratings", fontSize = 12.sp, color = Color.Gray)
+                    }
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("Sold: ${product.sold}", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (product.stock == 0) "⚠️" else if (product.stock < 10) "⚡" else "✅", fontSize = 12.sp)
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text("${product.stock}", fontSize = 12.sp, color = if (product.stock == 0) Color.Red else if (product.stock < 10) Color(0xFFFF9800) else Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            if (product.verificationStatus != "Verified") {
+                HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
+                Row(
+                    modifier = Modifier.fillMaxWidth().background(if (product.verificationStatus == "Pending") Color(0xFFFF9800).copy(alpha = 0.1f) else Color(0xFFF44336).copy(alpha = 0.1f)).padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = if (product.verificationStatus == "Pending") Icons.Default.HourglassEmpty else Icons.Default.Cancel,
+                        contentDescription = null, modifier = Modifier.size(16.dp),
+                        tint = if (product.verificationStatus == "Pending") Color(0xFFFF9800) else Color(0xFFF44336)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(if (product.verificationStatus == "Pending") "Pending Admin Verification" else "Rejected by Admin", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (product.verificationStatus == "Pending") Color(0xFFFF9800) else Color(0xFFF44336))
+                        if (product.verificationStatus == "Rejected" && product.rejectionReason.isNotEmpty()) {
+                            Text("Reason: ${product.rejectionReason}", fontSize = 11.sp, color = Color.Gray)
+                        }
+                    }
+                }
             }
         }
     }
@@ -254,7 +385,10 @@ fun BargainShortcutCard(count: Int, onClick: () -> Unit) {
                 Text("Bargain Offers", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text("$count requests pending", color = Color.Gray, fontSize = 12.sp)
             }
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.LightGray)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(20.dp).rotate(180f), tint = Color.LightGray)
         }
     }
 }
+
+// Extension to rotate the back arrow icon to point right
+private fun Modifier.rotate(degrees: Float) = this.then(androidx.compose.ui.draw.rotate(degrees))

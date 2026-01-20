@@ -1,5 +1,6 @@
 package com.example.handmadeexpo.view
 
+import android.app.Activity
 import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -45,10 +46,11 @@ fun CartScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<CartItem?>(null) }
 
-    // Map to track agreed-upon prices for each product
+    // Map to track agreed-upon prices for each product (from nirajan branch)
     val acceptedPrices = remember { mutableStateMapOf<String, Double>() }
 
     val context = LocalContext.current
+    val activity = context as? Activity
     val isLoading = cartViewModel.isLoading.value
     var currentUserName by remember { mutableStateOf("Customer") }
 
@@ -60,7 +62,7 @@ fun CartScreen(
 
     val cartItems = cartViewModel.cartItems
 
-    // Total calculated based on negotiated prices in the map
+    // Total calculated based on negotiated prices (from nirajan branch)
     val total = cartItems.sumOf { item ->
         val priceToUse = acceptedPrices[item.productId] ?: item.price.toDouble()
         priceToUse * item.quantity.toDouble()
@@ -107,7 +109,12 @@ fun CartScreen(
                     CircularProgressIndicator(color = MainColor)
                 }
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp)) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(horizontal = 16.dp)
+                ) {
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text("My Cart", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MainColor)
@@ -117,7 +124,11 @@ fun CartScreen(
                     if (cartItems.isEmpty()) {
                         item {
                             Box(Modifier.fillParentMaxHeight(0.7f).fillMaxWidth(), Alignment.Center) {
-                                Text("Your cart is empty", color = Color.Gray)
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Your cart is empty", color = Color.Gray, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("Add items to get started", color = Color.Gray, fontSize = 14.sp)
+                                }
                             }
                         }
                     } else {
@@ -135,55 +146,32 @@ fun CartScreen(
                                 }
                             )
                         }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
                     }
                 }
             }
         }
     }
 
+    // Consolidated Delete Dialog
     if (showDeleteDialog && itemToDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Remove Item") },
-            text = { Text("Are you sure you want to remove ${itemToDelete?.name} from your cart?") },
+            title = { Text("Remove from Cart") },
+            text = { Text("Do you want to remove ${itemToDelete?.name}?") },
             confirmButton = {
                 TextButton(onClick = {
-                    cartViewModel.removeFromCart(currentUserId, itemToDelete!!.productId)
+                    itemToDelete?.let {
+                        cartViewModel.removeFromCart(currentUserId, it.productId) { }
+                    }
                     showDeleteDialog = false
-                }) { Text("Remove", color = Color.Red) }
+                    itemToDelete = null
+                }) { Text("Remove", color = Color.Red, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
             }
         )
-    }
-}
-
-@Composable
-fun CartBottomBar(total: Double, onCheckoutClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shadowElevation = 8.dp,
-        color = Color.White
-    ) {
-        Row(
-            modifier = Modifier.padding(20.dp).navigationBarsPadding(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
-                Text("Total", color = Color.Gray, fontSize = 14.sp)
-                Text("NRP ${total.toInt()}", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = MainColor)
-            }
-            Button(
-                onClick = onCheckoutClick,
-                colors = ButtonDefaults.buttonColors(containerColor = MainColor),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.height(50.dp).width(150.dp)
-            ) {
-                Text("Checkout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            }
-        }
     }
 }
 
@@ -209,7 +197,6 @@ fun CartItemCard(
                     if (snapshot.exists()) {
                         val status = snapshot.child("status").value.toString()
                         bargainStatus = status
-
                         when (status) {
                             "Accepted" -> {
                                 val price = snapshot.child("offeredPrice").value.toString().toDoubleOrNull() ?: item.price.toDouble()
@@ -218,7 +205,6 @@ fun CartItemCard(
                             }
                             "Counter" -> {
                                 sellerCounterPrice = snapshot.child("counterPrice").value.toString()
-                                // Keep showing original product price in display until Buyer hits 'Accept'
                                 currentDisplayPrice = item.price.toDouble()
                                 onPriceUpdate(item.price.toDouble())
                             }
@@ -248,11 +234,12 @@ fun CartItemCard(
                     model = item.image,
                     contentDescription = null,
                     modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(R.drawable.img_1)
                 )
 
                 Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                    Text(item.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(item.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1)
                     Text(
                         text = "NRP ${currentDisplayPrice.toInt()}",
                         color = if (bargainStatus == "Accepted") Color(0xFF4CAF50) else MainColor,
@@ -267,18 +254,10 @@ fun CartItemCard(
             }
 
             if (bargainStatus == "Counter") {
-                // NEGOTIATION OPTIONS
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = {
-                            // Corrected parameters: Passing the seller's counter price as the new final price
-                            bargainViewModel.updateStatus(
-                                buyerId = userId,
-                                productId = item.productId,
-                                status = "Accepted",
-                                priceToSet = sellerCounterPrice,
-                                actorRole = "Buyer"
-                            )
+                            bargainViewModel.updateStatus(userId, item.productId, "Accepted", sellerCounterPrice, "Buyer")
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
@@ -293,15 +272,19 @@ fun CartItemCard(
                 }
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                    IconButton(modifier = Modifier.size(32.dp), onClick = {
-                        if (item.quantity > 1) cartViewModel.updateQuantity(userId, item.productId, item.quantity - 1) {}
-                    }) { Icon(Icons.Default.Remove, null, modifier = Modifier.size(18.dp)) }
+                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFF0F0F0)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(modifier = Modifier.size(32.dp), onClick = {
+                                if (item.quantity > 1) cartViewModel.updateQuantity(userId, item.productId, item.quantity - 1) {}
+                            }) { Icon(Icons.Default.Remove, null, modifier = Modifier.size(16.dp)) }
 
-                    Text("${item.quantity}", modifier = Modifier.padding(horizontal = 8.dp))
+                            Text("${item.quantity}", fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp))
 
-                    IconButton(modifier = Modifier.size(32.dp), onClick = {
-                        cartViewModel.updateQuantity(userId, item.productId, item.quantity + 1) {}
-                    }) { Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)) }
+                            IconButton(modifier = Modifier.size(32.dp), onClick = {
+                                cartViewModel.updateQuantity(userId, item.productId, item.quantity + 1) {}
+                            }) { Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp)) }
+                        }
+                    }
 
                     Spacer(Modifier.weight(1f))
 
@@ -324,6 +307,14 @@ fun CartItemCard(
         AlertDialog(
             onDismissRequest = { showBargainDialog = false },
             title = { Text(if(bargainStatus == "Counter") "New Counter Offer" else "Enter Your Offer") },
+            text = {
+                OutlinedTextField(
+                    value = offerAmount,
+                    onValueChange = { if (it.all { c -> c.isDigit() } ) offerAmount = it },
+                    label = { Text("NRP Amount") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+            },
             confirmButton = {
                 Button(onClick = {
                     if (offerAmount.isNotEmpty()) {
@@ -337,14 +328,42 @@ fun CartItemCard(
                     }
                 }) { Text("Send Offer") }
             },
-            text = {
-                OutlinedTextField(
-                    value = offerAmount,
-                    onValueChange = { if (it.all { c -> c.isDigit() } ) offerAmount = it },
-                    label = { Text("NRP Amount") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
+            dismissButton = {
+                TextButton(onClick = { showBargainDialog = false }) { Text("Cancel") }
             }
         )
+    }
+}
+
+@Composable
+fun CartBottomBar(total: Double, onCheckoutClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shadowElevation = 12.dp, 
+        color = Color.White
+    ) {
+        Row(
+            modifier = Modifier.padding(20.dp).navigationBarsPadding(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text("Total Amount", color = Color.Gray, fontSize = 14.sp)
+                Text(
+                    text = "NRP ${total.toInt()}", 
+                    fontWeight = FontWeight.Bold, 
+                    fontSize = 22.sp, 
+                    color = MainColor
+                )
+            }
+            Button(
+                onClick = onCheckoutClick,
+                colors = ButtonDefaults.buttonColors(containerColor = MainColor),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.height(50.dp).width(150.dp)
+            ) {
+                Text("Checkout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }

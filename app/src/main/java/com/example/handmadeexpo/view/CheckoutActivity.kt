@@ -2,7 +2,6 @@ package com.example.handmadeexpo.view
 
 import android.app.DatePickerDialog
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -52,14 +51,14 @@ class CheckoutActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // The CartScreen passes OrderItems that already contain the Accepted Bargain Price
+        // Retrieve items and the "from cart" flag
         val cartItems = intent.getSerializableExtra("cartItems") as? ArrayList<OrderItem>
         val isFromCart = intent.getBooleanExtra("isFromCart", false)
 
         val finalItems = if (cartItems != null && cartItems.isNotEmpty()) {
             cartItems.toList()
         } else {
-            // Logic for "Buy Now" from Product details (not from cart)
+            // "Buy Now" logic from Product Details
             val pId = intent.getStringExtra("productId") ?: ""
             val name = intent.getStringExtra("name") ?: "Unknown"
             val price = intent.getDoubleExtra("price", 0.0)
@@ -90,8 +89,7 @@ fun CheckoutUI(
     LaunchedEffect(Unit) { viewModel.fetchUserInfo() }
 
     val currentDate = remember {
-        val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-        sdf.format(Date())
+        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date())
     }
 
     var orderItems by remember { mutableStateOf(initialItems) }
@@ -114,7 +112,6 @@ fun CheckoutUI(
     val fetchedName by viewModel.currentUserName
     LaunchedEffect(fetchedName) { if (fetchedName.isNotEmpty()) customerName = fetchedName }
 
-    // Subtotal uses the price inside OrderItem (which we ensured is the Bargain price in CartScreen)
     val subtotal = orderItems.sumOf { it.price * it.quantity }
     val deliveryFee = if (orderItems.isNotEmpty()) 200.0 else 0.0
     val total = subtotal + deliveryFee
@@ -127,11 +124,14 @@ fun CheckoutUI(
             val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
             tempDeliveryDate = sdf.format(calendar.time)
         },
-        calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
     ).apply {
         datePicker.minDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1) }.timeInMillis
     }
 
+    // Stock Error Dialog
     if (showStockError) {
         AlertDialog(
             onDismissRequest = { showStockError = false },
@@ -146,26 +146,34 @@ fun CheckoutUI(
         )
     }
 
+    // Address/Shipping Dialog
     if (showAddressDialog) {
         AlertDialog(
             onDismissRequest = { showAddressDialog = false },
             title = { Text("Shipping Details") },
             text = {
                 Column {
-                    OutlinedTextField(value = tempAddress, onValueChange = { tempAddress = it }, label = { Text("Address") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(
+                        value = tempAddress,
+                        onValueChange = { tempAddress = it },
+                        label = { Text("Address") },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Complete delivery address") }
+                    )
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
                         value = tempPhone,
                         onValueChange = { if (it.all { c -> c.isDigit() } && it.length <= 10) tempPhone = it },
                         label = { Text("Phone Number") },
                         modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("10 digit mobile number") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
                         value = tempDeliveryDate,
                         onValueChange = { },
-                        label = { Text("Delivery Date") },
+                        label = { Text("Preferred Delivery Date") },
                         modifier = Modifier.fillMaxWidth().clickable { datePickerDialog.show() },
                         readOnly = true, enabled = false,
                         trailingIcon = { IconButton(onClick = { datePickerDialog.show() }) { Icon(Icons.Default.CalendarToday, null, tint = MainColor) } },
@@ -177,14 +185,19 @@ fun CheckoutUI(
                 Button(
                     onClick = {
                         if (tempAddress.isBlank() || tempPhone.length != 10 || tempDeliveryDate.isBlank()) {
-                            Toast.makeText(context, "Fill all details correctly", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Please fill all details correctly", Toast.LENGTH_SHORT).show()
                         } else {
-                            address = tempAddress; phoneNumber = tempPhone; deliveryDate = tempDeliveryDate
+                            address = tempAddress
+                            phoneNumber = tempPhone
+                            deliveryDate = tempDeliveryDate
                             showAddressDialog = false
                         }
                     },
                     colors = ButtonDefaults.buttonColors(MainColor)
                 ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddressDialog = false }) { Text("Cancel") }
             }
         )
     }
@@ -193,8 +206,12 @@ fun CheckoutUI(
         containerColor = cream,
         topBar = {
             TopAppBar(
-                title = { Text("Checkout", color = Color.White, fontWeight = FontWeight.Bold) },
-                navigationIcon = { IconButton(onClick = onBackClick) { Icon(painterResource(id = R.drawable.outline_arrow_back_ios_24), "Back", tint = Color.White) } },
+                title = { Text("Checkout (${orderItems.size})", color = Color.White, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(painterResource(id = R.drawable.outline_arrow_back_ios_24), "Back", tint = Color.White)
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MainColor)
             )
         },
@@ -203,26 +220,30 @@ fun CheckoutUI(
                 Box(modifier = Modifier.background(Color.White).padding(16.dp)) {
                     Button(
                         onClick = {
-                            if (address.isBlank() || phoneNumber.length != 10) {
+                            // Pre-order validation
+                            if (address.isBlank() || phoneNumber.length != 10 || deliveryDate.isBlank()) {
+                                tempAddress = address; tempPhone = phoneNumber; tempDeliveryDate = deliveryDate
                                 showAddressDialog = true
                                 return@Button
                             }
+
                             isPlacingOrder = true
                             val newOrder = OrderModel(
                                 customerName = customerName, address = address, phone = phoneNumber,
                                 items = orderItems, totalPrice = total, paymentMethod = selectedPaymentMethod,
                                 status = "Pending", orderDate = currentDate, deliveryDate = deliveryDate
                             )
+
                             viewModel.placeOrder(newOrder) { success, msg ->
                                 isPlacingOrder = false
                                 if (success) {
                                     val userId = FirebaseAuth.getInstance().currentUser?.uid
                                     if (userId != null) {
                                         val db = FirebaseDatabase.getInstance().reference
-                                        // 1. Remove cart items if ordered from cart
+                                        // 1. Clear Cart if needed
                                         if (isFromCart) db.child("carts").child(userId).removeValue()
-
-                                        // 2. IMPORTANT: Clean up Bargains for purchased items
+                                        
+                                        // 2. Clean up Bargains for purchased items
                                         orderItems.forEach { item ->
                                             db.child("Bargains").child(userId).child(item.productId).removeValue()
                                         }
@@ -240,26 +261,42 @@ fun CheckoutUI(
                         colors = ButtonDefaults.buttonColors(containerColor = MainColor),
                         enabled = !isPlacingOrder
                     ) {
-                        if (isPlacingOrder) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                        else Text("Place Order • NRP ${total.toInt()}", fontWeight = FontWeight.Bold)
+                        if (isPlacingOrder) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                        } else {
+                            Text("Place Order • NRP ${total.toInt()}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        }
                     }
                 }
             }
         }
-    ) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            // Shipping Details Section
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             item {
                 Text("Shipping Details", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Card(colors = CardDefaults.cardColors(containerColor = Color.White), modifier = Modifier.fillMaxWidth().clickable { showAddressDialog = true }) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        tempAddress = address; tempPhone = phoneNumber; tempDeliveryDate = deliveryDate
+                        showAddressDialog = true
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
                     Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(painterResource(id = R.drawable.baseline_add_location_24), null, tint = MainColor)
                         Spacer(Modifier.width(16.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(customerName.ifEmpty { "Customer" }, fontWeight = FontWeight.Bold)
-                            Text(if (address.isBlank()) "Add Shipping Info" else "$address, $phoneNumber", color = Gray, fontSize = 14.sp)
-                            if (deliveryDate.isNotEmpty()) {
-                                Text("Delivery by: $deliveryDate", color = MainColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(customerName.ifEmpty { "Customer" }, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            if (address.isBlank()) {
+                                Text("Tap to add shipping details...", color = Color.Red, fontSize = 14.sp)
+                            } else {
+                                Text("$address, $phoneNumber", color = Gray, fontSize = 14.sp)
+                                if (deliveryDate.isNotEmpty()) {
+                                    Text("Delivery by: $deliveryDate", color = MainColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
@@ -273,15 +310,14 @@ fun CheckoutUI(
                     if (orderItems.size > 1) {
                         orderItems = orderItems.toMutableList().apply { remove(item) }
                     } else {
-                        onBackClick() // Exit checkout if no items left
+                        onBackClick()
                     }
                 })
             }
 
-            // Payment and Summary sections remain the same
             item {
                 Text("Payment Method", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp)) {
                     Column(Modifier.padding(8.dp)) {
                         PaymentOptionRow("Cash on Delivery", "COD", selectedPaymentMethod) { selectedPaymentMethod = it }
                         PaymentOptionRow("eSewa Wallet", "eSewa", selectedPaymentMethod) { selectedPaymentMethod = it }
@@ -291,11 +327,11 @@ fun CheckoutUI(
 
             item {
                 Text("Order Summary", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp)) {
                     Column(Modifier.padding(16.dp)) {
                         PriceRow("Subtotal", "NRP ${subtotal.toInt()}")
                         PriceRow("Delivery Fee", "NRP ${deliveryFee.toInt()}")
-                        HorizontalDivider(Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
+                        HorizontalDivider(Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = Color(0xFFEEEEEE))
                         PriceRow("Total Amount", "NRP ${total.toInt()}", isTotal = true)
                     }
                 }
@@ -306,26 +342,31 @@ fun CheckoutUI(
 
 @Composable
 fun OrderItemRow(item: OrderItem, onDeleteClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp)
+    ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
                 model = item.imageUrl,
                 contentDescription = null,
                 modifier = Modifier.size(60.dp).clip(RoundedCornerShape(8.dp)).background(Color.LightGray),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                error = painterResource(R.drawable.img_1)
             )
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
-                Text(item.productName, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                // This will automatically show the bargain price because CartScreen passed it here
-                Text("NRP ${item.price.toInt()} x ${item.quantity}", color = MainColor, fontWeight = FontWeight.Bold)
+                Text(item.productName, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1)
+                Text("NRP ${item.price.toInt()} x ${item.quantity}", color = MainColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
-            IconButton(onClick = onDeleteClick) { Icon(Icons.Default.Delete, null, tint = Color.Red.copy(0.6f)) }
+            IconButton(onClick = onDeleteClick) {
+                Icon(Icons.Default.Delete, null, tint = Color.Red.copy(0.6f))
+            }
         }
     }
 }
 
-// ... PaymentOptionRow and PriceRow remain the same as your provided code ...
 @Composable
 fun PriceRow(label: String, value: String, isTotal: Boolean = false) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -336,8 +377,12 @@ fun PriceRow(label: String, value: String, isTotal: Boolean = false) {
 
 @Composable
 fun PaymentOptionRow(label: String, value: String, selectedValue: String, onSelect: (String) -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable { onSelect(value) }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        RadioButton(selected = (value == selectedValue), onClick = { onSelect(value) }, colors = RadioButtonDefaults.colors(selectedColor = MainColor))
-        Text(label, modifier = Modifier.padding(start = 8.dp))
+    Row(
+        Modifier.fillMaxWidth().clickable { onSelect(value) }.padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = (value == selectedValue), onClick = { onSelect(value) })
+        Spacer(Modifier.width(8.dp))
+        Text(label, fontSize = 16.sp)
     }
 }
