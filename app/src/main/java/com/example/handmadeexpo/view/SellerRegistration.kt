@@ -186,6 +186,7 @@ fun SellerRegisterScreen() {
                             !panNumber.matches(Regex("^[0-9]+$")) -> Toast.makeText(context, "PAN number must contain only digits", Toast.LENGTH_SHORT).show()
                             email.isBlank() -> Toast.makeText(context, "Email is required", Toast.LENGTH_SHORT).show()
                             AdminEmailValidator.isReservedEmail(email) -> Toast.makeText(context, AdminEmailValidator.getReservedEmailError(), Toast.LENGTH_SHORT).show()
+                            emailError != null -> Toast.makeText(context, emailError!!, Toast.LENGTH_SHORT).show()
                             phoneNumber.isBlank() -> Toast.makeText(context, "Phone number is required", Toast.LENGTH_SHORT).show()
                             !phoneNumber.matches(Regex("^[0-9]{10}$")) -> Toast.makeText(context, "Phone number must be 10 digits", Toast.LENGTH_SHORT).show()
                             password.isBlank() -> Toast.makeText(context, "Password is required", Toast.LENGTH_SHORT).show()
