@@ -25,7 +25,7 @@ class AdminDashboardActivity : ComponentActivity() {
         Log.d("AdminDashboard", "onCreate called")
 
         setContent {
-            // Create ViewModel manually to avoid composition issues
+            // State-hoisted ViewModel to maintain data during recomposition
             val viewModel = remember { AdminViewModel() }
             AdminDashboardScreen(viewModel)
         }
@@ -35,6 +35,7 @@ class AdminDashboardActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDashboardScreen(adminViewModel: AdminViewModel) {
+    // Tab Index: 0=Home, 1=Verify, 2=Users, 3=Products, 4=Reports
     var selectedTab by remember { mutableIntStateOf(0) }
 
     // Log for debugging
@@ -97,17 +98,26 @@ fun AdminDashboardScreen(adminViewModel: AdminViewModel) {
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (selectedTab) {
-                0 -> AdminOverviewSimple(adminViewModel)
+                0 -> AdminOverviewSimple(
+                    viewModel = adminViewModel,
+                    onUserClick = { selectedTab = 2 },
+                    onProductClick = { selectedTab = 3 }
+                )
                 1 -> VerificationHubSimple(adminViewModel)
                 2 -> AdminUserListScreen(adminViewModel)
                 3 -> AdminProductListScreen(adminViewModel)
+                4 -> AdminReportScreen()
             }
         }
     }
 }
 
 @Composable
-fun AdminOverviewSimple(viewModel: AdminViewModel) {
+fun AdminOverviewSimple(
+    viewModel: AdminViewModel,
+    onUserClick: () -> Unit,
+    onProductClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -116,7 +126,6 @@ fun AdminOverviewSimple(viewModel: AdminViewModel) {
         Text("System Statistics", fontWeight = FontWeight.Bold, fontSize = 20.sp)
         Spacer(Modifier.height(16.dp))
 
-        // Show loading or data
         if (viewModel.isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -129,11 +138,9 @@ fun AdminOverviewSimple(viewModel: AdminViewModel) {
                 }
             }
         } else {
-            // Statistics Cards
             val totalUsers = viewModel.sellers.size + viewModel.buyers.size
             val totalPending = viewModel.pendingSellers.size + viewModel.pendingProducts.size
 
-            // Pending Card (if any)
             if (totalPending > 0) {
                 SimpleStatCard(
                     label = "Pending Verification",
@@ -143,62 +150,37 @@ fun AdminOverviewSimple(viewModel: AdminViewModel) {
                 Spacer(Modifier.height(12.dp))
             }
 
-            // Total Users
             SimpleStatCard(
                 label = "Total Users",
                 count = totalUsers.toString(),
-                color = Color(0xFF6200EE)
+                color = Color(0xFF6200EE),
+                modifier = Modifier.fillMaxWidth().clickable { onUserClick() }
             )
             Spacer(Modifier.height(12.dp))
 
-            // Total Products
             SimpleStatCard(
                 label = "Total Products",
                 count = viewModel.products.size.toString(),
-                color = Color(0xFF2196F3)
+                color = Color(0xFF2196F3),
+                modifier = Modifier.fillMaxWidth().clickable { onProductClick() }
             )
             Spacer(Modifier.height(12.dp))
 
-            // Sellers and Buyers Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                SimpleStatCard(
+                SmallStatCard(
                     label = "Sellers",
                     count = viewModel.sellers.size.toString(),
                     color = Color(0xFFFF9800),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).clickable { onUserClick() }
                 )
-                SimpleStatCard(
+                SmallStatCard(
                     label = "Buyers",
                     count = viewModel.buyers.size.toString(),
                     color = Color(0xFF4CAF50),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            // Verification Overview
-            Text("Verification Stats", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Spacer(Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                SmallStatCard(
-                    label = "Pending\nSellers",
-                    count = viewModel.pendingSellers.size.toString(),
-                    color = Color(0xFFFF9800),
-                    modifier = Modifier.weight(1f)
-                )
-                SmallStatCard(
-                    label = "Pending\nProducts",
-                    count = viewModel.pendingProducts.size.toString(),
-                    color = Color(0xFFFF9800),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).clickable { onUserClick() }
                 )
             }
         }
@@ -214,9 +196,7 @@ fun SimpleStatCard(
 ) {
     Card(
         modifier = modifier.height(100.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = color.copy(alpha = 0.1f)
-        ),
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(
@@ -224,17 +204,8 @@ fun SimpleStatCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                count,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
-            Text(
-                label,
-                fontSize = 14.sp,
-                color = Color.Gray
-            )
+            Text(count, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(label, fontSize = 14.sp, color = Color.Gray)
         }
     }
 }
@@ -248,9 +219,7 @@ fun SmallStatCard(
 ) {
     Card(
         modifier = modifier.height(80.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = color.copy(alpha = 0.1f)
-        ),
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(
@@ -258,18 +227,8 @@ fun SmallStatCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                count,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
-            Text(
-                label,
-                fontSize = 11.sp,
-                color = Color.Gray,
-                maxLines = 2
-            )
+            Text(count, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(label, fontSize = 11.sp, color = Color.Gray, maxLines = 2)
         }
     }
 }
@@ -312,5 +271,19 @@ fun VerificationHubSimple(viewModel: AdminViewModel) {
             0 -> SellerVerificationScreen(viewModel)
             1 -> ProductVerificationScreen(viewModel)
         }
+    }
+}
+
+@Composable
+fun AdminReportScreen() {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Reports & Complaints", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        Text("No active reports to display.", color = Color.Gray, fontSize = 14.sp)
     }
 }

@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,85 +15,89 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.handmadeexpo.repo.ChatRepoImpl
 import com.google.firebase.database.*
 
 @Composable
-fun ChatListContent(sellerId: String, onChatSelected: (String, String, String) -> Unit) {
-    val database = FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId)
-    var activeChats by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+fun SellerChatListScreen(
+    currentUserId: String, // Matches the call in SellerDashboard
+    onChatClick: (String, String, String) -> Unit // Matches the call in SellerDashboard
+) {
 
-    LaunchedEffect(sellerId) {
-        database.addValueEventListener(object : ValueEventListener {
+    val database = FirebaseDatabase.getInstance().getReference("seller_inbox").child(currentUserId)
+
+    var activeChats by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(currentUserId) {
+        val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val list = snapshot.children.mapNotNull { it.value as? Map<String, Any> }
+                // Sort by timestamp descending (newest first)
                 activeChats = list.sortedByDescending { it["timestamp"] as? Long ?: 0L }
+                isLoading = false
             }
-            override fun onCancelled(error: DatabaseError) {}
-        })
-    }
-
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(activeChats) { chat ->
-            val bId = chat["participantId"].toString()
-            val cId = chat["chatId"].toString()
-
-            var buyerName by remember { mutableStateOf("Loading...") }
-            LaunchedEffect(bId) {
-                FirebaseDatabase.getInstance().getReference("buyers").child(bId).child("name")
-                    .get().addOnSuccessListener { buyerName = it.value?.toString() ?: "Customer" }
-            }
-
-            ListItem(
-                modifier = Modifier.clickable { onChatSelected(cId, bId, buyerName) },
-                leadingContent = {
-                    Box(Modifier.size(40.dp).background(Color.LightGray, CircleShape), Alignment.Center) {
-                        Icon(Icons.Default.Person, null)
-                    }
-                },
-                headlineContent = { Text(buyerName, fontWeight = FontWeight.Bold) },
-                supportingContent = { Text(chat["lastMessage"].toString(), maxLines = 1) }
-            )
-        }
-    }
-}
-
-@Composable
-fun SellerReplyView(chatId: String, buyerId: String, sellerId: String) {
-    val repo = remember { ChatRepoImpl() }
-
-    // FIX: Variable initialized at the top level of the Composable
-    var messageText by remember { mutableStateOf("") }
-    val messages by repo.listenForMessages(chatId).collectAsState(initial = emptyList())
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(modifier = Modifier.weight(1f).padding(8.dp)) {
-            items(messages) { msg ->
-                val isMe = msg.senderId == sellerId
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = if (isMe) Alignment.CenterEnd else Alignment.CenterStart) {
-                    Surface(
-                        color = if (isMe) Color(0xFFFFE0B2) else Color(0xFFEEEEEE),
-                        shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.padding(4.dp)
-                    ) {
-                        Text(msg.message, modifier = Modifier.padding(8.dp))
-                    }
-                }
+            override fun onCancelled(error: DatabaseError) {
+                isLoading = false
             }
         }
-        Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextField(
-                value = messageText,
-                onValueChange = { messageText = it },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Type a reply...") }
-            )
-            IconButton(onClick = {
-                if (messageText.isNotBlank()) {
-                    repo.sendMessage(chatId, sellerId, buyerId, messageText)
-                    messageText = ""
+        database.addValueEventListener(listener)
+
+        // Cleanup listener when leaving screen is not strictly necessary for addValueEventListener
+        // inside LaunchedEffect without a DisposableEffect, but good practice.
+    }
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else if (activeChats.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No messages yet", color = Color.Gray)
+        }
+    } else {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(activeChats) { chat ->
+                // Safely extract data
+                val buyerId = chat["participantId"]?.toString() ?: ""
+                val chatId = chat["chatId"]?.toString() ?: ""
+                val lastMessage = chat["lastMessage"]?.toString() ?: "No message"
+
+                // Fetch Buyer Name State
+                var buyerName by remember { mutableStateOf("Loading...") }
+
+                LaunchedEffect(buyerId) {
+                    if (buyerId.isNotEmpty()) {
+                        FirebaseDatabase.getInstance().getReference("buyers").child(buyerId).child("name")
+                            .get().addOnSuccessListener {
+                                buyerName = it.value?.toString() ?: "Customer"
+                            }
+                    }
                 }
-            }) { Icon(Icons.Default.Send, null, tint = Color(0xFFE65100)) }
+
+                ListItem(
+                    modifier = Modifier.clickable {
+                        // Call the navigation callback
+                        onChatClick(chatId, buyerId, buyerName)
+                    },
+                    leadingContent = {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(Color.LightGray, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Person, contentDescription = null, tint = Color.White)
+                        }
+                    },
+                    headlineContent = {
+                        Text(text = buyerName, fontWeight = FontWeight.Bold)
+                    },
+                    supportingContent = {
+                        Text(text = lastMessage, maxLines = 1, color = Color.Gray)
+                    }
+                )
+                HorizontalDivider()
+            }
         }
     }
 }

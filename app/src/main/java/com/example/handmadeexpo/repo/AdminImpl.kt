@@ -16,20 +16,18 @@ class AdminImpl : AdminRepo {
 
                 for (childSnapshot in snapshot.children) {
                     try {
-                        // Try to parse as SellerModel
+                        // Combined Crash Protection: Safely parse and log errors
                         val seller = childSnapshot.getValue(SellerModel::class.java)
                         if (seller != null) {
                             list.add(seller)
                         } else {
-                            Log.w("AdminImpl", "Null seller at: ${childSnapshot.key}")
+                            Log.w("AdminImpl", "Null seller at key: ${childSnapshot.key}")
                         }
                     } catch (e: Exception) {
-                        // Log the error but continue processing other sellers
-                        Log.e("AdminImpl", "Error parsing seller ${childSnapshot.key}: ${e.message}")
-                        Log.e("AdminImpl", "Data: ${childSnapshot.value}")
+                        Log.e("AdminImpl", "Skipping bad Seller data at key: ${childSnapshot.key}. Error: ${e.message}")
+                        Log.e("AdminImpl", "Raw Data: ${childSnapshot.value}")
                     }
                 }
-
                 Log.d("AdminImpl", "Successfully loaded ${list.size} sellers")
                 onResult(list)
             }
@@ -52,13 +50,12 @@ class AdminImpl : AdminRepo {
                         if (buyer != null) {
                             list.add(buyer)
                         } else {
-                            Log.w("AdminImpl", "Null buyer at: ${childSnapshot.key}")
+                            Log.w("AdminImpl", "Null buyer at key: ${childSnapshot.key}")
                         }
                     } catch (e: Exception) {
-                        Log.e("AdminImpl", "Error parsing buyer ${childSnapshot.key}: ${e.message}")
+                        Log.e("AdminImpl", "Skipping bad Buyer data at key: ${childSnapshot.key}. Error: ${e.message}")
                     }
                 }
-
                 Log.d("AdminImpl", "Successfully loaded ${list.size} buyers")
                 onResult(list)
             }
@@ -77,7 +74,8 @@ class AdminImpl : AdminRepo {
         }
     }
 
-    // Seller Verification Methods
+    // --- Seller Verification Methods (From Development) ---
+
     override fun updateSellerVerification(
         sellerId: String,
         status: String,
@@ -94,107 +92,42 @@ class AdminImpl : AdminRepo {
             }
     }
 
-    override fun getPendingSellers(onResult: (List<SellerModel>) -> Unit) {
+    override fun getPendingSellers(onResult: (List<SellerModel>) -> Unit) = getSellersByStatus("Pending", onResult)
+    override fun getVerifiedSellers(onResult: (List<SellerModel>) -> Unit) = getSellersByStatus("Verified", onResult)
+    override fun getRejectedSellers(onResult: (List<SellerModel>) -> Unit) = getSellersByStatus("Rejected", onResult)
+
+    private fun getSellersByStatus(status: String, onResult: (List<SellerModel>) -> Unit) {
         database.child("Seller")
             .orderByChild("verificationStatus")
-            .equalTo("Pending")
+            .equalTo(status)
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val list = mutableListOf<SellerModel>()
-
                     for (childSnapshot in snapshot.children) {
                         try {
-                            val seller = childSnapshot.getValue(SellerModel::class.java)
-                            if (seller != null) {
-                                list.add(seller)
-                            }
+                            childSnapshot.getValue(SellerModel::class.java)?.let { list.add(it) }
                         } catch (e: Exception) {
-                            Log.e("AdminImpl", "Error parsing pending seller: ${e.message}")
+                            Log.e("AdminImpl", "Error parsing $status seller: ${e.message}")
                         }
                     }
-
-                    Log.d("AdminImpl", "Pending sellers: ${list.size}")
                     onResult(list)
                 }
-
                 override fun onCancelled(error: DatabaseError) {
-                    Log.e("AdminImpl", "getPendingSellers cancelled: ${error.message}")
+                    Log.e("AdminImpl", "Query $status sellers cancelled: ${error.message}")
                     onResult(emptyList())
                 }
             })
     }
 
-    override fun getVerifiedSellers(onResult: (List<SellerModel>) -> Unit) {
-        database.child("Seller")
-            .orderByChild("verificationStatus")
-            .equalTo("Verified")
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val list = mutableListOf<SellerModel>()
+    // --- Product Verification Methods (From Development) ---
 
-                    for (childSnapshot in snapshot.children) {
-                        try {
-                            val seller = childSnapshot.getValue(SellerModel::class.java)
-                            if (seller != null) {
-                                list.add(seller)
-                            }
-                        } catch (e: Exception) {
-                            Log.e("AdminImpl", "Error parsing verified seller: ${e.message}")
-                        }
-                    }
-
-                    Log.d("AdminImpl", "Verified sellers: ${list.size}")
-                    onResult(list)
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    Log.e("AdminImpl", "getVerifiedSellers cancelled: ${error.message}")
-                    onResult(emptyList())
-                }
-            })
-    }
-
-    override fun getRejectedSellers(onResult: (List<SellerModel>) -> Unit) {
-        database.child("Seller")
-            .orderByChild("verificationStatus")
-            .equalTo("Rejected")
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val list = mutableListOf<SellerModel>()
-
-                    for (childSnapshot in snapshot.children) {
-                        try {
-                            val seller = childSnapshot.getValue(SellerModel::class.java)
-                            if (seller != null) {
-                                list.add(seller)
-                            }
-                        } catch (e: Exception) {
-                            Log.e("AdminImpl", "Error parsing rejected seller: ${e.message}")
-                        }
-                    }
-
-                    Log.d("AdminImpl", "Rejected sellers: ${list.size}")
-                    onResult(list)
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    Log.e("AdminImpl", "getRejectedSellers cancelled: ${error.message}")
-                    onResult(emptyList())
-                }
-            })
-    }
-
-    // Product Verification Methods
     override fun updateProductVerification(
         productId: String,
         status: String,
         rejectionReason: String,
         callback: (Boolean, String) -> Unit
     ) {
-        val updates = mutableMapOf<String, Any>(
-            "verificationStatus" to status
-        )
-
+        val updates = mutableMapOf<String, Any>("verificationStatus" to status)
         if (status == "Rejected" && rejectionReason.isNotEmpty()) {
             updates["rejectionReason"] = rejectionReason
         }
@@ -210,91 +143,27 @@ class AdminImpl : AdminRepo {
             }
     }
 
-    override fun getPendingProducts(onResult: (List<ProductModel>) -> Unit) {
+    override fun getPendingProducts(onResult: (List<ProductModel>) -> Unit) = getProductsByStatus("Pending", onResult)
+    override fun getVerifiedProducts(onResult: (List<ProductModel>) -> Unit) = getProductsByStatus("Verified", onResult)
+    override fun getRejectedProducts(onResult: (List<ProductModel>) -> Unit) = getProductsByStatus("Rejected", onResult)
+
+    private fun getProductsByStatus(status: String, onResult: (List<ProductModel>) -> Unit) {
         database.child("products")
             .orderByChild("verificationStatus")
-            .equalTo("Pending")
+            .equalTo(status)
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val list = mutableListOf<ProductModel>()
-
                     for (childSnapshot in snapshot.children) {
                         try {
-                            val product = childSnapshot.getValue(ProductModel::class.java)
-                            if (product != null) {
-                                list.add(product)
-                            }
+                            childSnapshot.getValue(ProductModel::class.java)?.let { list.add(it) }
                         } catch (e: Exception) {
-                            Log.e("AdminImpl", "Error parsing pending product: ${e.message}")
+                            Log.e("AdminImpl", "Error parsing $status product: ${e.message}")
                         }
                     }
-
-                    Log.d("AdminImpl", "Pending products: ${list.size}")
                     onResult(list)
                 }
-
                 override fun onCancelled(error: DatabaseError) {
-                    Log.e("AdminImpl", "getPendingProducts cancelled: ${error.message}")
-                    onResult(emptyList())
-                }
-            })
-    }
-
-    override fun getVerifiedProducts(onResult: (List<ProductModel>) -> Unit) {
-        database.child("products")
-            .orderByChild("verificationStatus")
-            .equalTo("Verified")
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val list = mutableListOf<ProductModel>()
-
-                    for (childSnapshot in snapshot.children) {
-                        try {
-                            val product = childSnapshot.getValue(ProductModel::class.java)
-                            if (product != null) {
-                                list.add(product)
-                            }
-                        } catch (e: Exception) {
-                            Log.e("AdminImpl", "Error parsing verified product: ${e.message}")
-                        }
-                    }
-
-                    Log.d("AdminImpl", "Verified products: ${list.size}")
-                    onResult(list)
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    Log.e("AdminImpl", "getVerifiedProducts cancelled: ${error.message}")
-                    onResult(emptyList())
-                }
-            })
-    }
-
-    override fun getRejectedProducts(onResult: (List<ProductModel>) -> Unit) {
-        database.child("products")
-            .orderByChild("verificationStatus")
-            .equalTo("Rejected")
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val list = mutableListOf<ProductModel>()
-
-                    for (childSnapshot in snapshot.children) {
-                        try {
-                            val product = childSnapshot.getValue(ProductModel::class.java)
-                            if (product != null) {
-                                list.add(product)
-                            }
-                        } catch (e: Exception) {
-                            Log.e("AdminImpl", "Error parsing rejected product: ${e.message}")
-                        }
-                    }
-
-                    Log.d("AdminImpl", "Rejected products: ${list.size}")
-                    onResult(list)
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    Log.e("AdminImpl", "getRejectedProducts cancelled: ${error.message}")
                     onResult(emptyList())
                 }
             })
