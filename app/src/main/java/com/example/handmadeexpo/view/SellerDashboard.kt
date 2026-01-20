@@ -54,6 +54,9 @@ fun SellerDashboardBody(sellerId: String) {
     var changingPassword by remember { mutableStateOf(false) }
     var chatCount by remember { mutableStateOf(0) }
 
+    // NEW: State to hold the seller's name fetched from Firebase
+    var sellerName by remember { mutableStateOf("Seller") }
+
     // Triple stores: (ChatID, BuyerID, BuyerName)
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
@@ -62,7 +65,17 @@ fun SellerDashboardBody(sellerId: String) {
     val repo = remember { SellerRepoImpl() }
     val viewModel = remember { SellerViewModel(repo) }
 
-    // --- 2. FIREBASE LISTENER FOR BADGE ---
+    // --- 2. FIREBASE LISTENERS ---
+
+    // Fetch Seller Name from Firebase to use in Bargain Logic
+    LaunchedEffect(sellerId) {
+        FirebaseDatabase.getInstance().getReference("Sellers").child(sellerId).child("name")
+            .get().addOnSuccessListener { snapshot ->
+                sellerName = snapshot.value?.toString() ?: "Seller"
+            }
+    }
+
+    // Badge Listener for Incoming Chats
     val inboxRef = remember { FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId) }
     LaunchedEffect(sellerId) {
         inboxRef.addValueEventListener(object : ValueEventListener {
@@ -159,7 +172,9 @@ fun SellerDashboardBody(sellerId: String) {
                 .padding(padding)
         ) {
             when (selectedIndex) {
-                0 -> SellerHomeScreen(sellerId)
+                // FIXED: Now passing both sellerId and the fetched sellerName
+                0 -> SellerHomeScreen(sellerId = sellerId, sellerName = sellerName)
+
                 1 -> InventoryScreen(sellerId)
                 2 -> {
                     if (activeChatData != null) {

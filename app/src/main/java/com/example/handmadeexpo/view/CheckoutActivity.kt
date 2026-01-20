@@ -51,12 +51,14 @@ class CheckoutActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Retrieve items and the "from cart" flag
         val cartItems = intent.getSerializableExtra("cartItems") as? ArrayList<OrderItem>
-        val isFromCart = intent.getBooleanExtra("isFromCart", false) // NEW: Flag to know if from cart
+        val isFromCart = intent.getBooleanExtra("isFromCart", false)
 
         val finalItems = if (cartItems != null && cartItems.isNotEmpty()) {
             cartItems.toList()
         } else {
+            // "Buy Now" logic from Product Details
             val pId = intent.getStringExtra("productId") ?: ""
             val name = intent.getStringExtra("name") ?: "Unknown"
             val price = intent.getDoubleExtra("price", 0.0)
@@ -67,7 +69,7 @@ class CheckoutActivity : ComponentActivity() {
         setContent {
             CheckoutUI(
                 initialItems = finalItems,
-                isFromCart = isFromCart, // NEW: Pass the flag
+                isFromCart = isFromCart,
                 onBackClick = { finish() }
             )
         }
@@ -78,7 +80,7 @@ class CheckoutActivity : ComponentActivity() {
 @Composable
 fun CheckoutUI(
     initialItems: List<OrderItem>,
-    isFromCart: Boolean, // NEW: Flag to know if from cart
+    isFromCart: Boolean,
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -87,8 +89,7 @@ fun CheckoutUI(
     LaunchedEffect(Unit) { viewModel.fetchUserInfo() }
 
     val currentDate = remember {
-        val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-        sdf.format(Date())
+        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date())
     }
 
     var orderItems by remember { mutableStateOf(initialItems) }
@@ -116,7 +117,6 @@ fun CheckoutUI(
     val total = subtotal + deliveryFee
 
     val calendar = Calendar.getInstance()
-
     val datePickerDialog = DatePickerDialog(
         context,
         { _, year, month, dayOfMonth ->
@@ -127,50 +127,26 @@ fun CheckoutUI(
         calendar.get(Calendar.YEAR),
         calendar.get(Calendar.MONTH),
         calendar.get(Calendar.DAY_OF_MONTH)
-    )
+    ).apply {
+        datePicker.minDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1) }.timeInMillis
+    }
 
-    datePickerDialog.datePicker.minDate = Calendar.getInstance().apply {
-        add(Calendar.DAY_OF_MONTH, 1)
-    }.timeInMillis
-
+    // Stock Error Dialog
     if (showStockError) {
         AlertDialog(
             onDismissRequest = { showStockError = false },
-            icon = {
-                Icon(
-                    Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = Color(0xFFFF9800),
-                    modifier = Modifier.size(48.dp)
-                )
-            },
-            title = {
-                Text(
-                    "Stock Unavailable",
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFF9800)
-                )
-            },
-            text = {
-                Text(
-                    stockErrorMessage,
-                    textAlign = TextAlign.Center
-                )
-            },
+            icon = { Icon(Icons.Default.Warning, null, tint = Color(0xFFFF9800), modifier = Modifier.size(48.dp)) },
+            title = { Text("Stock Unavailable", fontWeight = FontWeight.Bold, color = Color(0xFFFF9800)) },
+            text = { Text(stockErrorMessage, textAlign = TextAlign.Center) },
             confirmButton = {
-                Button(
-                    onClick = {
-                        showStockError = false
-                        onBackClick()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MainColor)
-                ) {
+                Button(onClick = { showStockError = false; onBackClick() }, colors = ButtonDefaults.buttonColors(containerColor = MainColor)) {
                     Text("OK")
                 }
             }
         )
     }
 
+    // Address/Shipping Dialog
     if (showAddressDialog) {
         AlertDialog(
             onDismissRequest = { showAddressDialog = false },
@@ -182,62 +158,34 @@ fun CheckoutUI(
                         onValueChange = { tempAddress = it },
                         label = { Text("Address") },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Enter your complete address") }
+                        placeholder = { Text("Complete delivery address") }
                     )
-
                     Spacer(modifier = Modifier.height(10.dp))
-
                     OutlinedTextField(
                         value = tempPhone,
-                        onValueChange = {
-                            if (it.all { char -> char.isDigit() } && it.length <= 10) {
-                                tempPhone = it
-                            }
-                        },
+                        onValueChange = { if (it.all { c -> c.isDigit() } && it.length <= 10) tempPhone = it },
                         label = { Text("Phone Number") },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("10 digit mobile number") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
-
                     Spacer(modifier = Modifier.height(10.dp))
-
                     OutlinedTextField(
                         value = tempDeliveryDate,
                         onValueChange = { },
                         label = { Text("Preferred Delivery Date") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { datePickerDialog.show() },
-                        readOnly = true,
-                        enabled = false,
-                        placeholder = { Text("Tap to select date") },
-                        trailingIcon = {
-                            IconButton(onClick = { datePickerDialog.show() }) {
-                                Icon(
-                                    imageVector = Icons.Default.CalendarToday,
-                                    contentDescription = "Select Date",
-                                    tint = MainColor
-                                )
-                            }
-                        },
-                        colors = TextFieldDefaults.colors(
-                            disabledTextColor = TextBlack,
-                            disabledContainerColor = Color.Transparent,
-                            disabledLabelColor = Gray
-                        )
+                        modifier = Modifier.fillMaxWidth().clickable { datePickerDialog.show() },
+                        readOnly = true, enabled = false,
+                        trailingIcon = { IconButton(onClick = { datePickerDialog.show() }) { Icon(Icons.Default.CalendarToday, null, tint = MainColor) } },
+                        colors = TextFieldDefaults.colors(disabledTextColor = TextBlack, disabledContainerColor = Color.Transparent)
                     )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        if (tempAddress.isBlank()) {
-                            Toast.makeText(context, "Please enter an address", Toast.LENGTH_SHORT).show()
-                        } else if (tempPhone.length != 10) {
-                            Toast.makeText(context, "Phone number must be exactly 10 digits", Toast.LENGTH_SHORT).show()
-                        } else if (tempDeliveryDate.isBlank()) {
-                            Toast.makeText(context, "Please select a delivery date", Toast.LENGTH_SHORT).show()
+                        if (tempAddress.isBlank() || tempPhone.length != 10 || tempDeliveryDate.isBlank()) {
+                            Toast.makeText(context, "Please fill all details correctly", Toast.LENGTH_SHORT).show()
                         } else {
                             address = tempAddress
                             phoneNumber = tempPhone
@@ -245,7 +193,7 @@ fun CheckoutUI(
                             showAddressDialog = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MainColor)
+                    colors = ButtonDefaults.buttonColors(MainColor)
                 ) { Text("Save") }
             },
             dismissButton = {
@@ -272,66 +220,35 @@ fun CheckoutUI(
                 Box(modifier = Modifier.background(Color.White).padding(16.dp)) {
                     Button(
                         onClick = {
-                            if (address.isBlank()) {
-                                Toast.makeText(context, "Please enter shipping address!", Toast.LENGTH_SHORT).show()
-                                tempAddress = address; tempPhone = phoneNumber; tempDeliveryDate = deliveryDate
-                                showAddressDialog = true
-                                return@Button
-                            }
-
-                            if (phoneNumber.length != 10 || !phoneNumber.all { it.isDigit() }) {
-                                Toast.makeText(context, "Phone must be valid 10 digits!", Toast.LENGTH_SHORT).show()
-                                tempAddress = address; tempPhone = phoneNumber; tempDeliveryDate = deliveryDate
-                                showAddressDialog = true
-                                return@Button
-                            }
-
-                            if (deliveryDate.isBlank()) {
-                                Toast.makeText(context, "Please select delivery date!", Toast.LENGTH_SHORT).show()
+                            // Pre-order validation
+                            if (address.isBlank() || phoneNumber.length != 10 || deliveryDate.isBlank()) {
                                 tempAddress = address; tempPhone = phoneNumber; tempDeliveryDate = deliveryDate
                                 showAddressDialog = true
                                 return@Button
                             }
 
                             isPlacingOrder = true
-                            Toast.makeText(context, "Validating stock...", Toast.LENGTH_SHORT).show()
-
                             val newOrder = OrderModel(
-                                customerName = customerName,
-                                address = address,
-                                phone = phoneNumber,
-                                items = orderItems,
-                                totalPrice = total,
-                                paymentMethod = selectedPaymentMethod,
-                                status = "Pending",
-                                orderDate = currentDate,
-                                deliveryDate = deliveryDate
+                                customerName = customerName, address = address, phone = phoneNumber,
+                                items = orderItems, totalPrice = total, paymentMethod = selectedPaymentMethod,
+                                status = "Pending", orderDate = currentDate, deliveryDate = deliveryDate
                             )
 
                             viewModel.placeOrder(newOrder) { success, msg ->
                                 isPlacingOrder = false
                                 if (success) {
-                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-
-                                    // NEW: Clear cart if order came from cart
-                                    if (isFromCart) {
-                                        val userId = FirebaseAuth.getInstance().currentUser?.uid
-                                        if (userId != null) {
-                                            // Clear the entire cart
-                                            FirebaseDatabase.getInstance()
-                                                .getReference("carts")
-                                                .child(userId)
-                                                .removeValue()
-                                                .addOnSuccessListener {
-                                                    Toast.makeText(
-                                                        context,
-                                                        "Cart cleared",
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
-                                                }
+                                    val userId = FirebaseAuth.getInstance().currentUser?.uid
+                                    if (userId != null) {
+                                        val db = FirebaseDatabase.getInstance().reference
+                                        // 1. Clear Cart if needed
+                                        if (isFromCart) db.child("carts").child(userId).removeValue()
+                                        
+                                        // 2. Clean up Bargains for purchased items
+                                        orderItems.forEach { item ->
+                                            db.child("Bargains").child(userId).child(item.productId).removeValue()
                                         }
                                     }
-
+                                    Toast.makeText(context, "Order Placed Successfully!", Toast.LENGTH_LONG).show()
                                     onBackClick()
                                 } else {
                                     stockErrorMessage = msg
@@ -345,98 +262,79 @@ fun CheckoutUI(
                         enabled = !isPlacingOrder
                     ) {
                         if (isPlacingOrder) {
-                            CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Processing...", fontSize = 16.sp)
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                         } else {
-                            Text("Place Order • NRP ${total.toInt()}", fontSize = 18.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("Place Order • NRP ${total.toInt()}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         }
                     }
                 }
             }
         }
     ) { paddingValues ->
-        if (orderItems.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Your checkout list is empty", color = Gray)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                item {
-                    Text("Shipping Details", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.clickable {
-                            tempAddress = address; tempPhone = phoneNumber; tempDeliveryDate = deliveryDate
-                            showAddressDialog = true
-                        }
-                    ) {
-                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(painterResource(id = R.drawable.baseline_add_location_24), null, tint = MainColor)
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(if (customerName.isEmpty()) "Name not set" else customerName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                if (address.isBlank()) {
-                                    Text("Tap to add shipping details...", color = Color.Red, fontSize = 14.sp)
-                                } else {
-                                    Text(address, color = Gray, fontSize = 14.sp)
-                                    Text(phoneNumber, color = Gray, fontSize = 14.sp)
-                                    if (deliveryDate.isNotBlank()) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(14.dp), tint = MainColor)
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text("Delivery: $deliveryDate", color = MainColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                                        }
-                                    }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                Text("Shipping Details", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        tempAddress = address; tempPhone = phoneNumber; tempDeliveryDate = deliveryDate
+                        showAddressDialog = true
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(painterResource(id = R.drawable.baseline_add_location_24), null, tint = MainColor)
+                        Spacer(Modifier.width(16.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(customerName.ifEmpty { "Customer" }, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            if (address.isBlank()) {
+                                Text("Tap to add shipping details...", color = Color.Red, fontSize = 14.sp)
+                            } else {
+                                Text("$address, $phoneNumber", color = Gray, fontSize = 14.sp)
+                                if (deliveryDate.isNotEmpty()) {
+                                    Text("Delivery by: $deliveryDate", color = MainColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
-                            Icon(painterResource(id = R.drawable.baseline_edit_24), "Edit", tint = Gray)
                         }
                     }
                 }
+            }
 
-                item { Text("Order Items", fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-                items(orderItems) { item ->
-                    OrderItemRow(item = item, onDeleteClick = { orderItems = orderItems.toMutableList().apply { remove(item) } })
-                    Spacer(modifier = Modifier.height(10.dp))
-                }
+            item { Text("Your Items", fontSize = 18.sp, fontWeight = FontWeight.Bold) }
 
-                item {
-                    Text("Payment Method", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
-                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp)) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            PaymentOptionRow("Cash on Delivery", "COD", selectedPaymentMethod) { selectedPaymentMethod = it }
-                            PaymentOptionRow("eSewa Wallet", "eSewa", selectedPaymentMethod) { selectedPaymentMethod = it }
-                        }
+            items(orderItems) { item ->
+                OrderItemRow(item, onDeleteClick = {
+                    if (orderItems.size > 1) {
+                        orderItems = orderItems.toMutableList().apply { remove(item) }
+                    } else {
+                        onBackClick()
+                    }
+                })
+            }
+
+            item {
+                Text("Payment Method", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp)) {
+                    Column(Modifier.padding(8.dp)) {
+                        PaymentOptionRow("Cash on Delivery", "COD", selectedPaymentMethod) { selectedPaymentMethod = it }
+                        PaymentOptionRow("eSewa Wallet", "eSewa", selectedPaymentMethod) { selectedPaymentMethod = it }
                     }
                 }
+            }
 
-                item {
-                    Text("Order Summary", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
-                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp)) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            PriceRow("Order Date", currentDate)
-                            if (deliveryDate.isNotBlank()) {
-                                PriceRow("Delivery Date", deliveryDate)
-                            }
-                            PriceRow("Subtotal", "NRP ${subtotal.toInt()}")
-                            PriceRow("Delivery Fee", "NRP ${deliveryFee.toInt()}")
-                            Divider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFEEEEEE))
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Total", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                                Text("NRP ${total.toInt()}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MainColor)
-                            }
-                        }
+            item {
+                Text("Order Summary", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(12.dp)) {
+                    Column(Modifier.padding(16.dp)) {
+                        PriceRow("Subtotal", "NRP ${subtotal.toInt()}")
+                        PriceRow("Delivery Fee", "NRP ${deliveryFee.toInt()}")
+                        HorizontalDivider(Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = Color(0xFFEEEEEE))
+                        PriceRow("Total Amount", "NRP ${total.toInt()}", isTotal = true)
                     }
                 }
-                item { Spacer(modifier = Modifier.height(16.dp)) }
             }
         }
     }
@@ -444,37 +342,47 @@ fun CheckoutUI(
 
 @Composable
 fun OrderItemRow(item: OrderItem, onDeleteClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(12.dp)).padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp)
     ) {
-        AsyncImage(model = item.imageUrl, contentDescription = null, contentScale = ContentScale.Crop,
-            modifier = Modifier.size(60.dp).clip(RoundedCornerShape(8.dp)).background(Color.LightGray),
-            error = painterResource(R.drawable.img_1))
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(item.productName, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = TextBlack, maxLines = 1)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("NRP ${item.price.toInt()}", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MainColor)
-                Text("  x ${item.quantity}", fontSize = 14.sp, color = Gray)
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            AsyncImage(
+                model = item.imageUrl,
+                contentDescription = null,
+                modifier = Modifier.size(60.dp).clip(RoundedCornerShape(8.dp)).background(Color.LightGray),
+                contentScale = ContentScale.Crop,
+                error = painterResource(R.drawable.img_1)
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(item.productName, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1)
+                Text("NRP ${item.price.toInt()} x ${item.quantity}", color = MainColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            }
+            IconButton(onClick = onDeleteClick) {
+                Icon(Icons.Default.Delete, null, tint = Color.Red.copy(0.6f))
             }
         }
-        IconButton(onClick = onDeleteClick) { Icon(imageVector = Icons.Default.Delete, contentDescription = "Remove", tint = Color.Red.copy(alpha = 0.6f)) }
+    }
+}
+
+@Composable
+fun PriceRow(label: String, value: String, isTotal: Boolean = false) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, fontSize = if (isTotal) 18.sp else 15.sp, fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal)
+        Text(value, color = if (isTotal) MainColor else TextBlack, fontSize = if (isTotal) 18.sp else 15.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 fun PaymentOptionRow(label: String, value: String, selectedValue: String, onSelect: (String) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().clickable { onSelect(value) }.padding(vertical = 4.dp, horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        RadioButton(selected = (value == selectedValue), onClick = { onSelect(value) }, colors = RadioButtonDefaults.colors(selectedColor = MainColor))
-        Text(text = label, fontSize = 15.sp, color = TextBlack, modifier = Modifier.padding(start = 8.dp))
-    }
-}
-
-@Composable
-fun PriceRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, fontSize = 15.sp, color = Gray)
-        Text(value, fontSize = 15.sp, color = TextBlack, fontWeight = FontWeight.Medium)
+    Row(
+        Modifier.fillMaxWidth().clickable { onSelect(value) }.padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = (value == selectedValue), onClick = { onSelect(value) })
+        Spacer(Modifier.width(8.dp))
+        Text(label, fontSize = 16.sp)
     }
 }
