@@ -1,5 +1,6 @@
 package com.example.handmadeexpo.view
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -45,6 +46,18 @@ fun BuyerProfileScreen(
     LaunchedEffect(Unit) {
         buyerId?.let {
             viewModel.getBuyerDetailsById(it)
+        }
+    }
+
+    // Debug: Log the actual data
+    LaunchedEffect(buyer) {
+        buyer?.let {
+            Log.d("ProfileScreen", "========== BUYER DATA ==========")
+            Log.d("ProfileScreen", "Name: ${it.buyerName}")
+            Log.d("ProfileScreen", "Email: ${it.buyerEmail}")
+            Log.d("ProfileScreen", "Phone: ${it.buyerPhoneNumber}")
+            Log.d("ProfileScreen", "Address: ${it.buyerAddress}")
+            Log.d("ProfileScreen", "================================")
         }
     }
 
@@ -114,7 +127,7 @@ fun BuyerProfileScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Spacer(modifier = Modifier.height(20.dp))
-                    
+
                     Text(
                         text = "Your Profile",
                         style = TextStyle(
@@ -134,7 +147,7 @@ fun BuyerProfileScreen(
                     )
 
                     Text(
-                        text = buyer?.buyerName ?: "",
+                        text = buyer?.buyerName ?: "No Name",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(8.dp)
@@ -149,17 +162,32 @@ fun BuyerProfileScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Profile Details Card
+                    // Profile Details Card - FIXED ORDER
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(20.dp),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.9f))
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
-                            BuyerProfileRow("Email", buyer?.buyerEmail ?: "")
-                            BuyerProfileRow("Phone", buyer?.buyerPhoneNumber ?: "")
-                            BuyerProfileRow("Address", buyer?.buyerAddress ?: "")
+                            // Email - using buyerEmail
+                            BuyerProfileRow(
+                                "Email",
+                                buyer?.buyerEmail ?: "Not provided"
+                            )
+
+                            // Phone - using buyerPhoneNumber (NOT buyerAddress!)
+                            BuyerProfileRow(
+                                "Phone",
+                                buyer?.buyerPhoneNumber ?: "Not provided"
+                            )
+
+                            // Address - using buyerAddress (NOT buyerPhoneNumber!)
+                            BuyerProfileRow(
+                                "Address",
+                                buyer?.buyerAddress ?: "Not provided"
+                            )
                         }
                     }
 
@@ -168,7 +196,8 @@ fun BuyerProfileScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.9f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             OutlinedButton(
@@ -225,8 +254,20 @@ fun BuyerProfileScreen(
 @Composable
 fun BuyerProfileRow(title: String, value: String) {
     Column(modifier = Modifier.padding(vertical = 6.dp)) {
-        Text(title, fontWeight = FontWeight.Bold)
-        Text(value, color = Color.DarkGray)
+        Text(
+            text = title,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            color = Color.DarkGray
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            fontSize = 16.sp,
+            color = Color.Black,
+            fontWeight = FontWeight.Normal
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
     }
 }
