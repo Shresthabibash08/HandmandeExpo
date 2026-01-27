@@ -55,11 +55,12 @@ fun DashboardBody(userId: String) {
     var changingPassword by remember { mutableStateOf(false) }
     var showAllSellers by remember { mutableStateOf(false) }
 
-    // --- REPORTING STATE (Used for Home Screen Reports) ---
+    // --- REPORTING STATE ---
     var reportProductId by remember { mutableStateOf<String?>(null) }
-    var reportSellerId by remember { mutableStateOf<String?>(null) }
+    var reportSellerId by remember { mutableStateOf<String?>(null) } 
+    var reportingChatUserId by remember { mutableStateOf<String?>(null) } 
 
-    // Chat State: (ChatID, SellerID, SellerName)
+    // Chat State
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
     // --- 2. INITIALIZE REPOS AND VIEWMODELS ---
@@ -81,21 +82,16 @@ fun DashboardBody(userId: String) {
     val isChatActive = selectedIndex == 1 && (activeChatData != null || showAllSellers)
     val isReportingProduct = reportProductId != null
     val isReportingSeller = reportSellerId != null
+    val isReportingChatUser = reportingChatUserId != null
     val isProfileOverlay = selectedIndex == 3 && (editing || changingPassword)
 
-    BackHandler(enabled = isChatActive || isReportingProduct || isReportingSeller || isProfileOverlay) {
+    BackHandler(enabled = isChatActive || isReportingProduct || isReportingSeller || isReportingChatUser || isProfileOverlay) {
         when {
-            // Priority 1: Close Report Screens
-            isReportingSeller -> reportSellerId = null
-            isReportingProduct -> reportProductId = null
-
-            // Priority 2: Close Chat Screen
+            reportingChatUserId != null -> reportingChatUserId = null
+            reportSellerId != null -> reportSellerId = null
+            reportProductId != null -> reportProductId = null
             activeChatData != null -> activeChatData = null
-
-            // Priority 3: Close "New Chat" List
             showAllSellers -> showAllSellers = false
-
-            // Priority 4: Close Profile Edits
             editing -> editing = false
             changingPassword -> changingPassword = false
         }
@@ -103,7 +99,7 @@ fun DashboardBody(userId: String) {
 
     Scaffold(
         topBar = {
-            if (reportProductId == null && reportSellerId == null) {
+            if (reportProductId == null && reportSellerId == null && reportingChatUserId == null) {
                 TopAppBar(
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MainColor,
@@ -124,7 +120,7 @@ fun DashboardBody(userId: String) {
             }
         },
         bottomBar = {
-            if (activeChatData == null && reportProductId == null && reportSellerId == null && !editing && !changingPassword) {
+            if (activeChatData == null && reportProductId == null && reportSellerId == null && reportingChatUserId == null && !editing && !changingPassword) {
                 NavigationBar {
                     listItems.forEachIndexed { index, item ->
                         NavigationBarItem(
@@ -137,6 +133,7 @@ fun DashboardBody(userId: String) {
                                 showAllSellers = false
                                 reportProductId = null
                                 reportSellerId = null
+                                reportingChatUserId = null
                                 if (index != 1) activeChatData = null
                             },
                             icon = { Icon(item.icon, contentDescription = item.label) },
@@ -147,6 +144,7 @@ fun DashboardBody(userId: String) {
             }
         },
         floatingActionButton = {
+            // ✅ Keep FAB for New Chats only when in Inbox tab and not already in a specific chat
             if (selectedIndex == 1 && activeChatData == null && !showAllSellers) {
                 FloatingActionButton(
                     onClick = { showAllSellers = true },
@@ -160,93 +158,94 @@ fun DashboardBody(userId: String) {
         modifier = Modifier.testTag("dashboard")
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            
             // --- GLOBAL OVERLAYS (REPORTING) ---
-            if (reportSellerId != null) {
-                ReportSellerScreen(
-                    sellerId = reportSellerId!!,
-                    onBackClick = { reportSellerId = null }
-                )
-            } else if (reportProductId != null) {
-                ReportProductScreen(
-                    productId = reportProductId!!,
-                    onBackClick = { reportProductId = null }
-                )
-            } else {
-                when (selectedIndex) {
-                    // --- HOME TAB ---
-                    0 -> {
-                        HomeScreen(
-                            onReportProductClick = { productId ->
-                                reportProductId = productId
-                            },
-                            onReportSellerClick = { sellerId ->
-                                reportSellerId = sellerId
-                            }
-                        )
-                    }
-
-                    // --- INBOX TAB ---
-                    1 -> when {
-                        activeChatData != null -> {
-                            // *** FIXED SECTION START ***
-                            ChatScreen(
-                                chatId = activeChatData!!.first,
-                                sellerId = activeChatData!!.second,
-                                sellerName = activeChatData!!.third,
-                                currentUserId = userId,
-                                onBackClick = { activeChatData = null }
-                                // REMOVED onReportClick because ChatScreen now handles it internally!
-                            )
-                            // *** FIXED SECTION END ***
-                        }
-                        showAllSellers -> {
-                            AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
-                                activeChatData = Triple(chatId, sellerId, sellerName)
-                                showAllSellers = false
-                            }
-                        }
-                        else -> {
-                            BuyerChatListScreen(userId) { chatId, sellerId, sellerName ->
-                                activeChatData = Triple(chatId, sellerId, sellerName)
-                            }
-                        }
-                    }
-
-                    // --- CART TAB ---
-                    2 -> {
-                        CartScreen(
-                            cartViewModel = cartViewModel,
-                            currentUserId = userId
-                        )
-                    }
-
-                    // --- PROFILE TAB ---
-                    3 -> when {
-                        changingPassword -> {
-                            ChangePasswordScreen(
-                                viewModel = buyerViewModel,
-                                onBackClick = { changingPassword = false },
-                                onPasswordChanged = { changingPassword = false }
+            when {
+                reportingChatUserId != null -> {
+                    ReportScreen(
+                        reportTargetId = reportingChatUserId!!,
+                        isReportingSeller = true,
+                        onBackClick = { reportingChatUserId = null }
+                    )
+                }
+                reportSellerId != null -> {
+                    ReportScreen(
+                        reportTargetId = reportSellerId!!,
+                        isReportingSeller = true,
+                        onBackClick = { reportSellerId = null }
+                    )
+                }
+                reportProductId != null -> {
+                    ReportProductScreen(
+                        productId = reportProductId!!,
+                        onBackClick = { reportProductId = null }
+                    )
+                }
+                else -> {
+                    // --- MAIN TABS ---
+                    when (selectedIndex) {
+                        0 -> {
+                            HomeScreen(
+                                onReportProductClick = { productId -> reportProductId = productId },
+                                onReportSellerClick = { sellerId -> reportSellerId = sellerId }
                             )
                         }
-                        editing -> {
-                            EditBuyerProfileScreen(
-                                viewModel = buyerViewModel,
-                                onBack = { editing = false }
-                            )
-                        }
-                        else -> {
-                            BuyerProfileScreen(
-                                viewModel = buyerViewModel,
-                                onEditClick = { editing = true },
-                                onChangePasswordClick = { changingPassword = true },
-                                onLogoutSuccess = {
-                                    val intent = Intent(context, SignInActivity::class.java)
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                    context.startActivity(intent)
-                                    activity?.finish()
+                        1 -> when {
+                            activeChatData != null -> {
+                                ChatScreen(
+                                    chatId = activeChatData!!.first,
+                                    sellerId = activeChatData!!.second,
+                                    sellerName = activeChatData!!.third,
+                                    currentUserId = userId,
+                                    onBackClick = { activeChatData = null },
+                                    isReportingSeller = true,
+                                    onReportClick = {
+                                        reportingChatUserId = activeChatData!!.second
+                                    }
+                                )
+                            }
+                            showAllSellers -> {
+                                AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
+                                    activeChatData = Triple(chatId, sellerId, sellerName)
+                                    showAllSellers = false
                                 }
-                            )
+                            }
+                            else -> {
+                                BuyerChatListScreen(userId) { chatId, sellerId, sellerName ->
+                                    activeChatData = Triple(chatId, sellerId, sellerName)
+                                }
+                            }
+                        }
+                        2 -> {
+                            CartScreen(cartViewModel = cartViewModel, currentUserId = userId)
+                        }
+                        3 -> when {
+                            changingPassword -> {
+                                ChangePasswordScreen(
+                                    viewModel = buyerViewModel,
+                                    onBackClick = { changingPassword = false },
+                                    onPasswordChanged = { changingPassword = false }
+                                )
+                            }
+                            editing -> {
+                                EditBuyerProfileScreen(
+                                    viewModel = buyerViewModel,
+                                    onBack = { editing = false }
+                                )
+                            }
+                            else -> {
+                                BuyerProfileScreen(
+                                    viewModel = buyerViewModel,
+                                    onEditClick = { editing = true },
+                                    onChangePasswordClick = { changingPassword = true },
+                                    onLogoutSuccess = {
+                                        val intent = Intent(context, SignInActivity::class.java)
+                                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                        context.startActivity(intent)
+                                        activity?.finish()
+                                    }
+                                )
+                            }
                         }
                     }
                 }

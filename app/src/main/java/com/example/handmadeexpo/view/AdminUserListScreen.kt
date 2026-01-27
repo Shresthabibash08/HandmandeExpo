@@ -8,7 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset // <--- ADDED IMPORT
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,7 +36,6 @@ fun AdminUserListScreen(viewModel: AdminViewModel) {
     var userToUnban by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     // --- FILTER DATA ---
-    // Note: Ensure both BuyerModel and SellerModel have 'val banned: Boolean = false'
     val activeSellers = viewModel.sellers.filter { !it.banned }
     val activeBuyers = viewModel.buyers.filter { !it.banned }
 
@@ -58,10 +57,13 @@ fun AdminUserListScreen(viewModel: AdminViewModel) {
                 containerColor = Color.Transparent,
                 contentColor = MaterialTheme.colorScheme.primary,
                 indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        Modifier.tabIndicatorOffset(tabPositions[bannedTabIndex]),
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    // Added safety check
+                    if (bannedTabIndex < tabPositions.size) {
+                        TabRowDefaults.SecondaryIndicator(
+                            Modifier.tabIndicatorOffset(tabPositions[bannedTabIndex]),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             ) {
                 Tab(selected = bannedTabIndex == 0, onClick = { bannedTabIndex = 0 }, text = { Text("Banned Sellers", fontSize = 12.sp) })
@@ -135,8 +137,6 @@ fun AdminUserListScreen(viewModel: AdminViewModel) {
     }
 
     // --- DIALOGS ---
-
-    // Delete Confirmation
     if (userToDelete != null) {
         ConfirmationDialog(
             title = "Confirm Delete",
@@ -150,7 +150,6 @@ fun AdminUserListScreen(viewModel: AdminViewModel) {
         )
     }
 
-    // Unban Confirmation
     if (userToUnban != null) {
         ConfirmationDialog(
             title = "Unban User",
@@ -164,7 +163,6 @@ fun AdminUserListScreen(viewModel: AdminViewModel) {
         )
     }
 
-    // Detail Popups
     selectedSeller?.let { seller ->
         UserDetailPopup("Seller Details", mapOf(
             "Shop" to seller.shopName, "Email" to seller.sellerEmail,
@@ -182,7 +180,6 @@ fun AdminUserListScreen(viewModel: AdminViewModel) {
 }
 
 // --- HELPER COMPOSABLES ---
-
 @Composable
 fun EmptyState(text: String) {
     Text(text, color = Color.Gray, modifier = Modifier.padding(8.dp))

@@ -36,10 +36,10 @@ class SellerDashboard : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
+
         // Get the current logged-in user ID safely
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
-        
+
         setContent {
             SellerDashboardBody(currentUserId)
         }
@@ -63,6 +63,9 @@ fun SellerDashboardBody(sellerId: String) {
 
     // Triple stores: (ChatID, BuyerID, BuyerName)
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
+
+    // --- NEW: Reporting State ---
+    var reportingChatUserId by remember { mutableStateOf<String?>(null) }
 
     val sellerRepo = remember { SellerRepoImpl() }
     val sellerViewModel = remember { SellerViewModel(sellerRepo) }
@@ -103,8 +106,10 @@ fun SellerDashboardBody(sellerId: String) {
     )
 
     // Handle Back Press
-    BackHandler(enabled = activeChatData != null || editing || changingPassword) {
+    // Includes logic to close report screen if open
+    BackHandler(enabled = activeChatData != null || editing || changingPassword || reportingChatUserId != null) {
         when {
+            reportingChatUserId != null -> reportingChatUserId = null
             activeChatData != null -> activeChatData = null
             editing -> editing = false
             changingPassword -> changingPassword = false
@@ -113,25 +118,29 @@ fun SellerDashboardBody(sellerId: String) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MainColor,
-                    titleContentColor = White12
-                ),
-                title = {
-                    val titleText = when {
-                        selectedIndex == 2 && activeChatData != null -> activeChatData!!.third 
-                        selectedIndex == 0 -> "Seller Dashboard"
-                        selectedIndex == 1 -> "My Inventory"
-                        selectedIndex == 2 -> "Messages"
-                        else -> "My Profile"
+            // Hide TopBar if reporting screen is active
+            if (reportingChatUserId == null) {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MainColor,
+                        titleContentColor = White12
+                    ),
+                    title = {
+                        val titleText = when {
+                            selectedIndex == 2 && activeChatData != null -> activeChatData!!.third
+                            selectedIndex == 0 -> "Seller Dashboard"
+                            selectedIndex == 1 -> "My Inventory"
+                            selectedIndex == 2 -> "Messages"
+                            else -> "My Profile"
+                        }
+                        Text(titleText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     }
-                    Text(titleText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                }
-            )
+                )
+            }
         },
         bottomBar = {
-            if (activeChatData == null && !editing && !changingPassword) {
+            // Hide BottomBar if chat is open, editing profile, or reporting
+            if (activeChatData == null && !editing && !changingPassword && reportingChatUserId == null) {
                 NavigationBar {
                     listItems.forEachIndexed { index, item ->
                         NavigationBarItem(
@@ -140,6 +149,7 @@ fun SellerDashboardBody(sellerId: String) {
                                 selectedIndex = index
                                 editing = false
                                 changingPassword = false
+                                reportingChatUserId = null
                                 if (index != 2) activeChatData = null
                             },
                             icon = {
@@ -159,54 +169,71 @@ fun SellerDashboardBody(sellerId: String) {
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            when (selectedIndex) {
-                0 -> SellerHomeScreen(sellerId = sellerId, sellerName = sellerName)
+            // --- FULL SCREEN REPORT OVERLAY ---
+            if (reportingChatUserId != null) {
+                ReportScreen(
+                    reportTargetId = reportingChatUserId!!,
+                    isReportingSeller = false, // Seller is reporting a Buyer
+                    onBackClick = { reportingChatUserId = null }
+                )
+            } else {
+                // --- MAIN CONTENT ---
+                when (selectedIndex) {
+                    0 -> SellerHomeScreen(sellerId = sellerId, sellerName = sellerName)
 
-                1 -> InventoryScreen(sellerId)
+                    1 -> InventoryScreen(sellerId)
 
-                2 -> {
-                    if (activeChatData != null) {
-                        ChatScreen(
-                            chatId = activeChatData!!.first,
-                            sellerId = activeChatData!!.second, // BuyerID as Receiver
-                            sellerName = activeChatData!!.third, // BuyerName as Title
-                            currentUserId = sellerId,            // Seller as "Me"
-                            onBackClick = { activeChatData = null }
-                        )
-                    } else {
-                        SellerChatListScreen(sellerId) { chatId, buyerId, buyerName ->
-                            activeChatData = Triple(chatId, buyerId, buyerName)
+                    2 -> {
+                        if (activeChatData != null) {
+                            // *** FIXED CHAT SCREEN CALL ***
+                            ChatScreen(
+                                chatId = activeChatData!!.first,
+                                sellerId = activeChatData!!.second, // This is the Buyer ID
+                                sellerName = activeChatData!!.third, // This is the Buyer Name
+                                currentUserId = sellerId,            // I am the Seller
+                                onBackClick = { activeChatData = null },
+                                isReportingSeller = false, // FALSE because I am a Seller reporting a Buyer
+
+                                // --- Callback triggers the Report Screen ---
+                                onReportClick = {
+                                    reportingChatUserId = activeChatData!!.second
+                                }
+                            )
+                        } else {
+                            SellerChatListScreen(sellerId) { chatId, buyerId, buyerName ->
+                                activeChatData = Triple(chatId, buyerId, buyerName)
+                            }
                         }
                     }
-                }
-                3 -> {
-                    when {
-                        changingPassword -> {
-                            SellerChangePasswordScreen(
-                                viewModel = sellerViewModel,
-                                onBackClick = { changingPassword = false },
-                                onPasswordChanged = { changingPassword = false }
-                            )
-                        }
-                        editing -> {
-                            EditSellerProfileScreen(
-                                viewModel = sellerViewModel,
-                                onBack = { editing = false }
-                            )
-                        }
-                        else -> {
-                            SellerProfileScreen(
-                                sellerId = sellerId,
-                                onEditProfileClick = { editing = true },
-                                onChangePasswordClick = { changingPassword = true },
-                                onLogoutSuccess = {
-                                    val intent = Intent(context, SignInActivity::class.java)
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                    context.startActivity(intent)
-                                    activity?.finish()
-                                },
-                                viewModel = sellerViewModel
-                            )
+                    3 -> {
+                        when {
+                            changingPassword -> {
+                                SellerChangePasswordScreen(
+                                    viewModel = sellerViewModel,
+                                    onBackClick = { changingPassword = false },
+                                    onPasswordChanged = { changingPassword = false }
+                                )
+                            }
+                            editing -> {
+                                EditSellerProfileScreen(
+                                    viewModel = sellerViewModel,
+                                    onBack = { editing = false }
+                                )
+                            }
+                            else -> {
+                                SellerProfileScreen(
+                                    sellerId = sellerId,
+                                    onEditProfileClick = { editing = true },
+                                    onChangePasswordClick = { changingPassword = true },
+                                    onLogoutSuccess = {
+                                        val intent = Intent(context, SignInActivity::class.java)
+                                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                        context.startActivity(intent)
+                                        activity?.finish()
+                                    },
+                                    viewModel = sellerViewModel
+                                )
+                            }
                         }
                     }
                 }

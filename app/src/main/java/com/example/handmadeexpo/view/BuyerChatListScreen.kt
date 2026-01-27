@@ -7,7 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,63 +19,113 @@ import com.google.firebase.database.*
 
 @Composable
 fun BuyerChatListScreen(
-    userId: String,
+    currentUserId: String, 
     onChatClick: (String, String, String) -> Unit
 ) {
-    val database = remember(userId) {
-        FirebaseDatabase.getInstance().getReference("buyer_inbox").child(userId)
-    }
+    // 1. Reference to the buyer's inbox
+    val database = FirebaseDatabase.getInstance().getReference("buyer_inbox").child(currentUserId)
 
-    var chattedSellers by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var activeChats by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    LaunchedEffect(userId) {
-        database.addValueEventListener(object : ValueEventListener {
+    // 2. Fetch Chat List (Cleaned up conflict and duplicates)
+    DisposableEffect(currentUserId) {
+        val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val list = mutableListOf<Map<String, Any>>()
-                snapshot.children.forEach { doc ->
-                    (doc.value as? Map<String, Any>)?.let { list.add(it) }
-                }
-                chattedSellers = list.sortedByDescending { it["timestamp"] as? Long ?: 0L }
+                val list = snapshot.children.mapNotNull { it.value as? Map<String, Any> }
+                // Sort by newest timestamp first
+                activeChats = list.sortedByDescending { it["timestamp"] as? Long ?: 0L }
                 isLoading = false
             }
-            override fun onCancelled(error: DatabaseError) { isLoading = false }
-        })
+
+            override fun onCancelled(error: DatabaseError) {
+                isLoading = false
+            }
+        }
+        
+        database.addValueEventListener(listener)
+
+        onDispose {
+            database.removeEventListener(listener)
+        }
     }
 
+    // 3. UI Content
     if (isLoading) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = Color(0xFFE65100))
         }
-    } else if (chattedSellers.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    } else if (activeChats.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No messages yet.", color = Color.Gray)
         }
     } else {
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
-            items(chattedSellers) { chat ->
-                val sId = chat["participantId"].toString()
-                val cId = chat["chatId"].toString()
-                val lastMsg = chat["lastMessage"].toString()
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(activeChats) { chat ->
+                // Safely extract data
+                val sellerId = chat["participantId"]?.toString() ?: ""
+                val chatId = chat["chatId"]?.toString() ?: ""
+                val lastMessage = chat["lastMessage"]?.toString() ?: "No message"
 
-                // Fetch real name from sellers node
-                var sellerName by remember { mutableStateOf("Loading...") }
-                LaunchedEffect(sId) {
-                    FirebaseDatabase.getInstance().getReference("sellers").child(sId).child("name")
-                        .get().addOnSuccessListener { snapshot ->
-                            sellerName = snapshot.value?.toString() ?: "Unknown Seller"
+                // State for Seller's Shop Name
+                var shopName by remember { mutableStateOf("Loading...") }
+
+                // 4. REAL-TIME LISTENER FOR SELLER NAME
+                DisposableEffect(sellerId) {
+                    if (sellerId.isNotEmpty()) {
+                        val db = FirebaseDatabase.getInstance()
+                        val ref = db.getReference("Seller").child(sellerId)
+
+                        val nameListener = object : ValueEventListener {
+                            override fun onDataChange(snapshot: DataSnapshot) {
+                                // Priority: shopName -> name -> fallback
+                                val fetchedName = snapshot.child("shopName").value?.toString()
+                                    ?: snapshot.child("name").value?.toString()
+
+                                shopName = when {
+                                    !fetchedName.isNullOrEmpty() -> fetchedName
+                                    snapshot.exists() -> "Seller"
+                                    else -> "Unknown"
+                                }
+                            }
+
+                            override fun onCancelled(error: DatabaseError) {
+                                // Error handling
+                            }
                         }
+                        ref.addValueEventListener(nameListener)
+
+                        onDispose { ref.removeEventListener(nameListener) }
+                    } else {
+                        onDispose { }
+                    }
                 }
 
                 ListItem(
-                    modifier = Modifier.clickable { onChatClick(cId, sId, sellerName) },
+                    modifier = Modifier.clickable {
+                        onChatClick(chatId, sellerId, shopName)
+                    },
                     leadingContent = {
-                        Box(Modifier.size(45.dp).background(Color(0xFFF5F5F5), CircleShape), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Person, null, tint = Color.Gray)
+                        Box(
+                            modifier = Modifier
+                                .size(45.dp)
+                                .background(Color(0xFFF5F5F5), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Using Store icon as it's more relevant for identifying Sellers
+                            Icon(
+                                imageVector = Icons.Default.Store, 
+                                contentDescription = "Store Icon", 
+                                tint = Color.Gray
+                            )
                         }
                     },
-                    headlineContent = { Text(sellerName, fontWeight = FontWeight.Bold) },
-                    supportingContent = { Text(lastMsg, maxLines = 1, color = Color.Gray) }
+                    headlineContent = {
+                        Text(shopName, fontWeight = FontWeight.Bold)
+                    },
+                    supportingContent = {
+                        Text(lastMessage, maxLines = 1, color = Color.Gray)
+                    }
                 )
                 HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
             }
