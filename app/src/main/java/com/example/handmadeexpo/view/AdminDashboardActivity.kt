@@ -540,63 +540,135 @@ fun DetailedStatItem(
 
 @Composable
 fun ModernVerificationHub(viewModel: AdminViewModel) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedVerificationTab by remember { mutableIntStateOf(0) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(
-            selectedTabIndex = selectedTab,
-            containerColor = Color.White,
-            contentColor = Color(0xFF1E88E5),
-            indicator = { tabPositions ->
-                TabRowDefaults.SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    color = Color(0xFF1E88E5)
-                )
-            }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF5F7FA))
+    ) {
+        // Header Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(4.dp, RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
         ) {
-            Tab(
-                selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
-                text = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(Color(0xFFFF9800).copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("Sellers", fontWeight = FontWeight.Medium)
-                        if (viewModel.pendingSellers.isNotEmpty()) {
-                            Spacer(Modifier.width(8.dp))
-                            Badge(
-                                containerColor = Color(0xFFFF5722)
-                            ) {
-                                Text(viewModel.pendingSellers.size.toString())
-                            }
-                        }
+                        Icon(
+                            Icons.Default.VerifiedUser,
+                            contentDescription = null,
+                            tint = Color(0xFFFF9800),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            "Verification Hub",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF212121)
+                        )
+                        Text(
+                            "${viewModel.pendingSellers.size + viewModel.pendingProducts.size} pending items",
+                            fontSize = 13.sp,
+                            color = Color.Gray
+                        )
                     }
                 }
-            )
-            Tab(
-                selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
-                text = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text("Products", fontWeight = FontWeight.Medium)
-                        if (viewModel.pendingProducts.isNotEmpty()) {
-                            Spacer(Modifier.width(8.dp))
-                            Badge(
-                                containerColor = Color(0xFFFF5722)
-                            ) {
-                                Text(viewModel.pendingProducts.size.toString())
-                            }
-                        }
-                    }
-                }
-            )
+            }
         }
 
-        when (selectedTab) {
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Tabs Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .shadow(2.dp, RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            TabRow(
+                selectedTabIndex = selectedVerificationTab,
+                containerColor = Color.Transparent,
+                contentColor = Color(0xFF1E88E5),
+                indicator = { tabPositions ->
+                    TabRowDefaults.SecondaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedVerificationTab]),
+                        color = Color(0xFFFF9800),
+                        height = 3.dp
+                    )
+                }
+            ) {
+                Tab(
+                    selected = selectedVerificationTab == 0,
+                    onClick = { selectedVerificationTab = 0 },
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                "Sellers",
+                                fontWeight = if (selectedVerificationTab == 0) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                            if (viewModel.pendingSellers.isNotEmpty()) {
+                                Spacer(Modifier.width(8.dp))
+                                Badge(
+                                    containerColor = Color(0xFFFF5722)
+                                ) {
+                                    Text(viewModel.pendingSellers.size.toString(), fontSize = 10.sp)
+                                }
+                            }
+                        }
+                    }
+                )
+                Tab(
+                    selected = selectedVerificationTab == 1,
+                    onClick = { selectedVerificationTab = 1 },
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                "Products",
+                                fontWeight = if (selectedVerificationTab == 1) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                            if (viewModel.pendingProducts.isNotEmpty()) {
+                                Spacer(Modifier.width(8.dp))
+                                Badge(
+                                    containerColor = Color(0xFFFF5722)
+                                ) {
+                                    Text(viewModel.pendingProducts.size.toString(), fontSize = 10.sp)
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Content
+        when (selectedVerificationTab) {
             0 -> SellerVerificationScreen(viewModel)
             1 -> ProductVerificationScreen(viewModel)
         }
@@ -608,25 +680,33 @@ fun ModernLogoutDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
-            Icon(
-                Icons.Default.ExitToApp,
-                contentDescription = null,
-                tint = Color(0xFF1E88E5),
-                modifier = Modifier.size(32.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(Color(0xFF1E88E5).copy(alpha = 0.15f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.ExitToApp,
+                    contentDescription = null,
+                    tint = Color(0xFF1E88E5),
+                    modifier = Modifier.size(28.dp)
+                )
+            }
         },
         title = {
             Text(
                 "Confirm Logout",
                 fontWeight = FontWeight.Bold,
-                fontSize = 20.sp
+                fontSize = 20.sp,
+                color = Color(0xFF212121)
             )
         },
         text = {
             Text(
                 "Are you sure you want to logout from the Admin Dashboard?",
                 fontSize = 14.sp,
-                color = Color.Gray
+                color = Color(0xFF616161)
             )
         },
         confirmButton = {
@@ -635,19 +715,23 @@ fun ModernLogoutDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFF44336)
                 ),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Logout")
+                Text("Logout", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             OutlinedButton(
                 onClick = onDismiss,
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color(0xFF757575)
+                )
             ) {
-                Text("Cancel", color = Color(0xFF757575))
+                Text("Cancel", fontWeight = FontWeight.Medium)
             }
         },
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp),
+        containerColor = Color.White
     )
 }
