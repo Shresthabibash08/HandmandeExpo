@@ -23,7 +23,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -92,17 +91,14 @@ fun HomeScreen(
             }
             isChatOpen && selectedProduct != null -> {
                 val chatId = ChatUtils.generateChatId(currentUserId, selectedProduct!!.sellerId)
-
-                // Initial Name State
                 var sellerNameState by remember { mutableStateOf("Loading...") }
 
-                // *** FIX: Fetch 'shopName' from 'Seller' node ***
                 LaunchedEffect(selectedProduct!!.sellerId) {
                     FirebaseDatabase.getInstance().getReference("Seller")
                         .child(selectedProduct!!.sellerId).child("shopName").get()
                         .addOnSuccessListener {
                             val name = it.value?.toString()
-                            if (!name.isNullOrEmpty()) sellerNameState = name else sellerNameState = "Seller"
+                            sellerNameState = if (!name.isNullOrEmpty()) name else "Seller"
                         }
                 }
 
@@ -112,12 +108,11 @@ fun HomeScreen(
                     sellerName = sellerNameState,
                     currentUserId = currentUserId,
                     onBackClick = { isChatOpen = false },
-                    isReportingSeller = true, // We are a Buyer reporting a Seller
+                    isReportingSeller = true,
                     onReportClick = { onReportSellerClick(selectedProduct!!.sellerId) }
                 )
             }
             selectedCategory != null && selectedProduct == null -> {
-                // *** Calls the new Grid-Based CategoryScreen ***
                 CategoryScreen(
                     categoryName = selectedCategory!!,
                     viewModel = viewModel,
@@ -158,7 +153,6 @@ fun HomeScreen(
     }
 }
 
-// --- NEW GRID-BASED CATEGORY SCREEN ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryScreen(
@@ -167,17 +161,14 @@ fun CategoryScreen(
     onBackClick: () -> Unit,
     onProductClick: (ProductModel) -> Unit
 ) {
-    // 1. Fetch data based on the selection
     LaunchedEffect(categoryName) {
         if (categoryName == "All") {
             viewModel.getAllProduct()
         } else {
-            // Note: Ensure your ProductViewModel has this method
             viewModel.getProductByCategory(categoryName)
         }
     }
 
-    // 2. Switch which LiveData we observe based on the selection
     val productsState by if (categoryName == "All") {
         viewModel.allProducts.observeAsState(null)
     } else {
@@ -185,7 +176,6 @@ fun CategoryScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        // --- TOP NAVIGATION BAR ---
         TopAppBar(
             title = { Text(categoryName, fontWeight = FontWeight.Bold) },
             navigationIcon = {
@@ -196,29 +186,17 @@ fun CategoryScreen(
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
         )
 
-        // --- CONTENT LOGIC ---
         when {
-            // State: Still Loading
             productsState == null -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = OrangeBrand)
                 }
             }
-
-            // State: Loaded but No items found
             productsState!!.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            "No products found in $categoryName",
-                            color = Color.Gray,
-                            fontSize = 16.sp
-                        )
-                    }
+                    Text("No products found in $categoryName", color = Color.Gray, fontSize = 16.sp)
                 }
             }
-
-            // State: Data arrived successfully -> SHOW GRID
             else -> {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
@@ -231,7 +209,7 @@ fun CategoryScreen(
                         ProductCard(
                             product = product,
                             onClick = { onProductClick(product) },
-                            onChatClick = { /* Chat logic handled in ProductDescription usually */ }
+                            onChatClick = { /* Handled in ProductDescription */ }
                         )
                     }
                 }
@@ -275,11 +253,8 @@ fun MainHomeContent(
                     color = MainColor,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
-
                 CategoryList(categories = categories, onCategoryClick = onCategoryClick)
-
                 Spacer(modifier = Modifier.height(16.dp))
-
                 GradientPriceSliderSection(sliderValue, maxPrice, onSliderChange, onCategorySelect)
             }
         }
@@ -292,38 +267,6 @@ fun MainHomeContent(
             SectionHeader("Recommended", "Handpicked for you", true)
             ProductRow(filteredList.reversed(), onProductClick, onChatClick)
             Spacer(modifier = Modifier.height(80.dp))
-        }
-    }
-}
-
-@Composable
-fun CategoryList(
-    categories: List<Pair<String, Int>>,
-    onCategoryClick: (String) -> Unit
-) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        items(categories) { (name, imageRes) ->
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.clickable { onCategoryClick(name) }
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(55.dp)
-                        .background(CreamBackground, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = imageRes),
-                        contentDescription = name,
-                        modifier = Modifier.size(30.dp)
-                    )
-                }
-                Text(name, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-            }
         }
     }
 }
@@ -343,19 +286,54 @@ fun GradientPriceSliderSection(
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Text("Max Price", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text("NRP ${max.toInt()}", color = OrangeBrand, fontWeight = FontWeight.Bold)
+                Text("NPR ${max.toInt()}", color = OrangeBrand, fontWeight = FontWeight.Bold)
             }
             Slider(
                 value = value,
                 onValueChange = {
                     onValueChange(it)
-                    onCategorySelect(it.toDouble())
+                    // ✅ FIXED: Calculate actual price from slider percentage (development branch logic)
+                    val actualPrice = (it / 100f) * 100000.0
+                    onCategorySelect(actualPrice)
                 },
                 valueRange = 0f..100f,
-                colors = SliderDefaults.colors(thumbColor = OrangeBrand, activeTrackColor = OrangeBrand)
+                colors = SliderDefaults.colors(
+                    thumbColor = OrangeBrand,
+                    activeTrackColor = OrangeBrand
+                )
             )
+        }
+    }
+}
+
+@Composable
+fun CategoryList(categories: List<Pair<String, Int>>, onCategoryClick: (String) -> Unit) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        items(categories) { (name, imageRes) ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.clickable { onCategoryClick(name) }
+            ) {
+                Box(
+                    modifier = Modifier.size(55.dp).background(CreamBackground, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = imageRes),
+                        contentDescription = name,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
+                Text(name, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            }
         }
     }
 }
@@ -383,19 +361,14 @@ fun ProductCard(
     onChatClick: (ProductModel) -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .width(160.dp)
-            .clickable { onClick(product) },
+        modifier = Modifier.width(160.dp).clickable { onClick(product) },
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA))
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
             AsyncImage(
                 model = product.image,
                 contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(110.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                modifier = Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop
             )
             Text(product.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -425,10 +398,7 @@ fun SearchBarInput(query: String, onQueryChange: (String) -> Unit) {
         onValueChange = onQueryChange,
         placeholder = { Text("Search items...") },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .clip(RoundedCornerShape(12.dp)),
+        modifier = Modifier.fillMaxWidth().padding(16.dp).clip(RoundedCornerShape(12.dp)),
         colors = TextFieldDefaults.colors(
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent
@@ -439,9 +409,7 @@ fun SearchBarInput(query: String, onQueryChange: (String) -> Unit) {
 @Composable
 fun SectionHeader(title: String, subtitle: String?, showArrow: Boolean) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {

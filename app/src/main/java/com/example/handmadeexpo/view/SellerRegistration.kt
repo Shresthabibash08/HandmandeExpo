@@ -54,7 +54,6 @@ fun SellerRegisterScreen() {
     val activity = context as Activity
     val viewModel = remember { SellerViewModel(SellerRepoImpl()) }
 
-    // Merged state variables
     var fullName by remember { mutableStateOf("") }
     var shopName by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
@@ -114,7 +113,6 @@ fun SellerRegisterScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Input Fields Grouped
                 CustomTextField("Full Name", fullName) { fullName = it }
                 Spacer(modifier = Modifier.height(12.dp))
                 CustomTextField("Shop Name", shopName) { shopName = it }
@@ -126,11 +124,9 @@ fun SellerRegisterScreen() {
 
                 CustomTextField("Email", email) {
                     email = it
-                    // First check if it's admin email
                     if (AdminEmailValidator.isReservedEmail(it)) {
                         emailError = AdminEmailValidator.getReservedEmailError()
                     } else if (it.isNotBlank()) {
-                        // Then check if email exists in database
                         AdminEmailValidator.isSellerEmailExists(it) { exists ->
                             emailError = if (exists) {
                                 AdminEmailValidator.getDuplicateEmailError()
@@ -174,10 +170,8 @@ fun SellerRegisterScreen() {
 
                 Spacer(modifier = Modifier.height(30.dp))
 
-                // --- REGISTER BUTTON ---
                 Button(
                     onClick = {
-                        // Extensive Validations
                         when {
                             fullName.isBlank() -> Toast.makeText(context, "Full name is required", Toast.LENGTH_SHORT).show()
                             shopName.isBlank() -> Toast.makeText(context, "Shop name is required", Toast.LENGTH_SHORT).show()
@@ -194,8 +188,11 @@ fun SellerRegisterScreen() {
 
                             else -> {
                                 isLoading = true
+
+                                // ✅ STEP 1: Register with Firebase Auth
                                 viewModel.register(email, password) { success, msg, sellerId ->
                                     if (success) {
+                                        // ✅ STEP 2: Save to Database
                                         val sellerModel = SellerModel(
                                             sellerId = sellerId,
                                             fullName = fullName,
@@ -204,22 +201,45 @@ fun SellerRegisterScreen() {
                                             sellerEmail = email,
                                             sellerPhoneNumber = phoneNumber,
                                             panNumber = panNumber,
-                                            verificationStatus = "Unverified"
+                                            verificationStatus = "Unverified",
+                                            documentType = "",      // ✅ Will be filled in verification
+                                            documentUrl = "",       // ✅ Will be filled in verification
+                                            role = "seller",
+                                            banned = false
                                         )
 
                                         viewModel.addSellerToDatabase(sellerId, sellerModel) { dbSuccess, dbMsg ->
                                             isLoading = false
-                                            Toast.makeText(context, dbMsg, Toast.LENGTH_SHORT).show()
+
                                             if (dbSuccess) {
-                                                // Navigate to Verification
+                                                // ✅ SUCCESS - Navigate to verification
+                                                Toast.makeText(
+                                                    context,
+                                                    "Account created! Please verify your identity.",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+
                                                 val intent = Intent(context, SellerVerificationActivity::class.java)
+                                                intent.putExtra("sellerId", sellerId)  // ✅ Pass seller ID
                                                 context.startActivity(intent)
                                                 activity.finish()
+                                            } else {
+                                                // ❌ Database save failed
+                                                Toast.makeText(
+                                                    context,
+                                                    "Registration failed: $dbMsg",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
                                             }
                                         }
                                     } else {
+                                        // ❌ Auth registration failed
                                         isLoading = false
-                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            "Registration failed: $msg",
+                                            Toast.LENGTH_LONG
+                                        ).show()
                                     }
                                 }
                             }
@@ -243,13 +263,12 @@ fun SellerRegisterScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // --- FOOTER: SIGN IN NAVIGATION ---
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Already have an account?", fontSize = 16.sp, color = MainColor)
+                    Text("Already have an account ?", fontSize = 16.sp, color = MainColor)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Sign In",

@@ -19,7 +19,7 @@ import com.google.firebase.database.*
 
 @Composable
 fun BuyerChatListScreen(
-    currentUserId: String, // Adjusted name for clarity
+    currentUserId: String, 
     onChatClick: (String, String, String) -> Unit
 ) {
     // 1. Reference to the buyer's inbox
@@ -28,7 +28,7 @@ fun BuyerChatListScreen(
     var activeChats by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // 2. Fetch Chat List (Real-time listener for the inbox itself)
+    // 2. Fetch Chat List (Cleaned up conflict and duplicates)
     DisposableEffect(currentUserId) {
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -37,10 +37,12 @@ fun BuyerChatListScreen(
                 activeChats = list.sortedByDescending { it["timestamp"] as? Long ?: 0L }
                 isLoading = false
             }
+
             override fun onCancelled(error: DatabaseError) {
                 isLoading = false
             }
         }
+        
         database.addValueEventListener(listener)
 
         onDispose {
@@ -69,7 +71,6 @@ fun BuyerChatListScreen(
                 var shopName by remember { mutableStateOf("Loading...") }
 
                 // 4. REAL-TIME LISTENER FOR SELLER NAME
-                // This specifically looks into the "Seller" node for "shopName"
                 DisposableEffect(sellerId) {
                     if (sellerId.isNotEmpty()) {
                         val db = FirebaseDatabase.getInstance()
@@ -77,17 +78,17 @@ fun BuyerChatListScreen(
 
                         val nameListener = object : ValueEventListener {
                             override fun onDataChange(snapshot: DataSnapshot) {
-                                // *** FIX: Look for 'shopName' first ***
+                                // Priority: shopName -> name -> fallback
                                 val fetchedName = snapshot.child("shopName").value?.toString()
-                                    ?: snapshot.child("name").value?.toString() // Fallback
+                                    ?: snapshot.child("name").value?.toString()
 
-                                if (!fetchedName.isNullOrEmpty()) {
-                                    shopName = fetchedName
-                                } else {
-                                    // Fallback if data exists but name is blank
-                                    shopName = if (snapshot.exists()) "Seller" else "Unknown"
+                                shopName = when {
+                                    !fetchedName.isNullOrEmpty() -> fetchedName
+                                    snapshot.exists() -> "Seller"
+                                    else -> "Unknown"
                                 }
                             }
+
                             override fun onCancelled(error: DatabaseError) {
                                 // Error handling
                             }
@@ -102,7 +103,6 @@ fun BuyerChatListScreen(
 
                 ListItem(
                     modifier = Modifier.clickable {
-                        // Navigate passing the fetched shopName
                         onChatClick(chatId, sellerId, shopName)
                     },
                     leadingContent = {
@@ -112,8 +112,12 @@ fun BuyerChatListScreen(
                                 .background(Color(0xFFF5F5F5), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            // Changed icon to Store for Sellers
-                            Icon(Icons.Default.Store, contentDescription = null, tint = Color.Gray)
+                            // Using Store icon as it's more relevant for identifying Sellers
+                            Icon(
+                                imageVector = Icons.Default.Store, 
+                                contentDescription = "Store Icon", 
+                                tint = Color.Gray
+                            )
                         }
                     },
                     headlineContent = {

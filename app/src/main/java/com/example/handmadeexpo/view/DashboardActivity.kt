@@ -10,7 +10,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -57,9 +56,9 @@ fun DashboardBody(userId: String) {
     // --- REPORTING STATE ---
     var reportProductId by remember { mutableStateOf<String?>(null) }
     var reportSellerId by remember { mutableStateOf<String?>(null) } // From Home
-    var reportingChatUserId by remember { mutableStateOf<String?>(null) } // From Chat (NEW)
+    var reportingChatUserId by remember { mutableStateOf<String?>(null) } // From Chat
 
-    // Chat State: (ChatID, SellerID, SellerName)
+    // Chat State
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
     // --- 2. INITIALIZE REPOS AND VIEWMODELS ---
@@ -86,18 +85,11 @@ fun DashboardBody(userId: String) {
 
     BackHandler(enabled = isChatActive || isReportingProduct || isReportingSeller || isReportingChatUser || isProfileOverlay) {
         when {
-            // Priority 1: Close Report Screens
             reportingChatUserId != null -> reportingChatUserId = null
-            isReportingSeller -> reportSellerId = null
-            isReportingProduct -> reportProductId = null
-
-            // Priority 2: Close Chat Screen
+            reportSellerId != null -> reportSellerId = null
+            reportProductId != null -> reportProductId = null
             activeChatData != null -> activeChatData = null
-
-            // Priority 3: Close "New Chat" List
             showAllSellers -> showAllSellers = false
-
-            // Priority 4: Close Profile Edits
             editing -> editing = false
             changingPassword -> changingPassword = false
         }
@@ -147,23 +139,12 @@ fun DashboardBody(userId: String) {
                     }
                 }
             }
-        },
-        floatingActionButton = {
-            if (selectedIndex == 1 && activeChatData == null && !showAllSellers) {
-                FloatingActionButton(
-                    onClick = { showAllSellers = true },
-                    containerColor = MainColor,
-                    contentColor = White12
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "New Chat")
-                }
-            }
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             // --- GLOBAL OVERLAYS (REPORTING) ---
 
-            // 1. Report from Chat (Full Screen)
+            // 1. Report from Chat
             if (reportingChatUserId != null) {
                 ReportScreen(
                     reportTargetId = reportingChatUserId!!,
@@ -189,19 +170,12 @@ fun DashboardBody(userId: String) {
             else {
                 // --- MAIN TABS ---
                 when (selectedIndex) {
-                    // --- HOME TAB ---
                     0 -> {
                         HomeScreen(
-                            onReportProductClick = { productId ->
-                                reportProductId = productId
-                            },
-                            onReportSellerClick = { sellerId ->
-                                reportSellerId = sellerId
-                            }
+                            onReportProductClick = { productId -> reportProductId = productId },
+                            onReportSellerClick = { sellerId -> reportSellerId = sellerId }
                         )
                     }
-
-                    // --- INBOX TAB ---
                     1 -> when {
                         activeChatData != null -> {
                             ChatScreen(
@@ -210,9 +184,7 @@ fun DashboardBody(userId: String) {
                                 sellerName = activeChatData!!.third,
                                 currentUserId = userId,
                                 onBackClick = { activeChatData = null },
-                                isReportingSeller = true, // Buyer reporting Seller
-
-                                // --- NEW CALLBACK TO TRIGGER REPORT SCREEN ---
+                                isReportingSeller = true,
                                 onReportClick = {
                                     reportingChatUserId = activeChatData!!.second
                                 }
@@ -230,16 +202,9 @@ fun DashboardBody(userId: String) {
                             }
                         }
                     }
-
-                    // --- CART TAB ---
                     2 -> {
-                        CartScreen(
-                            cartViewModel = cartViewModel,
-                            currentUserId = userId
-                        )
+                        CartScreen(cartViewModel = cartViewModel, currentUserId = userId)
                     }
-
-                    // --- PROFILE TAB ---
                     3 -> when {
                         changingPassword -> {
                             ChangePasswordScreen(
