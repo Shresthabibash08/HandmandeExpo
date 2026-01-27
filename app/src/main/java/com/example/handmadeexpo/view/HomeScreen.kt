@@ -1,6 +1,5 @@
 package com.example.handmadeexpo.view
 
-import CategoryScreen
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -9,6 +8,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,6 +23,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -89,12 +92,18 @@ fun HomeScreen(
             }
             isChatOpen && selectedProduct != null -> {
                 val chatId = ChatUtils.generateChatId(currentUserId, selectedProduct!!.sellerId)
+
+                // Initial Name State
                 var sellerNameState by remember { mutableStateOf("Loading...") }
 
+                // *** FIX: Fetch 'shopName' from 'Seller' node ***
                 LaunchedEffect(selectedProduct!!.sellerId) {
-                    FirebaseDatabase.getInstance().getReference("sellers")
-                        .child(selectedProduct!!.sellerId).child("name").get()
-                        .addOnSuccessListener { sellerNameState = it.value?.toString() ?: "Seller" }
+                    FirebaseDatabase.getInstance().getReference("Seller")
+                        .child(selectedProduct!!.sellerId).child("shopName").get()
+                        .addOnSuccessListener {
+                            val name = it.value?.toString()
+                            if (!name.isNullOrEmpty()) sellerNameState = name else sellerNameState = "Seller"
+                        }
                 }
 
                 ChatScreen(
@@ -102,10 +111,13 @@ fun HomeScreen(
                     sellerId = selectedProduct!!.sellerId,
                     sellerName = sellerNameState,
                     currentUserId = currentUserId,
-                    onBackClick = { isChatOpen = false }
+                    onBackClick = { isChatOpen = false },
+                    isReportingSeller = true, // We are a Buyer reporting a Seller
+                    onReportClick = { onReportSellerClick(selectedProduct!!.sellerId) }
                 )
             }
             selectedCategory != null && selectedProduct == null -> {
+                // *** Calls the new Grid-Based CategoryScreen ***
                 CategoryScreen(
                     categoryName = selectedCategory!!,
                     viewModel = viewModel,
@@ -146,6 +158,88 @@ fun HomeScreen(
     }
 }
 
+// --- NEW GRID-BASED CATEGORY SCREEN ---
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategoryScreen(
+    categoryName: String,
+    viewModel: ProductViewModel,
+    onBackClick: () -> Unit,
+    onProductClick: (ProductModel) -> Unit
+) {
+    // 1. Fetch data based on the selection
+    LaunchedEffect(categoryName) {
+        if (categoryName == "All") {
+            viewModel.getAllProduct()
+        } else {
+            // Note: Ensure your ProductViewModel has this method
+            viewModel.getProductByCategory(categoryName)
+        }
+    }
+
+    // 2. Switch which LiveData we observe based on the selection
+    val productsState by if (categoryName == "All") {
+        viewModel.allProducts.observeAsState(null)
+    } else {
+        viewModel.allProductsCategory.observeAsState(null)
+    }
+
+    Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
+        // --- TOP NAVIGATION BAR ---
+        TopAppBar(
+            title = { Text(categoryName, fontWeight = FontWeight.Bold) },
+            navigationIcon = {
+                IconButton(onClick = onBackClick) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+        )
+
+        // --- CONTENT LOGIC ---
+        when {
+            // State: Still Loading
+            productsState == null -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = OrangeBrand)
+                }
+            }
+
+            // State: Loaded but No items found
+            productsState!!.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "No products found in $categoryName",
+                            color = Color.Gray,
+                            fontSize = 16.sp
+                        )
+                    }
+                }
+            }
+
+            // State: Data arrived successfully -> SHOW GRID
+            else -> {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(productsState!!, key = { it.productId }) { product ->
+                        ProductCard(
+                            product = product,
+                            onClick = { onProductClick(product) },
+                            onChatClick = { /* Chat logic handled in ProductDescription usually */ }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun MainHomeContent(
     products: List<ProductModel>,
@@ -164,7 +258,7 @@ fun MainHomeContent(
         "Wooden Mask" to R.drawable.masks,
         "Singing Bowl" to R.drawable.bowls,
         "Painting" to R.drawable.painting,
-        "Thanka" to R.drawable.thankas,
+        "Thangka" to R.drawable.thankas,
         "Wall Decor" to R.drawable.walldecore,
         "Others" to R.drawable.others
     )
@@ -257,7 +351,7 @@ fun GradientPriceSliderSection(
                 value = value,
                 onValueChange = {
                     onValueChange(it)
-                    onCategorySelect(it.toDouble()) 
+                    onCategorySelect(it.toDouble())
                 },
                 valueRange = 0f..100f,
                 colors = SliderDefaults.colors(thumbColor = OrangeBrand, activeTrackColor = OrangeBrand)
