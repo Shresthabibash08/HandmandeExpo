@@ -7,27 +7,31 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.repo.CartRepoImpl
-import com.example.handmadeexpo.ui.theme.MainColor
-import com.example.handmadeexpo.ui.theme.White12
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
 import com.example.handmadeexpo.viewmodel.CartViewModel
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,35 +52,61 @@ fun DashboardBody(userId: String) {
     val context = LocalContext.current
     val activity = context as? Activity
 
-    // --- 1. NAVIGATION STATE ---
+    // Navigation State
     var selectedIndex by remember { mutableIntStateOf(0) }
     var editing by remember { mutableStateOf(false) }
     var changingPassword by remember { mutableStateOf(false) }
     var showAllSellers by remember { mutableStateOf(false) }
+    var buyerName by remember { mutableStateOf("Buyer") }
+    var chatCount by remember { mutableIntStateOf(0) }
 
-    // --- REPORTING STATE (Used for Home Screen Reports) ---
+    // Reporting State
     var reportProductId by remember { mutableStateOf<String?>(null) }
     var reportSellerId by remember { mutableStateOf<String?>(null) }
 
     // Chat State: (ChatID, SellerID, SellerName)
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
-    // --- 2. INITIALIZE REPOS AND VIEWMODELS ---
+    // Initialize Repos and ViewModels
     val buyerRepo = remember { BuyerRepoImpl() }
     val buyerViewModel = remember { BuyerViewModel(buyerRepo) }
 
     val cartRepo = remember { CartRepoImpl() }
     val cartViewModel = remember { CartViewModel(cartRepo) }
 
-    data class NavItem(val icon: ImageVector, val label: String)
+    // Fetch Buyer Name
+    LaunchedEffect(userId) {
+        if (userId.isNotEmpty()) {
+            FirebaseDatabase.getInstance().getReference("Buyers").child(userId).child("name")
+                .get().addOnSuccessListener { snapshot ->
+                    buyerName = snapshot.value?.toString() ?: "Buyer"
+                }
+        }
+    }
+
+    // Badge Listener for Incoming Chats
+    val inboxRef = remember { FirebaseDatabase.getInstance().getReference("buyer_inbox").child(userId) }
+    LaunchedEffect(userId) {
+        if (userId.isNotEmpty()) {
+            val listener = object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    chatCount = snapshot.childrenCount.toInt()
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            }
+            inboxRef.addValueEventListener(listener)
+        }
+    }
+
+    data class NavItem(val icon: ImageVector, val label: String, val color: Color)
     val listItems = listOf(
-        NavItem(Icons.Default.Home, "Home"),
-        NavItem(Icons.AutoMirrored.Filled.Chat, "Inbox"),
-        NavItem(Icons.Default.ShoppingCart, "Cart"),
-        NavItem(Icons.Default.Person, "Profile")
+        NavItem(Icons.Default.Home, "Home", Color(0xFF1E88E5)),
+        NavItem(Icons.AutoMirrored.Filled.Chat, "Inbox", Color(0xFF4CAF50)),
+        NavItem(Icons.Default.ShoppingCart, "Cart", Color(0xFFFF9800)),
+        NavItem(Icons.Default.Person, "Profile", Color(0xFF9C27B0))
     )
 
-    // --- 3. BACK HANDLER LOGIC ---
+    // Back Handler Logic
     val isChatActive = selectedIndex == 1 && (activeChatData != null || showAllSellers)
     val isReportingProduct = reportProductId != null
     val isReportingSeller = reportSellerId != null
@@ -84,17 +114,10 @@ fun DashboardBody(userId: String) {
 
     BackHandler(enabled = isChatActive || isReportingProduct || isReportingSeller || isProfileOverlay) {
         when {
-            // Priority 1: Close Report Screens
             isReportingSeller -> reportSellerId = null
             isReportingProduct -> reportProductId = null
-
-            // Priority 2: Close Chat Screen
             activeChatData != null -> activeChatData = null
-
-            // Priority 3: Close "New Chat" List
             showAllSellers -> showAllSellers = false
-
-            // Priority 4: Close Profile Edits
             editing -> editing = false
             changingPassword -> changingPassword = false
         }
@@ -102,29 +125,66 @@ fun DashboardBody(userId: String) {
 
     Scaffold(
         topBar = {
-            if (reportProductId == null && reportSellerId == null) {
-                TopAppBar(
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MainColor,
-                        titleContentColor = White12
-                    ),
-                    title = {
-                        val title = when {
+            CenterAlignedTopAppBar(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color(0xFF1E88E5)
+                ),
+                title = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        val titleText = when {
+                            reportSellerId != null -> "Report Seller"
+                            reportProductId != null -> "Report Product"
                             selectedIndex == 1 && activeChatData != null -> activeChatData!!.third
                             selectedIndex == 1 && showAllSellers -> "Select Seller"
+                            selectedIndex == 0 -> "Handmade Expo"
                             selectedIndex == 1 -> "Messages"
                             selectedIndex == 2 -> "My Cart"
-                            selectedIndex == 3 -> "Profile"
-                            else -> "Handmade Expo"
+                            else -> "My Profile"
                         }
-                        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            titleText,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        if (selectedIndex == 0 && activeChatData == null && reportProductId == null && reportSellerId == null) {
+                            Text(
+                                "Discover unique products",
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
                     }
-                )
-            }
+                },
+                navigationIcon = {
+                    // Show back button for chat, seller list, or reporting screens
+                    if (activeChatData != null || showAllSellers || reportProductId != null || reportSellerId != null) {
+                        IconButton(
+                            onClick = {
+                                when {
+                                    reportSellerId != null -> reportSellerId = null
+                                    reportProductId != null -> reportProductId = null
+                                    activeChatData != null -> activeChatData = null
+                                    showAllSellers -> showAllSellers = false
+                                }
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                }
+            )
         },
         bottomBar = {
             if (activeChatData == null && reportProductId == null && reportSellerId == null && !editing && !changingPassword) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = Color.White,
+                    tonalElevation = 8.dp
+                ) {
                     listItems.forEachIndexed { index, item ->
                         NavigationBarItem(
                             selected = selectedIndex == index,
@@ -137,27 +197,53 @@ fun DashboardBody(userId: String) {
                                 reportSellerId = null
                                 if (index != 1) activeChatData = null
                             },
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) }
+                            icon = {
+                                if (index == 1 && chatCount > 0) {
+                                    BadgedBox(
+                                        badge = {
+                                            Badge(containerColor = Color(0xFFFF5722)) {
+                                                Text("$chatCount")
+                                            }
+                                        }
+                                    ) {
+                                        Icon(item.icon, contentDescription = item.label)
+                                    }
+                                } else {
+                                    Icon(item.icon, contentDescription = item.label)
+                                }
+                            },
+                            label = { Text(item.label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = item.color,
+                                selectedTextColor = item.color,
+                                indicatorColor = item.color.copy(alpha = 0.15f)
+                            )
                         )
                     }
                 }
             }
         },
+        containerColor = Color(0xFFF5F7FA),
         floatingActionButton = {
-            if (selectedIndex == 1 && activeChatData == null && !showAllSellers) {
+            // Floating Action Button for New Chat
+            if (selectedIndex == 1 && activeChatData == null && !showAllSellers && reportProductId == null && reportSellerId == null) {
                 FloatingActionButton(
                     onClick = { showAllSellers = true },
-                    containerColor = MainColor,
-                    contentColor = White12
+                    containerColor = Color(0xFF4CAF50),
+                    contentColor = Color.White,
+                    modifier = Modifier.size(64.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "New Chat")
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "New Chat",
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
             }
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // --- GLOBAL OVERLAYS (REPORTING) ---
+            // Global Overlays (Reporting)
             if (reportSellerId != null) {
                 ReportSellerScreen(
                     sellerId = reportSellerId!!,
@@ -170,7 +256,7 @@ fun DashboardBody(userId: String) {
                 )
             } else {
                 when (selectedIndex) {
-                    // --- HOME TAB ---
+                    // Home Tab
                     0 -> {
                         HomeScreen(
                             onReportProductClick = { productId ->
@@ -182,19 +268,16 @@ fun DashboardBody(userId: String) {
                         )
                     }
 
-                    // --- INBOX TAB ---
+                    // Inbox Tab
                     1 -> when {
                         activeChatData != null -> {
-                            // *** FIXED SECTION START ***
                             ChatScreen(
                                 chatId = activeChatData!!.first,
                                 sellerId = activeChatData!!.second,
                                 sellerName = activeChatData!!.third,
                                 currentUserId = userId,
                                 onBackClick = { activeChatData = null }
-                                // REMOVED onReportClick because ChatScreen now handles it internally!
                             )
-                            // *** FIXED SECTION END ***
                         }
                         showAllSellers -> {
                             AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
@@ -209,7 +292,7 @@ fun DashboardBody(userId: String) {
                         }
                     }
 
-                    // --- CART TAB ---
+                    // Cart Tab
                     2 -> {
                         CartScreen(
                             cartViewModel = cartViewModel,
@@ -217,7 +300,7 @@ fun DashboardBody(userId: String) {
                         )
                     }
 
-                    // --- PROFILE TAB ---
+                    // Profile Tab
                     3 -> when {
                         changingPassword -> {
                             ChangePasswordScreen(

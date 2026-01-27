@@ -43,7 +43,7 @@ import com.google.firebase.database.FirebaseDatabase
 // Admin credentials 
 object AdminCredentials {
     const val ADMIN_EMAIL = "admin@handmadeexpo.com"
-    const val ADMIN_PASSWORD = "Handmade@Expo2024#Secure"
+    const val ADMIN_PASSWORD = "AdminHandmadeExpo"
 }
 
 class SignInActivity : ComponentActivity() {

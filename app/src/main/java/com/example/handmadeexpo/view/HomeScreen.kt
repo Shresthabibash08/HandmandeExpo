@@ -1,6 +1,5 @@
 package com.example.handmadeexpo.view
 
-import CategoryScreen
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -82,7 +81,11 @@ fun HomeScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF5F7FA))
+    ) {
         when {
             showCart -> {
                 CartScreen(cartViewModel = cartViewModel, currentUserId = currentUserId)
@@ -170,34 +173,58 @@ fun MainHomeContent(
     )
     val filteredList = products.filter { it.name.contains(searchQuery, ignoreCase = true) }
 
-    LazyColumn(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF5F7FA))
+    ) {
         item {
-            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            ) {
+                // Search Bar
                 SearchBarInput(query = searchQuery, onQueryChange = { searchQuery = it })
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Categories Header
                 Text(
                     text = "Categories",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp,
-                    color = MainColor,
+                    fontSize = 22.sp,
+                    color = Color(0xFF212121),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
+                // Category List
                 CategoryList(categories = categories, onCategoryClick = onCategoryClick)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Price Slider
                 GradientPriceSliderSection(sliderValue, maxPrice, onSliderChange, onCategorySelect)
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
+
+        // Sale Section
         item {
-            SectionHeader("Sale", "${filteredList.size} items Found", true)
+            SectionHeader("Featured Products", "${filteredList.size} items available", true)
             ProductRow(filteredList, onProductClick, onChatClick)
         }
+
         item {
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // Recommended Section
+        item {
             SectionHeader("Recommended", "Handpicked for you", true)
             ProductRow(filteredList.reversed(), onProductClick, onChatClick)
-            Spacer(modifier = Modifier.height(80.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -209,26 +236,44 @@ fun CategoryList(
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp)
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(categories) { (name, imageRes) ->
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.clickable { onCategoryClick(name) }
+            Card(
+                modifier = Modifier
+                    .width(80.dp)
+                    .clickable { onCategoryClick(name) },
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(55.dp)
-                        .background(CreamBackground, CircleShape),
-                    contentAlignment = Alignment.Center
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(12.dp)
                 ) {
-                    Image(
-                        painter = painterResource(id = imageRes),
-                        contentDescription = name,
-                        modifier = Modifier.size(30.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(CreamBackground, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = imageRes),
+                            contentDescription = name,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        name,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF424242),
+                        maxLines = 1
                     )
                 }
-                Text(name, fontSize = 11.sp, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -244,23 +289,58 @@ fun GradientPriceSliderSection(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .shadow(1.dp, RoundedCornerShape(12.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+            .padding(horizontal = 16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Max Price", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text("NRP ${max.toInt()}", color = OrangeBrand, fontWeight = FontWeight.Bold)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        "Price Range",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color(0xFF212121)
+                    )
+                    Text(
+                        "Filter by maximum price",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = OrangeBrand.copy(alpha = 0.1f)
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        "NPR ${max.toInt()}",
+                        color = OrangeBrand,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
             }
+            Spacer(modifier = Modifier.height(12.dp))
             Slider(
                 value = value,
                 onValueChange = {
                     onValueChange(it)
-                    onCategorySelect(it.toDouble()) 
+                    onCategorySelect(it.toDouble())
                 },
                 valueRange = 0f..100f,
-                colors = SliderDefaults.colors(thumbColor = OrangeBrand, activeTrackColor = OrangeBrand)
+                colors = SliderDefaults.colors(
+                    thumbColor = OrangeBrand,
+                    activeTrackColor = OrangeBrand,
+                    inactiveTrackColor = OrangeBrand.copy(alpha = 0.2f)
+                )
             )
         }
     }
@@ -290,33 +370,73 @@ fun ProductCard(
 ) {
     Card(
         modifier = Modifier
-            .width(160.dp)
+            .width(180.dp)
             .clickable { onClick(product) },
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA))
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            AsyncImage(
-                model = product.image,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(110.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
+        Column(modifier = Modifier.padding(12.dp)) {
+            // Product Image
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                AsyncImage(
+                    model = product.image,
+                    contentDescription = product.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Product Name
+            Text(
+                product.name,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF212121),
+                maxLines = 1
             )
-            Text(product.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Price and Chat Button Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("NRP ${product.price.toInt()}", color = OrangeBrand, fontWeight = FontWeight.Bold)
-                IconButton(onClick = { onChatClick(product) }, modifier = Modifier.size(24.dp)) {
+                Column {
+                    Text(
+                        "Price",
+                        fontSize = 11.sp,
+                        color = Color.Gray
+                    )
+                    Text(
+                        "NPR ${product.price.toInt()}",
+                        color = OrangeBrand,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+
+                // Chat Button
+                IconButton(
+                    onClick = { onChatClick(product) },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(OrangeBrand.copy(alpha = 0.1f), CircleShape)
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Chat,
-                        contentDescription = null,
+                        contentDescription = "Chat with seller",
                         tint = OrangeBrand,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -324,22 +444,54 @@ fun ProductCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchBarInput(query: String, onQueryChange: (String) -> Unit) {
-    TextField(
-        value = query,
-        onValueChange = onQueryChange,
-        placeholder = { Text("Search items...") },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
-            .clip(RoundedCornerShape(12.dp)),
-        colors = TextFieldDefaults.colors(
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent
+            .padding(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        TextField(
+            value = query,
+            onValueChange = onQueryChange,
+            placeholder = {
+                Text(
+                    "Search for products...",
+                    color = Color.Gray
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = Color(0xFF1E88E5)
+                )
+            },
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(
+                            Icons.Default.Clear,
+                            contentDescription = "Clear",
+                            tint = Color.Gray
+                        )
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            ),
+            singleLine = true
         )
-    )
+    }
 }
 
 @Composable
@@ -347,15 +499,31 @@ fun SectionHeader(title: String, subtitle: String?, showArrow: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            subtitle?.let { Text(it, fontSize = 12.sp, color = Color.Gray) }
+            Text(
+                title,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF212121)
+            )
+            subtitle?.let {
+                Text(
+                    it,
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+            }
         }
         if (showArrow) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = OrangeBrand)
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "View all",
+                tint = OrangeBrand,
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }

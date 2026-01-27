@@ -7,11 +7,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Warning
@@ -21,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -36,6 +41,13 @@ import com.example.handmadeexpo.viewmodel.CartViewModel
 import com.example.handmadeexpo.viewmodel.ProductViewModel
 import kotlinx.coroutines.delay
 
+// --- Modern Palette ---
+private val AppBackground = Color(0xFFF5F7FA)
+private val PrimaryGreen = Color(0xFF4CAF50)
+private val DarkText = Color(0xFF212121)
+private val MutedText = Color(0xFF757575)
+private val GoldStar = Color(0xFFFFB300)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDescriptionScreen(
@@ -46,23 +58,18 @@ fun ProductDescriptionScreen(
     onBackClick: () -> Unit,
     onChatClick: () -> Unit,
     onNavigateToCart: () -> Unit,
-    onReportClick: () -> Unit 
+    onReportClick: () -> Unit
 ) {
     val context = LocalContext.current
 
-    // Theme Colors
-    val OrangeBrand = Color(0xFFE65100)
-    val CreamBackground = Color(0xFFFFF8E1)
-    val TextGray = Color(0xFF757575)
-
-    // --- State Management ---
+    // --- State ---
     var selectedRating by remember { mutableIntStateOf(0) }
     var hasRated by remember { mutableStateOf(false) }
     var showRatingDialog by remember { mutableStateOf(false) }
     var showCartAddedMessage by remember { mutableStateOf(false) }
     var showSellerDetails by remember { mutableStateOf(false) }
 
-    // Calculate average rating dynamically
+    // Average Rating Calculation
     val averageRating = if (product.ratingCount > 0) {
         product.totalRating.toFloat() / product.ratingCount
     } else {
@@ -73,10 +80,18 @@ fun ProductDescriptionScreen(
     if (showRatingDialog) {
         AlertDialog(
             onDismissRequest = { showRatingDialog = false },
-            title = { Text("Rate this Product") },
+            containerColor = Color.White,
+            title = {
+                Text(
+                    "Rate Product",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = DarkText
+                )
+            },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("How would you rate this product?")
+                    Text("How was your experience?", color = MutedText, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(
                         horizontalArrangement = Arrangement.Center,
@@ -85,10 +100,10 @@ fun ProductDescriptionScreen(
                         repeat(5) { index ->
                             Icon(
                                 imageVector = if (index < selectedRating) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                                contentDescription = "Rate ${index + 1} stars",
-                                tint = if (index < selectedRating) Color(0xFFFFB300) else Color.LightGray,
+                                contentDescription = "Rate ${index + 1}",
+                                tint = if (index < selectedRating) GoldStar else Color.LightGray,
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(44.dp)
                                     .clickable { selectedRating = index + 1 }
                                     .padding(4.dp)
                             )
@@ -108,63 +123,79 @@ fun ProductDescriptionScreen(
                             }
                         }
                     },
-                    enabled = selectedRating > 0
+                    enabled = selectedRating > 0,
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Submit")
+                    Text("Submit", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showRatingDialog = false }) {
+                TextButton(
+                    onClick = { showRatingDialog = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MutedText)
+                ) {
                     Text("Cancel")
                 }
-            }
+            },
+            shape = RoundedCornerShape(16.dp)
         )
     }
 
     Scaffold(
+        containerColor = AppBackground,
+        // Custom Top Bar
         topBar = {
-            TopAppBar(
-                title = { Text("Product Details", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onReportClick) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = "Report Product",
-                            tint = Color.Red
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = CreamBackground)
-            )
+            Box(
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                // Back Button
+                SmallFloatingButton(
+                    onClick = onBackClick,
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                )
+
+                // Report Button
+                SmallFloatingButton(
+                    onClick = onReportClick,
+                    icon = Icons.Default.Warning,
+                    tint = Color(0xFFE53935), // Red
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                )
+            }
         },
         bottomBar = {
-            BottomAppBar(
-                containerColor = Color.White,
-                tonalElevation = 8.dp,
-                modifier = Modifier.height(100.dp)
+            // --- Modern Action Bar ---
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(16.dp),
+                color = Color.White,
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier
+                        .padding(horizontal = 20.dp, vertical = 20.dp)
+                        .navigationBarsPadding(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // 1. Chat Button
+                    // Chat Button (Icon Only)
                     OutlinedIconButton(
                         onClick = onChatClick,
-                        modifier = Modifier.size(50.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, OrangeBrand)
+                        modifier = Modifier.size(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.5.dp, PrimaryGreen.copy(alpha = 0.5f))
                     ) {
-                        Icon(Icons.Default.Chat, contentDescription = "Chat", tint = OrangeBrand)
+                        Icon(Icons.Default.Chat, null, tint = PrimaryGreen)
                     }
 
-                    // 2. Add to Cart Button
-                    OutlinedButton(
+                    // Add to Cart
+                    Button(
                         onClick = {
                             if (product.stock > 0) {
                                 val cartItem = CartItem.fromProduct(product, currentUserId)
@@ -177,17 +208,25 @@ fun ProductDescriptionScreen(
                                     }
                                 }
                             } else {
-                                Toast.makeText(context, "Product is out of stock", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Out of stock", Toast.LENGTH_SHORT).show()
                             }
                         },
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, OrangeBrand)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE8F5E9),
+                            contentColor = PrimaryGreen
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(0.dp)
                     ) {
-                        Text("Add to Cart", color = OrangeBrand, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Icon(Icons.Default.AddShoppingCart, null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Cart", fontWeight = FontWeight.Bold)
                     }
 
-                    // 3. Buy Now Button
+                    // Buy Now
                     Button(
                         onClick = {
                             if (product.stock > 0) {
@@ -202,14 +241,22 @@ fun ProductDescriptionScreen(
                                 }
                                 context.startActivity(intent)
                             } else {
-                                Toast.makeText(context, "Product is out of stock", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Out of stock", Toast.LENGTH_SHORT).show()
                             }
                         },
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = OrangeBrand)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PrimaryGreen,
+                            contentColor = Color.White
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(4.dp)
                     ) {
-                        Text("Buy Now", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Icon(Icons.Default.ShoppingBag, null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Buy Now", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -218,7 +265,7 @@ fun ProductDescriptionScreen(
             if (showCartAddedMessage) {
                 Snackbar(
                     modifier = Modifier.padding(16.dp).clickable { onNavigateToCart() },
-                    containerColor = Color(0xFF4CAF50),
+                    containerColor = PrimaryGreen,
                     action = {
                         TextButton(onClick = onNavigateToCart) {
                             Text("VIEW", color = Color.White, fontWeight = FontWeight.Bold)
@@ -234,153 +281,207 @@ fun ProductDescriptionScreen(
             }
         }
     ) { paddingValues ->
+        // Main Scrollable Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color.White)
+                .background(AppBackground)
+                .padding(paddingValues) // FIXED: Added this line to handle Scaffold padding
                 .verticalScroll(rememberScrollState())
         ) {
-            // 1. Image Section
+
+            // --- 1. Immersive Image Header ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(380.dp)
-                    .background(CreamBackground),
-                contentAlignment = Alignment.Center
+                    .height(400.dp)
             ) {
-                AsyncImage(
-                    model = product.image,
-                    contentDescription = product.name,
+                // Background
+                Box(
                     modifier = Modifier
-                        .fillMaxSize(0.85f)
-                        .clip(RoundedCornerShape(16.dp)),
-                    contentScale = ContentScale.Fit,
-                    error = painterResource(R.drawable.img_1)
-                )
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                        .background(Color.White)
+                ) {
+                    AsyncImage(
+                        model = product.image,
+                        contentDescription = product.name,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 20.dp), // Lift image slightly
+                        contentScale = ContentScale.Fit,
+                        error = painterResource(R.drawable.img_1)
+                    )
+                }
             }
 
-            // 2. Product Info Section
-            Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Text(
-                        text = product.name,
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.weight(1f),
-                        lineHeight = 32.sp
-                    )
-                    Text(
-                        text = "NRP ${product.price.toInt()}",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = OrangeBrand
-                    )
-                }
+            // --- 2. Content Body ---
+            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // 3. Rating & Feedback Section
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    repeat(5) { index ->
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = if (index < averageRating.toInt()) Color(0xFFFFB300) else Color.LightGray,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = String.format("%.1f (%d Reviews)", averageRating, product.ratingCount),
-                        color = TextGray,
-                        fontSize = 14.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                if (!hasRated) {
-                    OutlinedButton(
-                        onClick = { showRatingDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, OrangeBrand)
-                    ) {
-                        Icon(Icons.Default.Star, null, tint = OrangeBrand, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Rate this Product", color = OrangeBrand)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 4. View Seller Details Button
-                OutlinedButton(
-                    onClick = { showSellerDetails = true },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.5.dp, OrangeBrand),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeBrand)
-                ) {
-                    Icon(Icons.Default.Store, null, modifier = Modifier.size(22.dp))
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text("View Seller Details", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp), thickness = 0.5.dp)
-
-                // 5. Description
-                Text(text = "Description", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = product.description.ifEmpty { "Premium handmade collection product." },
-                    fontSize = 16.sp, color = TextGray, lineHeight = 24.sp
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // 6. Stock Status
-                Text(text = "Stock Information", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(10.dp))
-
+                // Floating Stats Card (Overlapping)
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = when {
-                            product.stock == 0 -> Color(0xFFFFEBEE)
-                            product.stock < 5 -> Color(0xFFFFF3E0)
-                            else -> Color(0xFFE8F5E9)
-                        }
-                    ),
-                    shape = RoundedCornerShape(8.dp)
+                    modifier = Modifier
+                        .offset(y = (-40).dp) // Pull up to overlap image
+                        .fillMaxWidth()
+                        .shadow(8.dp, RoundedCornerShape(16.dp)),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Rating Side
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Star, null, tint = GoldStar, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = String.format("%.1f", averageRating),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = DarkText
+                            )
+                            Text(
+                                text = " (${product.ratingCount})",
+                                color = MutedText,
+                                fontSize = 14.sp
+                            )
+                        }
+
+                        // Vertical Divider
+                        VerticalDivider(modifier = Modifier.height(24.dp))
+
+                        // Stock Status Side
                         Text(
                             text = when {
-                                product.stock == 0 -> "⚠️ Out of Stock"
-                                product.stock < 5 -> "⚡ Only ${product.stock} left!"
-                                else -> "✅ In Stock (${product.stock} available)"
+                                product.stock == 0 -> "Out of Stock"
+                                product.stock < 5 -> "Only ${product.stock} left!"
+                                else -> "In Stock"
                             },
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
                             color = when {
-                                product.stock == 0 -> Color(0xFFC62828)
-                                product.stock < 5 -> Color(0xFFE65100)
-                                else -> Color(0xFF2E7D32)
-                            }
+                                product.stock == 0 -> Color(0xFFE53935)
+                                product.stock < 5 -> Color(0xFFFB8C00)
+                                else -> PrimaryGreen
+                            },
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(40.dp))
+
+                // Title & Price (Adjusted offset due to card above)
+                Column(modifier = Modifier.offset(y = (-20).dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(
+                            text = product.name,
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = DarkText,
+                            modifier = Modifier.weight(1f),
+                            lineHeight = 32.sp
+                        )
+                        Text(
+                            text = "Rs. ${product.price.toInt()}",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryGreen
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Description
+                    Text(
+                        "Description",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DarkText
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = product.description.ifEmpty { "No description available for this product." },
+                        fontSize = 15.sp,
+                        color = MutedText,
+                        lineHeight = 24.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Seller Section
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showSellerDetails = true },
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .background(PrimaryGreen.copy(alpha = 0.1f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Store, null, tint = PrimaryGreen)
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Sold by",
+                                    fontSize = 12.sp,
+                                    color = MutedText
+                                )
+                                Text(
+                                    "View Seller Profile",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DarkText
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = MutedText
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Rate Button
+                    if (!hasRated) {
+                        OutlinedButton(
+                            onClick = { showRatingDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = DarkText)
+                        ) {
+                            Icon(Icons.Default.Star, null, tint = GoldStar, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Rate this Product")
+                        }
+                    }
+
+                    // Spacer for bottom content
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
             }
         }
     }
 
+    // --- Overlays ---
     if (showSellerDetails) {
         SellerDetailsScreen(
             sellerId = product.sellerId,
@@ -391,4 +492,35 @@ fun ProductDescriptionScreen(
             }
         )
     }
+}
+
+// --- Helper Components ---
+
+@Composable
+fun SmallFloatingButton(
+    onClick: () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+    tint: Color = Color.Black
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = Color.White,
+        shadowElevation = 4.dp,
+        modifier = modifier.size(40.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+@Composable
+fun VerticalDivider(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .width(1.dp)
+            .background(Color.Gray.copy(alpha = 0.2f))
+    )
 }
