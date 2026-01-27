@@ -268,7 +268,7 @@ fun SellerRegisterScreen() {
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Already have an account?", fontSize = 16.sp, color = MainColor)
+                    Text("Already have an account ?", fontSize = 16.sp, color = MainColor)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Sign In",
