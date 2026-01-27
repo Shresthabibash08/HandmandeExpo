@@ -197,7 +197,7 @@ fun SignupBody() {
                             checkmarkColor = Color.White
                         )
                     )
-                    Text("I agree to terms & Conditions", fontSize = 14.sp)
+                    Text("I agree to Terms & Conditions", fontSize = 14.sp)
                 }
 
                 // Sign Up Button
@@ -214,7 +214,16 @@ fun SignupBody() {
                             else -> {
                                 buyerViewModel.register(email, password) { success, msg, userId ->
                                     if (success && userId != null) {
-                                        val model = BuyerModel(userId, fullName, email, address, phoneNumber)
+                                        // ✅ FIXED: Correct parameter order
+                                        val model = BuyerModel(
+                                            buyerId = userId,
+                                            buyerName = fullName,
+                                            buyerEmail = email,
+                                            buyerPhoneNumber = phoneNumber,  // ✅ Phone goes to phoneNumber
+                                            buyerAddress = address,          // ✅ Address goes to address
+                                            role = "buyer",
+                                            banned = false
+                                        )
                                         buyerViewModel.addBuyerToDatabase(userId, model) { dbSuccess, dbMsg ->
                                             if (dbSuccess) {
                                                 context.startActivity(Intent(context, SignInActivity::class.java))

@@ -10,7 +10,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -54,11 +53,11 @@ fun DashboardBody(userId: String) {
     var changingPassword by remember { mutableStateOf(false) }
     var showAllSellers by remember { mutableStateOf(false) }
 
-    // --- REPORTING STATE (Used for Home Screen Reports) ---
+    // --- REPORTING STATE ---
     var reportProductId by remember { mutableStateOf<String?>(null) }
     var reportSellerId by remember { mutableStateOf<String?>(null) }
 
-    // Chat State: (ChatID, SellerID, SellerName)
+    // Chat State
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
     // --- 2. INITIALIZE REPOS AND VIEWMODELS ---
@@ -84,17 +83,10 @@ fun DashboardBody(userId: String) {
 
     BackHandler(enabled = isChatActive || isReportingProduct || isReportingSeller || isProfileOverlay) {
         when {
-            // Priority 1: Close Report Screens
             isReportingSeller -> reportSellerId = null
             isReportingProduct -> reportProductId = null
-
-            // Priority 2: Close Chat Screen
             activeChatData != null -> activeChatData = null
-
-            // Priority 3: Close "New Chat" List
             showAllSellers -> showAllSellers = false
-
-            // Priority 4: Close Profile Edits
             editing -> editing = false
             changingPassword -> changingPassword = false
         }
@@ -143,21 +135,10 @@ fun DashboardBody(userId: String) {
                     }
                 }
             }
-        },
-        floatingActionButton = {
-            if (selectedIndex == 1 && activeChatData == null && !showAllSellers) {
-                FloatingActionButton(
-                    onClick = { showAllSellers = true },
-                    containerColor = MainColor,
-                    contentColor = White12
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "New Chat")
-                }
-            }
         }
+        // FloatingActionButton removed from here
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // --- GLOBAL OVERLAYS (REPORTING) ---
             if (reportSellerId != null) {
                 ReportSellerScreen(
                     sellerId = reportSellerId!!,
@@ -170,31 +151,21 @@ fun DashboardBody(userId: String) {
                 )
             } else {
                 when (selectedIndex) {
-                    // --- HOME TAB ---
                     0 -> {
                         HomeScreen(
-                            onReportProductClick = { productId ->
-                                reportProductId = productId
-                            },
-                            onReportSellerClick = { sellerId ->
-                                reportSellerId = sellerId
-                            }
+                            onReportProductClick = { productId -> reportProductId = productId },
+                            onReportSellerClick = { sellerId -> reportSellerId = sellerId }
                         )
                     }
-
-                    // --- INBOX TAB ---
                     1 -> when {
                         activeChatData != null -> {
-                            // *** FIXED SECTION START ***
                             ChatScreen(
                                 chatId = activeChatData!!.first,
                                 sellerId = activeChatData!!.second,
                                 sellerName = activeChatData!!.third,
                                 currentUserId = userId,
                                 onBackClick = { activeChatData = null }
-                                // REMOVED onReportClick because ChatScreen now handles it internally!
                             )
-                            // *** FIXED SECTION END ***
                         }
                         showAllSellers -> {
                             AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
@@ -208,16 +179,9 @@ fun DashboardBody(userId: String) {
                             }
                         }
                     }
-
-                    // --- CART TAB ---
                     2 -> {
-                        CartScreen(
-                            cartViewModel = cartViewModel,
-                            currentUserId = userId
-                        )
+                        CartScreen(cartViewModel = cartViewModel, currentUserId = userId)
                     }
-
-                    // --- PROFILE TAB ---
                     3 -> when {
                         changingPassword -> {
                             ChangePasswordScreen(

@@ -39,7 +39,9 @@ fun BuyerChatListScreen(
                 chattedSellers = list.sortedByDescending { it["timestamp"] as? Long ?: 0L }
                 isLoading = false
             }
-            override fun onCancelled(error: DatabaseError) { isLoading = false }
+            override fun onCancelled(error: DatabaseError) {
+                isLoading = false
+            }
         })
     }
 
@@ -70,7 +72,12 @@ fun BuyerChatListScreen(
                 ListItem(
                     modifier = Modifier.clickable { onChatClick(cId, sId, sellerName) },
                     leadingContent = {
-                        Box(Modifier.size(45.dp).background(Color(0xFFF5F5F5), CircleShape), contentAlignment = Alignment.Center) {
+                        Box(
+                            Modifier
+                                .size(45.dp)
+                                .background(Color(0xFFF5F5F5), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(Icons.Default.Person, null, tint = Color.Gray)
                         }
                     },

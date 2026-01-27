@@ -249,18 +249,26 @@ fun GradientPriceSliderSection(
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Text("Max Price", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text("NRP ${max.toInt()}", color = OrangeBrand, fontWeight = FontWeight.Bold)
+                Text("NPR ${max.toInt()}", color = OrangeBrand, fontWeight = FontWeight.Bold)
             }
             Slider(
                 value = value,
                 onValueChange = {
                     onValueChange(it)
-                    onCategorySelect(it.toDouble()) 
+                    // ✅ FIX: Calculate actual price from slider percentage
+                    val actualPrice = (it / 100f) * 100000.0
+                    onCategorySelect(actualPrice)
                 },
-                valueRange = 0f..100f,
-                colors = SliderDefaults.colors(thumbColor = OrangeBrand, activeTrackColor = OrangeBrand)
+                valueRange = 0f..100f,  // Slider position 0-100%
+                colors = SliderDefaults.colors(
+                    thumbColor = OrangeBrand,
+                    activeTrackColor = OrangeBrand
+                )
             )
         }
     }

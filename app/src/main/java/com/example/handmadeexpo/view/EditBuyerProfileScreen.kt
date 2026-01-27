@@ -4,6 +4,8 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -15,7 +17,6 @@ import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.model.BuyerModel
 import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
-import com.example.handmadeexpo.utils.AdminEmailValidator
 
 @Composable
 fun EditBuyerProfileScreen(
@@ -25,14 +26,21 @@ fun EditBuyerProfileScreen(
     val context = LocalContext.current
     val buyer by viewModel.buyer.observeAsState()
 
-    var name by remember { mutableStateOf(buyer?.buyerName ?: "") }
-    var email by remember { mutableStateOf(buyer?.buyerEmail ?: "") }
-    var phone by remember { mutableStateOf(buyer?.buyerPhoneNumber ?: "") }
-    var address by remember { mutableStateOf(buyer?.buyerAddress ?: "") }
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
 
     var loading by remember { mutableStateOf(false) }
-    var emailError by remember { mutableStateOf<String?>(null) }
-    var isEmailDuplicate by remember { mutableStateOf(false) }
+
+    LaunchedEffect(buyer) {
+        buyer?.let {
+            name = it.buyerName
+            email = it.buyerEmail
+            phone = it.buyerPhoneNumber
+            address = it.buyerAddress
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -50,40 +58,47 @@ fun EditBuyerProfileScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // ✅ READ-ONLY EMAIL FIELD
         OutlinedTextField(
             value = email,
-            onValueChange = { newEmail ->
-                email = newEmail
-                // First check if it's admin email
-                if (AdminEmailValidator.isReservedEmail(newEmail)) {
-                    emailError = AdminEmailValidator.getReservedEmailError()
-                    isEmailDuplicate = true
-                } else if (newEmail.isNotBlank() && newEmail != buyer?.buyerEmail) {
-                    // Only check database if email changed
-                    AdminEmailValidator.isBuyerEmailExists(newEmail) { exists ->
-                        isEmailDuplicate = exists
-                        emailError = if (exists) {
-                            AdminEmailValidator.getDuplicateEmailError()
-                        } else {
-                            null
-                        }
-                    }
-                } else if (newEmail == buyer?.buyerEmail) {
-                    emailError = null
-                    isEmailDuplicate = false
-                }
-            },
-            label = { Text("Email") },
+            onValueChange = { /* Do nothing - read only */ },
+            label = { Text("Email (Cannot be changed)") },
             modifier = Modifier.fillMaxWidth(),
-            isError = emailError != null
+            enabled = false,  // ✅ Disabled
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledTextColor = Color.Black,
+                disabledBorderColor = Color.Gray,
+                disabledLabelColor = Color.Gray,
+                disabledLeadingIconColor = Color.Gray,
+                disabledTrailingIconColor = Color.Gray
+            ),
+            trailingIcon = {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = "Cannot change email",
+                    tint = Color.Gray
+                )
+            }
         )
 
-        if (emailError != null) {
+        // ✅ INFO MESSAGE
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Icon(
+                Icons.Default.Info,
+                contentDescription = null,
+                tint = Color(0xFFE65100),
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = emailError!!,
-                color = Color.Red,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(vertical = 4.dp)
+                text = "Email cannot be changed for security reasons",
+                color = Color.Gray,
+                fontSize = 12.sp
             )
         }
 
@@ -109,24 +124,16 @@ fun EditBuyerProfileScreen(
 
         Button(
             onClick = {
-                // Show toast if email is duplicate or reserved
-                if (isEmailDuplicate || AdminEmailValidator.isReservedEmail(email)) {
-                    Toast.makeText(
-                        context,
-                        "Cannot save: Email already exists or is reserved",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@Button
-                }
-
                 buyer?.buyerId?.let { id ->
                     loading = true
                     val updatedBuyer = BuyerModel(
                         buyerId = id,
                         buyerName = name,
-                        buyerEmail = email,
+                        buyerEmail = email,  // ✅ Email stays the same
                         buyerPhoneNumber = phone,
-                        buyerAddress = address
+                        buyerAddress = address,
+                        role = buyer?.role ?: "buyer",
+                        banned = buyer?.banned ?: false
                     )
                     viewModel.updateProfile(id, updatedBuyer) { success, _ ->
                         loading = false
@@ -148,7 +155,7 @@ fun EditBuyerProfileScreen(
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = !loading && !isEmailDuplicate && !AdminEmailValidator.isReservedEmail(email),
+            enabled = !loading,
             colors = ButtonDefaults.buttonColors(containerColor = MainColor)
         ) {
             Text(if (loading) "Saving..." else "Save")
