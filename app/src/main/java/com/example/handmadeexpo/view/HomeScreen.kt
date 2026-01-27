@@ -1,6 +1,5 @@
 package com.example.handmadeexpo.view
 
-import CategoryScreen
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -9,6 +8,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -92,9 +94,12 @@ fun HomeScreen(
                 var sellerNameState by remember { mutableStateOf("Loading...") }
 
                 LaunchedEffect(selectedProduct!!.sellerId) {
-                    FirebaseDatabase.getInstance().getReference("sellers")
-                        .child(selectedProduct!!.sellerId).child("name").get()
-                        .addOnSuccessListener { sellerNameState = it.value?.toString() ?: "Seller" }
+                    FirebaseDatabase.getInstance().getReference("Seller")
+                        .child(selectedProduct!!.sellerId).child("shopName").get()
+                        .addOnSuccessListener {
+                            val name = it.value?.toString()
+                            sellerNameState = if (!name.isNullOrEmpty()) name else "Seller"
+                        }
                 }
 
                 ChatScreen(
@@ -102,7 +107,9 @@ fun HomeScreen(
                     sellerId = selectedProduct!!.sellerId,
                     sellerName = sellerNameState,
                     currentUserId = currentUserId,
-                    onBackClick = { isChatOpen = false }
+                    onBackClick = { isChatOpen = false },
+                    isReportingSeller = true,
+                    onReportClick = { onReportSellerClick(selectedProduct!!.sellerId) }
                 )
             }
             selectedCategory != null && selectedProduct == null -> {
@@ -146,6 +153,71 @@ fun HomeScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategoryScreen(
+    categoryName: String,
+    viewModel: ProductViewModel,
+    onBackClick: () -> Unit,
+    onProductClick: (ProductModel) -> Unit
+) {
+    LaunchedEffect(categoryName) {
+        if (categoryName == "All") {
+            viewModel.getAllProduct()
+        } else {
+            viewModel.getProductByCategory(categoryName)
+        }
+    }
+
+    val productsState by if (categoryName == "All") {
+        viewModel.allProducts.observeAsState(null)
+    } else {
+        viewModel.allProductsCategory.observeAsState(null)
+    }
+
+    Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
+        TopAppBar(
+            title = { Text(categoryName, fontWeight = FontWeight.Bold) },
+            navigationIcon = {
+                IconButton(onClick = onBackClick) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+        )
+
+        when {
+            productsState == null -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = OrangeBrand)
+                }
+            }
+            productsState!!.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No products found in $categoryName", color = Color.Gray, fontSize = 16.sp)
+                }
+            }
+            else -> {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(productsState!!, key = { it.productId }) { product ->
+                        ProductCard(
+                            product = product,
+                            onClick = { onProductClick(product) },
+                            onChatClick = { /* Handled in ProductDescription */ }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun MainHomeContent(
     products: List<ProductModel>,
@@ -164,7 +236,7 @@ fun MainHomeContent(
         "Wooden Mask" to R.drawable.masks,
         "Singing Bowl" to R.drawable.bowls,
         "Painting" to R.drawable.painting,
-        "Thanka" to R.drawable.thankas,
+        "Thangka" to R.drawable.thankas,
         "Wall Decor" to R.drawable.walldecore,
         "Others" to R.drawable.others
     )
@@ -181,11 +253,8 @@ fun MainHomeContent(
                     color = MainColor,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
-
                 CategoryList(categories = categories, onCategoryClick = onCategoryClick)
-
                 Spacer(modifier = Modifier.height(16.dp))
-
                 GradientPriceSliderSection(sliderValue, maxPrice, onSliderChange, onCategorySelect)
             }
         }
@@ -198,38 +267,6 @@ fun MainHomeContent(
             SectionHeader("Recommended", "Handpicked for you", true)
             ProductRow(filteredList.reversed(), onProductClick, onChatClick)
             Spacer(modifier = Modifier.height(80.dp))
-        }
-    }
-}
-
-@Composable
-fun CategoryList(
-    categories: List<Pair<String, Int>>,
-    onCategoryClick: (String) -> Unit
-) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        items(categories) { (name, imageRes) ->
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.clickable { onCategoryClick(name) }
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(55.dp)
-                        .background(CreamBackground, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = imageRes),
-                        contentDescription = name,
-                        modifier = Modifier.size(30.dp)
-                    )
-                }
-                Text(name, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-            }
         }
     }
 }
@@ -260,16 +297,43 @@ fun GradientPriceSliderSection(
                 value = value,
                 onValueChange = {
                     onValueChange(it)
-                    // ✅ FIX: Calculate actual price from slider percentage
+                    // ✅ FIXED: Calculate actual price from slider percentage (development branch logic)
                     val actualPrice = (it / 100f) * 100000.0
                     onCategorySelect(actualPrice)
                 },
-                valueRange = 0f..100f,  // Slider position 0-100%
+                valueRange = 0f..100f,
                 colors = SliderDefaults.colors(
                     thumbColor = OrangeBrand,
                     activeTrackColor = OrangeBrand
                 )
             )
+        }
+    }
+}
+
+@Composable
+fun CategoryList(categories: List<Pair<String, Int>>, onCategoryClick: (String) -> Unit) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        items(categories) { (name, imageRes) ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.clickable { onCategoryClick(name) }
+            ) {
+                Box(
+                    modifier = Modifier.size(55.dp).background(CreamBackground, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = imageRes),
+                        contentDescription = name,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
+                Text(name, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            }
         }
     }
 }
@@ -297,19 +361,14 @@ fun ProductCard(
     onChatClick: (ProductModel) -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .width(160.dp)
-            .clickable { onClick(product) },
+        modifier = Modifier.width(160.dp).clickable { onClick(product) },
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA))
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
             AsyncImage(
                 model = product.image,
                 contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(110.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                modifier = Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop
             )
             Text(product.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -339,10 +398,7 @@ fun SearchBarInput(query: String, onQueryChange: (String) -> Unit) {
         onValueChange = onQueryChange,
         placeholder = { Text("Search items...") },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .clip(RoundedCornerShape(12.dp)),
+        modifier = Modifier.fillMaxWidth().padding(16.dp).clip(RoundedCornerShape(12.dp)),
         colors = TextFieldDefaults.colors(
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent
@@ -353,9 +409,7 @@ fun SearchBarInput(query: String, onQueryChange: (String) -> Unit) {
 @Composable
 fun SectionHeader(title: String, subtitle: String?, showArrow: Boolean) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {

@@ -1,7 +1,5 @@
 package com.example.handmadeexpo.view
 
-import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,35 +20,65 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.handmadeexpo.repo.ChatRepoImpl
 import com.example.handmadeexpo.viewmodel.ChatViewModel
 import com.example.handmadeexpo.viewmodel.ChatViewModelFactory
-import com.example.handmadeexpo.viewmodel.ReportViewModel
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     chatId: String,
-    sellerId: String, // Note: If you are the Seller, this ID is the Buyer you are talking to.
+    sellerId: String,
     sellerName: String,
     currentUserId: String,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    isReportingSeller: Boolean, // true = Buyer viewing Seller; false = Seller viewing Buyer
+    onReportClick: () -> Unit
 ) {
-    val context = LocalContext.current
+    val viewModel: ChatViewModel = viewModel(factory = ChatViewModelFactory(ChatRepoImpl()))
 
-    // 1. ViewModels
-    val viewModel: ChatViewModel = viewModel(
-        factory = ChatViewModelFactory(ChatRepoImpl())
-    )
-    // We use the default factory for ReportViewModel since it has no params in your previous code
-    val reportViewModel: ReportViewModel = viewModel()
+    // Default to "Loading..." so we don't show "Unknown" prematurely
+    var displayName by remember { mutableStateOf(if(sellerName == "Unknown" || sellerName == "Loading...") "Loading..." else sellerName) }
 
-    // 2. State
     var messageText by remember { mutableStateOf("") }
     val messages by viewModel.messages.collectAsState(initial = emptyList())
 
-    // State to control the Report Popup
-    var showReportDialog by remember { mutableStateOf(false) }
-
     LaunchedEffect(chatId) {
         viewModel.listenForMessages(chatId)
+    }
+
+    // *** FIX: Fetch correct field based on user type ***
+    DisposableEffect(sellerId) {
+        val database = FirebaseDatabase.getInstance()
+
+        // 1. Determine correct Node and Field Name
+        val nodeName = if (isReportingSeller) "Seller" else "Buyer"
+        val targetField = if (isReportingSeller) "shopName" else "buyerName"
+
+        val ref = database.getReference(nodeName).child(sellerId)
+
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                // Fetch the specific field: shopName OR buyerName
+                val name = snapshot.child(targetField).value?.toString()
+
+                if (!name.isNullOrEmpty()) {
+                    displayName = name
+                } else {
+                    // Fallback: Check 'name' or 'username' just in case
+                    val backupName = snapshot.child("name").value?.toString()
+                        ?: snapshot.child("username").value?.toString()
+
+                    if (!backupName.isNullOrEmpty()) displayName = backupName
+                    else displayName = "User"
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+
+        ref.addValueEventListener(listener)
+        onDispose { ref.removeEventListener(listener) }
     }
 
     Scaffold(
@@ -59,8 +86,8 @@ fun ChatScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(sellerName, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("Buyer", fontSize = 12.sp, color = Color.Gray)
+                        Text(displayName, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(if (isReportingSeller) "Seller" else "Buyer", fontSize = 12.sp, color = Color.Gray)
                     }
                 },
                 navigationIcon = {
@@ -69,35 +96,21 @@ fun ChatScreen(
                     }
                 },
                 actions = {
-                    // 3. Report Button Logic
-                    IconButton(onClick = { showReportDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = "Report User",
-                            tint = Color.Red
-                        )
+                    IconButton(onClick = onReportClick) {
+                        Icon(Icons.Default.Warning, contentDescription = "Report User", tint = Color.Red)
                     }
                 }
             )
         },
         bottomBar = {
-            BottomAppBar(
-                containerColor = Color.White,
-                modifier = Modifier.imePadding()
-            ) {
-                Row(
-                    modifier = Modifier.padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            BottomAppBar(containerColor = Color.White, modifier = Modifier.imePadding()) {
+                Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     TextField(
                         value = messageText,
                         onValueChange = { messageText = it },
                         modifier = Modifier.weight(1f),
                         placeholder = { Text("Type a message...") },
-                        colors = TextFieldDefaults.colors(
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        ),
+                        colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
                         shape = RoundedCornerShape(24.dp)
                     )
                     IconButton(onClick = {
@@ -106,44 +119,17 @@ fun ChatScreen(
                             messageText = ""
                         }
                     }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "Send",
-                            tint = Color(0xFFE65100)
-                        )
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color(0xFFE65100))
                     }
                 }
             }
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                reverseLayout = false
-            ) {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                 items(messages) { msg ->
-                    val isMe = msg.senderId == currentUserId
-                    ChatBubble(text = msg.message, isMe = isMe)
+                    ChatBubble(text = msg.message, isMe = msg.senderId == currentUserId)
                 }
-            }
-
-            // 4. Report Dialog Implementation
-            if (showReportDialog) {
-                ReportDialog(
-                    name = sellerName,
-                    onDismiss = { showReportDialog = false },
-                    onSubmit = { reason ->
-                        // Call the reportBuyer function we created in ReportViewModel
-                        reportViewModel.reportBuyer(sellerId, reason) { success, msg ->
-                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                            if (success) {
-                                showReportDialog = false
-                            }
-                        }
-                    }
-                )
             }
         }
     }
@@ -152,9 +138,7 @@ fun ChatScreen(
 @Composable
 fun ChatBubble(text: String, isMe: Boolean) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
     ) {
         Surface(
@@ -165,46 +149,7 @@ fun ChatBubble(text: String, isMe: Boolean) {
                 bottomEnd = if (isMe) 0.dp else 12.dp
             )
         ) {
-            Text(
-                text = text,
-                modifier = Modifier.padding(12.dp),
-                color = if (isMe) Color.White else Color.Black,
-                fontSize = 14.sp
-            )
+            Text(text = text, modifier = Modifier.padding(12.dp), color = if (isMe) Color.White else Color.Black, fontSize = 14.sp)
         }
     }
-}
-
-// 5. Reusable Dialog Component
-@Composable
-fun ReportDialog(name: String, onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
-    var reason by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Report $name") },
-        text = {
-            Column {
-                Text("Why are you reporting this user?")
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = reason,
-                    onValueChange = { reason = it },
-                    placeholder = { Text("e.g. Harassment, Scam, Rude...") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { if (reason.isNotBlank()) onSubmit(reason) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-            ) {
-                Text("Report")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
 }

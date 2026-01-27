@@ -55,7 +55,8 @@ fun DashboardBody(userId: String) {
 
     // --- REPORTING STATE ---
     var reportProductId by remember { mutableStateOf<String?>(null) }
-    var reportSellerId by remember { mutableStateOf<String?>(null) }
+    var reportSellerId by remember { mutableStateOf<String?>(null) } // From Home
+    var reportingChatUserId by remember { mutableStateOf<String?>(null) } // From Chat
 
     // Chat State
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
@@ -79,12 +80,14 @@ fun DashboardBody(userId: String) {
     val isChatActive = selectedIndex == 1 && (activeChatData != null || showAllSellers)
     val isReportingProduct = reportProductId != null
     val isReportingSeller = reportSellerId != null
+    val isReportingChatUser = reportingChatUserId != null
     val isProfileOverlay = selectedIndex == 3 && (editing || changingPassword)
 
-    BackHandler(enabled = isChatActive || isReportingProduct || isReportingSeller || isProfileOverlay) {
+    BackHandler(enabled = isChatActive || isReportingProduct || isReportingSeller || isReportingChatUser || isProfileOverlay) {
         when {
-            isReportingSeller -> reportSellerId = null
-            isReportingProduct -> reportProductId = null
+            reportingChatUserId != null -> reportingChatUserId = null
+            reportSellerId != null -> reportSellerId = null
+            reportProductId != null -> reportProductId = null
             activeChatData != null -> activeChatData = null
             showAllSellers -> showAllSellers = false
             editing -> editing = false
@@ -94,7 +97,7 @@ fun DashboardBody(userId: String) {
 
     Scaffold(
         topBar = {
-            if (reportProductId == null && reportSellerId == null) {
+            if (reportProductId == null && reportSellerId == null && reportingChatUserId == null) {
                 TopAppBar(
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MainColor,
@@ -115,7 +118,7 @@ fun DashboardBody(userId: String) {
             }
         },
         bottomBar = {
-            if (activeChatData == null && reportProductId == null && reportSellerId == null && !editing && !changingPassword) {
+            if (activeChatData == null && reportProductId == null && reportSellerId == null && reportingChatUserId == null && !editing && !changingPassword) {
                 NavigationBar {
                     listItems.forEachIndexed { index, item ->
                         NavigationBarItem(
@@ -127,6 +130,7 @@ fun DashboardBody(userId: String) {
                                 showAllSellers = false
                                 reportProductId = null
                                 reportSellerId = null
+                                reportingChatUserId = null
                                 if (index != 1) activeChatData = null
                             },
                             icon = { Icon(item.icon, contentDescription = item.label) },
@@ -136,20 +140,35 @@ fun DashboardBody(userId: String) {
                 }
             }
         }
-        // FloatingActionButton removed from here
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            if (reportSellerId != null) {
-                ReportSellerScreen(
-                    sellerId = reportSellerId!!,
+            // --- GLOBAL OVERLAYS (REPORTING) ---
+
+            // 1. Report from Chat
+            if (reportingChatUserId != null) {
+                ReportScreen(
+                    reportTargetId = reportingChatUserId!!,
+                    isReportingSeller = true,
+                    onBackClick = { reportingChatUserId = null }
+                )
+            }
+            // 2. Report Seller from Home
+            else if (reportSellerId != null) {
+                ReportScreen(
+                    reportTargetId = reportSellerId!!,
+                    isReportingSeller = true,
                     onBackClick = { reportSellerId = null }
                 )
-            } else if (reportProductId != null) {
+            }
+            // 3. Report Product
+            else if (reportProductId != null) {
                 ReportProductScreen(
                     productId = reportProductId!!,
                     onBackClick = { reportProductId = null }
                 )
-            } else {
+            }
+            else {
+                // --- MAIN TABS ---
                 when (selectedIndex) {
                     0 -> {
                         HomeScreen(
@@ -164,7 +183,11 @@ fun DashboardBody(userId: String) {
                                 sellerId = activeChatData!!.second,
                                 sellerName = activeChatData!!.third,
                                 currentUserId = userId,
-                                onBackClick = { activeChatData = null }
+                                onBackClick = { activeChatData = null },
+                                isReportingSeller = true,
+                                onReportClick = {
+                                    reportingChatUserId = activeChatData!!.second
+                                }
                             )
                         }
                         showAllSellers -> {

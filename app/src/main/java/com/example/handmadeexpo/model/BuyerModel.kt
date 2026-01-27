@@ -7,9 +7,9 @@ data class BuyerModel(
     val buyerPhoneNumber: String = "",
     val buyerAddress: String = "",
     var role: String = "buyer",
-
-    // --- ADD THIS FIELD ---
-    val banned: Boolean = false
+    val banned: Boolean = false,
+    // Added profile image field
+    val profileImage: String = ""
 ) {
     fun toMap(): Map<String, Any?> {
         return mapOf(
@@ -19,9 +19,8 @@ data class BuyerModel(
             "buyerPhoneNumber" to buyerPhoneNumber,
             "buyerAddress" to buyerAddress,
             "role" to role,
-
-            // --- ADD THIS TO MAP ---
-            "banned" to banned
+            "banned" to banned,
+            "profileImage" to profileImage
         )
     }
 }
