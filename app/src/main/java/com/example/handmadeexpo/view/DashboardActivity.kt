@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.repo.BuyerRepoImpl
@@ -127,6 +128,7 @@ fun DashboardBody(userId: String) {
                 NavigationBar {
                     listItems.forEachIndexed { index, item ->
                         NavigationBarItem(
+                            modifier = Modifier.testTag("nav_item_${item.label.lowercase()}"),
                             selected = selectedIndex == index,
                             onClick = {
                                 selectedIndex = index
@@ -154,7 +156,8 @@ fun DashboardBody(userId: String) {
                     Icon(Icons.Default.Add, contentDescription = "New Chat")
                 }
             }
-        }
+        },
+        modifier = Modifier.testTag("dashboard")
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             // --- GLOBAL OVERLAYS (REPORTING) ---
