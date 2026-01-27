@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color.Companion.Black
 import androidx.compose.ui.graphics.Color.Companion.Blue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -115,7 +116,8 @@ fun SignInBody() {
                         label = { Text("Email") },
                         singleLine = true,
                         enabled = !isLoading,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+                            .testTag("email"),
                         shape = RoundedCornerShape(12.dp),
                         leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null, tint = MainColor) }
                     )
@@ -130,7 +132,8 @@ fun SignInBody() {
                         singleLine = true,
                         enabled = !isLoading,
                         visualTransformation = if (!visibility) PasswordVisualTransformation() else VisualTransformation.None,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+                            .testTag("password"),
                         shape = RoundedCornerShape(12.dp),
                         leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, tint = MainColor) },
                         trailingIcon = {
@@ -147,6 +150,7 @@ fun SignInBody() {
                     Text(
                         text = "Forgot password?",
                         modifier = Modifier
+                            .testTag("forgetpassword")
                             .fillMaxWidth()
                             .padding(end = 24.dp, top = 8.dp)
                             .clickable { context.startActivity(Intent(context, ForgetPasswordActivity::class.java)) },
@@ -190,7 +194,8 @@ fun SignInBody() {
                                 }
                             }
                         },
-                        modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 24.dp),
+                        modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 24.dp)
+                            .testTag("singin"),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MainColor),
                         enabled = !isLoading
@@ -265,13 +270,15 @@ fun RegistrationFooter(context: android.content.Context) {
         Row {
             Text("New to Handmade Expo? ", fontSize = 14.sp)
             Text("Register as Buyer", color = Blue, fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable { context.startActivity(Intent(context, SignupActivity::class.java)) })
+                modifier = Modifier.testTag("signup")
+                    .clickable { context.startActivity(Intent(context, SignupActivity::class.java)) })
         }
         Spacer(modifier = Modifier.height(8.dp))
         Row {
             Text("Want to sell? ", fontSize = 14.sp)
             Text("Join as Seller", color = Blue, fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable { context.startActivity(Intent(context, SellerRegistration::class.java)) })
+                modifier = Modifier.testTag("seller")
+                    .clickable { context.startActivity(Intent(context, SellerRegistration::class.java)) })
         }
     }
 }
