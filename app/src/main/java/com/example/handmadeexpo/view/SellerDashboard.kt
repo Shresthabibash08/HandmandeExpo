@@ -36,7 +36,6 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 
-
 class SellerDashboard : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,24 +62,29 @@ fun ModernSellerDashboardBody(sellerId: String) {
     var sellerName by remember { mutableStateOf("Seller") }
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
+    // State for Reporting Buyer
+    var reportBuyerId by remember { mutableStateOf<String?>(null) }
+
     val sellerViewModel: SellerViewModel = viewModel(
         factory = SellerViewModelFactory(SellerRepoImpl())
     )
 
-    // Fetch Seller Name
+    // Fetch Seller Name (Corrected Node)
     LaunchedEffect(sellerId) {
         if (sellerId.isNotEmpty()) {
-            FirebaseDatabase.getInstance().getReference("Sellers").child(sellerId).child("name")
+            // Fetch 'shopName' from 'Seller' node
+            FirebaseDatabase.getInstance().getReference("Seller").child(sellerId).child("shopName")
                 .get().addOnSuccessListener { snapshot ->
-                    sellerName = snapshot.value?.toString() ?: "Seller"
+                    val name = snapshot.value?.toString()
+                    sellerName = if (!name.isNullOrEmpty()) name else "Seller"
                 }
         }
     }
 
     // Badge Listener for Incoming Chats
-    val inboxRef = remember { FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId) }
-    LaunchedEffect(sellerId) {
+    DisposableEffect(sellerId) {
         if (sellerId.isNotEmpty()) {
+            val inboxRef = FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId)
             val listener = object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     chatCount = snapshot.childrenCount.toInt()
@@ -88,6 +92,9 @@ fun ModernSellerDashboardBody(sellerId: String) {
                 override fun onCancelled(error: DatabaseError) {}
             }
             inboxRef.addValueEventListener(listener)
+            onDispose { inboxRef.removeEventListener(listener) }
+        } else {
+            onDispose { }
         }
     }
 
@@ -99,8 +106,13 @@ fun ModernSellerDashboardBody(sellerId: String) {
         NavItem(Icons.Default.Person, "Profile", Color(0xFF9C27B0))
     )
 
-    BackHandler(enabled = activeChatData != null || editing || changingPassword) {
+    val isChatActive = selectedIndex == 2 && activeChatData != null
+    val isReporting = reportBuyerId != null
+    val isProfileActive = editing || changingPassword
+
+    BackHandler(enabled = isChatActive || isReporting || isProfileActive) {
         when {
+            reportBuyerId != null -> reportBuyerId = null
             activeChatData != null -> activeChatData = null
             editing -> editing = false
             changingPassword -> changingPassword = false
@@ -116,6 +128,7 @@ fun ModernSellerDashboardBody(sellerId: String) {
                 title = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         val titleText = when {
+                            reportBuyerId != null -> "Report Buyer"
                             selectedIndex == 2 && activeChatData != null -> activeChatData!!.third
                             selectedIndex == 0 -> "Seller Dashboard"
                             selectedIndex == 1 -> "My Inventory"
@@ -128,19 +141,12 @@ fun ModernSellerDashboardBody(sellerId: String) {
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
-                        if (selectedIndex == 0 && activeChatData == null) {
-                            Text(
-                                "Welcome back!",
-                                fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
-                        }
                     }
                 }
             )
         },
         bottomBar = {
-            if (activeChatData == null && !editing && !changingPassword) {
+            if (activeChatData == null && reportBuyerId == null && !editing && !changingPassword) {
                 NavigationBar(
                     containerColor = Color.White,
                     tonalElevation = 8.dp
@@ -152,6 +158,7 @@ fun ModernSellerDashboardBody(sellerId: String) {
                                 selectedIndex = index
                                 editing = false
                                 changingPassword = false
+                                reportBuyerId = null
                                 if (index != 2) activeChatData = null
                             },
                             icon = {
@@ -183,52 +190,65 @@ fun ModernSellerDashboardBody(sellerId: String) {
         containerColor = Color(0xFFF5F7FA)
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            when (selectedIndex) {
-                0 -> SellerHomeScreen(sellerId = sellerId, sellerName = sellerName)
-                1 -> InventoryScreen(sellerId)
-                2 -> {
-                    if (activeChatData != null) {
-                        ChatScreen(
-                            chatId = activeChatData!!.first,
-                            sellerId = activeChatData!!.second,
-                            sellerName = activeChatData!!.third,
-                            currentUserId = sellerId,
-                            onBackClick = { activeChatData = null }
-                        )
-                    } else {
-                        SellerChatListScreen(sellerId) { chatId, buyerId, buyerName ->
-                            activeChatData = Triple(chatId, buyerId, buyerName)
+            when {
+                reportBuyerId != null -> {
+                    // *** FIX: Uses correct 'targetId' parameter ***
+                    ReportScreen(
+                        targetId = reportBuyerId!!,
+                        isReportingSeller = false, // Seller reporting Buyer
+                        onBackClick = { reportBuyerId = null }
+                    )
+                }
+                else -> when (selectedIndex) {
+                    0 -> SellerHomeScreen(sellerId = sellerId, sellerName = sellerName)
+                    1 -> InventoryScreen(sellerId)
+                    2 -> {
+                        if (activeChatData != null) {
+                            ChatScreen(
+                                chatId = activeChatData!!.first,
+                                sellerId = activeChatData!!.second, // Other person's ID (Buyer)
+                                sellerName = activeChatData!!.third,
+                                currentUserId = sellerId,
+                                onBackClick = { activeChatData = null },
+                                // *** FIX: Added missing params for Seller side ***
+                                isReportingSeller = false, // Seller viewing Buyer
+                                onReportClick = { reportBuyerId = activeChatData!!.second }
+                            )
+                        } else {
+                            SellerChatListScreen(sellerId) { chatId, buyerId, buyerName ->
+                                activeChatData = Triple(chatId, buyerId, buyerName)
+                            }
                         }
                     }
-                }
-                3 -> {
-                    when {
-                        changingPassword -> {
-                            SellerChangePasswordScreen(
-                                viewModel = sellerViewModel,
-                                onBackClick = { changingPassword = false },
-                                onPasswordChanged = { changingPassword = false }
-                            )
-                        }
-                        editing -> {
-                            EditSellerProfileScreen(
-                                viewModel = sellerViewModel,
-                                onBack = { editing = false }
-                            )
-                        }
-                        else -> {
-                            SellerProfileScreen(
-                                sellerId = sellerId,
-                                onEditProfileClick = { editing = true },
-                                onChangePasswordClick = { changingPassword = true },
-                                onLogoutSuccess = {
-                                    val intent = Intent(context, SignInActivity::class.java)
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                    context.startActivity(intent)
-                                    activity?.finish()
-                                },
-                                viewModel = sellerViewModel
-                            )
+                    3 -> {
+                        when {
+                            changingPassword -> {
+                                SellerChangePasswordScreen(
+                                    viewModel = sellerViewModel,
+                                    onBackClick = { changingPassword = false },
+                                    onPasswordChanged = { changingPassword = false }
+                                )
+                            }
+                            editing -> {
+                                EditSellerProfileScreen(
+                                    viewModel = sellerViewModel,
+                                    onBack = { editing = false }
+                                )
+                            }
+                            else -> {
+                                SellerProfileScreen(
+                                    sellerId = sellerId,
+                                    onEditProfileClick = { editing = true },
+                                    onChangePasswordClick = { changingPassword = true },
+                                    onLogoutSuccess = {
+                                        val intent = Intent(context, SignInActivity::class.java)
+                                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                        context.startActivity(intent)
+                                        activity?.finish()
+                                    },
+                                    viewModel = sellerViewModel
+                                )
+                            }
                         }
                     }
                 }
