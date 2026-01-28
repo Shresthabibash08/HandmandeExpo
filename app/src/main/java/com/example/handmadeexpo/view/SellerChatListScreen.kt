@@ -31,7 +31,8 @@ fun SellerChatListScreen(
     var activeChats by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    LaunchedEffect(currentUserId) {
+    // Properly dispose listener when composable leaves composition
+    DisposableEffect(currentUserId) {
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val list = snapshot.children.mapNotNull { it.value as? Map<String, Any> }
@@ -43,6 +44,7 @@ fun SellerChatListScreen(
             }
         }
         database.addValueEventListener(listener)
+        onDispose { database.removeEventListener(listener) }
     }
 
     Column(
@@ -101,79 +103,102 @@ fun SellerChatListScreen(
                     val chatId = chat["chatId"]?.toString() ?: ""
                     val lastMessage = chat["lastMessage"]?.toString() ?: "No message"
 
-                    var buyerName by remember { mutableStateOf("Loading...") }
+                    var buyerDisplayName by remember { mutableStateOf("Loading...") }
 
-                    LaunchedEffect(buyerId) {
+                    // Properly dispose listener for buyer name
+                    DisposableEffect(buyerId) {
                         if (buyerId.isNotEmpty()) {
-                            FirebaseDatabase.getInstance().getReference("buyers").child(buyerId).child("name")
-                                .get().addOnSuccessListener {
-                                    buyerName = it.value?.toString() ?: "Customer"
+                            val ref = FirebaseDatabase.getInstance().getReference("buyers").child(buyerId)
+
+                            val nameListener = object : ValueEventListener {
+                                override fun onDataChange(snapshot: DataSnapshot) {
+                                    // Try buyerName first, then fallback to name
+                                    val bName = snapshot.child("buyerName").value?.toString()
+                                    if (!bName.isNullOrEmpty()) {
+                                        buyerDisplayName = bName
+                                    } else {
+                                        buyerDisplayName = snapshot.child("name").value?.toString() ?: "Customer"
+                                    }
                                 }
+                                override fun onCancelled(error: DatabaseError) {}
+                            }
+                            ref.addValueEventListener(nameListener)
+                            onDispose { ref.removeEventListener(nameListener) }
+                        } else {
+                            onDispose { }
                         }
                     }
 
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .shadow(1.dp, RoundedCornerShape(16.dp))
-                            .clickable {
-                                onChatClick(chatId, buyerId, buyerName)
-                            },
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .background(
-                                        Color(0xFF1E88E5).copy(alpha = 0.15f),
-                                        CircleShape
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = null,
-                                    tint = Color(0xFF1E88E5),
-                                    modifier = Modifier.size(26.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = buyerName,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp,
-                                    color = Color(0xFF212121)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = lastMessage,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    color = Color.Gray,
-                                    fontSize = 13.sp
-                                )
-                            }
-
-                            Icon(
-                                Icons.Default.ChevronRight,
-                                contentDescription = null,
-                                tint = Color.Gray.copy(alpha = 0.5f),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
+                    ChatListItem(
+                        name = buyerDisplayName,
+                        lastMessage = lastMessage,
+                        onClick = { onChatClick(chatId, buyerId, buyerDisplayName) }
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ChatListItem(
+    name: String,
+    lastMessage: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(1.dp, RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .background(Color(0xFF1E88E5).copy(alpha = 0.15f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = null,
+                    tint = Color(0xFF1E88E5),
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = Color(0xFF212121)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = lastMessage,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.Gray,
+                    fontSize = 13.sp
+                )
+            }
+
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Color.Gray.copy(alpha = 0.5f),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

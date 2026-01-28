@@ -1,4 +1,3 @@
-
 package com.example.handmadeexpo.view
 
 import android.widget.Toast
@@ -27,6 +26,10 @@ import com.example.handmadeexpo.repo.ChatRepoImpl
 import com.example.handmadeexpo.viewmodel.ChatViewModel
 import com.example.handmadeexpo.viewmodel.ChatViewModelFactory
 import com.example.handmadeexpo.viewmodel.ReportViewModel
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,23 +38,59 @@ fun ChatScreen(
     sellerId: String,
     sellerName: String,
     currentUserId: String,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    isReportingSeller: Boolean = true,
+    onReportClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
 
-    // ViewModels
     val viewModel: ChatViewModel = viewModel(
         factory = ChatViewModelFactory(ChatRepoImpl())
     )
     val reportViewModel: ReportViewModel = viewModel()
 
-    // State
+    // Display name state with proper fallback
+    var displayName by remember {
+        mutableStateOf(
+            if (sellerName == "Unknown" || sellerName == "Loading...") "Loading..."
+            else sellerName
+        )
+    }
+
     var messageText by remember { mutableStateOf("") }
     val messages by viewModel.messages.collectAsState(initial = emptyList())
     var showReportDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(chatId) {
         viewModel.listenForMessages(chatId)
+    }
+
+    // Fetch correct name based on user type
+    DisposableEffect(sellerId, isReportingSeller) {
+        val database = FirebaseDatabase.getInstance()
+        val nodeName = if (isReportingSeller) "sellers" else "buyers"
+        val targetField = if (isReportingSeller) "shopName" else "buyerName"
+
+        val ref = database.getReference(nodeName).child(sellerId)
+
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val name = snapshot.child(targetField).value?.toString()
+                if (!name.isNullOrEmpty()) {
+                    displayName = name
+                } else {
+                    val backupName = snapshot.child("name").value?.toString()
+                        ?: snapshot.child("username").value?.toString()
+                        ?: snapshot.child("fullName").value?.toString()
+                    displayName = backupName ?: "User"
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {}
+        }
+
+        ref.addValueEventListener(listener)
+        onDispose { ref.removeEventListener(listener) }
     }
 
     Column(
@@ -68,7 +107,6 @@ fun ChatScreen(
             shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
-                // Back Button Row
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
@@ -86,16 +124,11 @@ fun ChatScreen(
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        "Back",
-                        fontSize = 14.sp,
-                        color = Color(0xFF757575)
-                    )
+                    Text("Back", fontSize = 14.sp, color = Color(0xFF757575))
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Chat Header with Avatar
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
@@ -107,7 +140,7 @@ fun ChatScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Default.Person,
+                            if (isReportingSeller) Icons.Default.Store else Icons.Default.Person,
                             contentDescription = null,
                             tint = Color(0xFF1E88E5),
                             modifier = Modifier.size(28.dp)
@@ -116,28 +149,35 @@ fun ChatScreen(
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            sellerName,
+                            displayName,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF212121)
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(Color(0xFF4CAF50), CircleShape)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                "Active",
-                                fontSize = 12.sp,
-                                color = Color(0xFF4CAF50)
-                            )
+                            Surface(
+                                color = if (isReportingSeller) Color(0xFFFF9800).copy(alpha = 0.15f)
+                                else Color(0xFF4CAF50).copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    if (isReportingSeller) "Seller" else "Buyer",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (isReportingSeller) Color(0xFFFF9800) else Color(0xFF4CAF50),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
                         }
                     }
-                    // Report Button
                     IconButton(
-                        onClick = { showReportDialog = true },
+                        onClick = {
+                            if (onReportClick != null) {
+                                onReportClick()
+                            } else {
+                                showReportDialog = true
+                            }
+                        },
                         modifier = Modifier
                             .size(40.dp)
                             .background(Color(0xFFF44336).copy(alpha = 0.1f), CircleShape)
@@ -160,7 +200,6 @@ fun ChatScreen(
                 .fillMaxWidth()
         ) {
             if (messages.isEmpty()) {
-                // Empty State
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -180,7 +219,7 @@ fun ChatScreen(
                         color = Color.Gray
                     )
                     Text(
-                        "Send a message to $sellerName",
+                        "Send a message to $displayName",
                         fontSize = 14.sp,
                         color = Color.Gray.copy(alpha = 0.7f)
                     )
@@ -190,18 +229,16 @@ fun ChatScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    reverseLayout = false,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(messages) { msg ->
-                        val isMe = msg.senderId == currentUserId
-                        ModernChatBubble(text = msg.message, isMe = isMe)
+                        ModernChatBubble(text = msg.message, isMe = msg.senderId == currentUserId)
                     }
                 }
             }
         }
 
-        // Modern Message Input
+        // Message Input
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shadowElevation = 8.dp,
@@ -215,7 +252,6 @@ fun ChatScreen(
                 verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Message Input Field
                 Surface(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(24.dp),
@@ -226,11 +262,7 @@ fun ChatScreen(
                         onValueChange = { messageText = it },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = {
-                            Text(
-                                "Type a message...",
-                                color = Color(0xFF9E9E9E),
-                                fontSize = 14.sp
-                            )
+                            Text("Type a message...", color = Color(0xFF9E9E9E), fontSize = 14.sp)
                         },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color(0xFFF5F5F5),
@@ -244,7 +276,6 @@ fun ChatScreen(
                     )
                 }
 
-                // Send Button
                 IconButton(
                     onClick = {
                         if (messageText.isNotBlank()) {
@@ -271,16 +302,22 @@ fun ChatScreen(
         }
     }
 
-    // Modern Report Dialog
+    // Built-in Report Dialog
     if (showReportDialog) {
         ModernReportDialog(
-            name = sellerName,
+            name = displayName,
+            userType = if (isReportingSeller) "Seller" else "Buyer",
             onDismiss = { showReportDialog = false },
             onSubmit = { reason ->
-                reportViewModel.reportBuyer(sellerId, reason) { success, msg ->
-                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                    if (success) {
-                        showReportDialog = false
+                if (isReportingSeller) {
+                    reportViewModel.reportSeller(sellerId, reason) { success, msg ->
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        if (success) showReportDialog = false
+                    }
+                } else {
+                    reportViewModel.reportBuyer(sellerId, reason) { success, msg ->
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        if (success) showReportDialog = false
                     }
                 }
             }
@@ -360,7 +397,12 @@ fun ModernChatBubble(text: String, isMe: Boolean) {
 }
 
 @Composable
-fun ModernReportDialog(name: String, onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
+fun ModernReportDialog(
+    name: String,
+    userType: String = "User",
+    onDismiss: () -> Unit,
+    onSubmit: (String) -> Unit
+) {
     var reason by remember { mutableStateOf("") }
 
     AlertDialog(
@@ -382,7 +424,7 @@ fun ModernReportDialog(name: String, onDismiss: () -> Unit, onSubmit: (String) -
         },
         title = {
             Text(
-                "Report $name",
+                "Report $userType",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 color = Color(0xFF212121)
@@ -391,8 +433,15 @@ fun ModernReportDialog(name: String, onDismiss: () -> Unit, onSubmit: (String) -
         text = {
             Column {
                 Text(
-                    "Help us understand the problem. Your report is anonymous.",
+                    "Reporting: $name",
                     fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF424242)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Help us understand the problem. Your report is anonymous.",
+                    fontSize = 13.sp,
                     color = Color(0xFF616161)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -401,10 +450,7 @@ fun ModernReportDialog(name: String, onDismiss: () -> Unit, onSubmit: (String) -
                     value = reason,
                     onValueChange = { reason = it },
                     placeholder = {
-                        Text(
-                            "e.g., Harassment, Scam, Inappropriate behavior...",
-                            fontSize = 13.sp
-                        )
+                        Text("e.g., Harassment, Scam, Inappropriate behavior...", fontSize = 13.sp)
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -446,17 +492,11 @@ fun ModernReportDialog(name: String, onDismiss: () -> Unit, onSubmit: (String) -
         confirmButton = {
             Button(
                 onClick = { if (reason.isNotBlank()) onSubmit(reason) },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFF44336)
-                ),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336)),
                 shape = RoundedCornerShape(12.dp),
                 enabled = reason.isNotBlank()
             ) {
-                Icon(
-                    Icons.Default.Send,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
+                Icon(Icons.Default.Send, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text("Submit Report", fontWeight = FontWeight.Bold)
             }
@@ -465,9 +505,7 @@ fun ModernReportDialog(name: String, onDismiss: () -> Unit, onSubmit: (String) -
             OutlinedButton(
                 onClick = onDismiss,
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color(0xFF757575)
-                )
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF757575))
             ) {
                 Text("Cancel", fontWeight = FontWeight.Medium)
             }
