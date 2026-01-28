@@ -26,11 +26,13 @@ import androidx.compose.ui.graphics.Color.Companion.Black
 import androidx.compose.ui.graphics.Color.Companion.Blue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.R
@@ -40,10 +42,10 @@ import com.example.handmadeexpo.viewmodel.BuyerViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 
-// Admin credentials 
+// Admin credentials
 object AdminCredentials {
     const val ADMIN_EMAIL = "admin@handmadeexpo.com"
-    const val ADMIN_PASSWORD = "Handmade@Expo2024#Secure"
+    const val ADMIN_PASSWORD = "AdminHandmadeExpo"
 }
 
 class SignInActivity : ComponentActivity() {
@@ -115,9 +117,18 @@ fun SignInBody() {
                         label = { Text("Email") },
                         singleLine = true,
                         enabled = !isLoading,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
+                            .testTag("email"),
                         shape = RoundedCornerShape(12.dp),
-                        leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null, tint = MainColor) }
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.Email,
+                                contentDescription = null,
+                                tint = MainColor
+                            )
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -129,15 +140,31 @@ fun SignInBody() {
                         label = { Text("Password") },
                         singleLine = true,
                         enabled = !isLoading,
-                        visualTransformation = if (!visibility) PasswordVisualTransformation() else VisualTransformation.None,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                        visualTransformation = if (!visibility) {
+                            PasswordVisualTransformation()
+                        } else {
+                            VisualTransformation.None
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
+                            .testTag("password"),
                         shape = RoundedCornerShape(12.dp),
-                        leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, tint = MainColor) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.Lock,
+                                contentDescription = null,
+                                tint = MainColor
+                            )
+                        },
                         trailingIcon = {
                             IconButton(onClick = { visibility = !visibility }) {
                                 Icon(
-                                    painter = painterResource(if (visibility) R.drawable.baseline_visibility_off_24 else R.drawable.baseline_visibility_24),
-                                    contentDescription = null
+                                    painter = painterResource(
+                                        if (visibility) R.drawable.baseline_visibility_off_24
+                                        else R.drawable.baseline_visibility_24
+                                    ),
+                                    contentDescription = "Toggle password visibility"
                                 )
                             }
                         }
@@ -147,10 +174,15 @@ fun SignInBody() {
                     Text(
                         text = "Forgot password?",
                         modifier = Modifier
+                            .testTag("forgetpassword")
                             .fillMaxWidth()
                             .padding(end = 24.dp, top = 8.dp)
-                            .clickable { context.startActivity(Intent(context, ForgetPasswordActivity::class.java)) },
-                        textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                            .clickable {
+                                context.startActivity(
+                                    Intent(context, ForgetPasswordActivity::class.java)
+                                )
+                            },
+                        textAlign = TextAlign.End,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -168,8 +200,12 @@ fun SignInBody() {
                             isLoading = true
 
                             // 1. Check for Hardcoded Admin first
-                            if (email == AdminCredentials.ADMIN_EMAIL && password == AdminCredentials.ADMIN_PASSWORD) {
-                                context.startActivity(Intent(context, AdminDashboardActivity::class.java))
+                            if (email == AdminCredentials.ADMIN_EMAIL &&
+                                password == AdminCredentials.ADMIN_PASSWORD
+                            ) {
+                                context.startActivity(
+                                    Intent(context, AdminDashboardActivity::class.java)
+                                )
                                 activity?.finish()
                                 isLoading = false
                                 return@Button
@@ -180,7 +216,12 @@ fun SignInBody() {
                                 if (success) {
                                     val userId = buyerViewModel.getCurrentUser()?.uid
                                     if (userId != null) {
-                                        handleUserRouting(userId, buyerViewModel, context, activity) {
+                                        handleUserRouting(
+                                            userId = userId,
+                                            viewModel = buyerViewModel,
+                                            context = context,
+                                            activity = activity
+                                        ) {
                                             isLoading = false
                                         }
                                     }
@@ -190,67 +231,100 @@ fun SignInBody() {
                                 }
                             }
                         },
-                        modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 24.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .padding(horizontal = 24.dp)
+                            .testTag("singin"),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MainColor),
                         enabled = !isLoading
                     ) {
                         if (isLoading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
                         } else {
-                            Text("Sign In", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "Sign In",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    RegistrationFooter(context)
+                    RegistrationFooter(context = context)
                 }
             }
         }
     }
 }
 
-private fun handleUserRouting(userId: String, viewModel: BuyerViewModel, context: android.content.Context, activity: Activity?, onComplete: () -> Unit) {
+private fun handleUserRouting(
+    userId: String,
+    viewModel: BuyerViewModel,
+    context: android.content.Context,
+    activity: Activity?,
+    onComplete: () -> Unit
+) {
     viewModel.checkUserRole(userId) { role ->
         val db = FirebaseDatabase.getInstance()
+
         when (role) {
             "buyer" -> {
-                db.getReference("Buyer").child(userId).get().addOnSuccessListener { snapshot ->
-                    val isBanned = snapshot.child("banned").getValue(Boolean::class.java) ?: false
-                    if (isBanned) {
-                        FirebaseAuth.getInstance().signOut()
-                        Toast.makeText(context, "ACCOUNT SUSPENDED", Toast.LENGTH_LONG).show()
-                    } else {
-                        context.startActivity(Intent(context, DashboardActivity::class.java))
-                        activity?.finish()
-                    }
-                    onComplete()
-                }
-            }
-            "seller" -> {
-                db.getReference("Seller").child(userId).get().addOnSuccessListener { snapshot ->
-                    val isBanned = snapshot.child("banned").getValue(Boolean::class.java) ?: false
-                    val status = snapshot.child("verificationStatus").getValue(String::class.java) ?: "Unverified"
+                db.getReference("Buyer").child(userId).get()
+                    .addOnSuccessListener { snapshot ->
+                        val isBanned = snapshot.child("banned").getValue(Boolean::class.java) ?: false
 
-                    if (isBanned) {
-                        FirebaseAuth.getInstance().signOut()
-                        Toast.makeText(context, "ACCOUNT SUSPENDED", Toast.LENGTH_LONG).show()
-                    } else if (status == "Verified") {
-                        context.startActivity(Intent(context, SellerDashboard::class.java))
-                        activity?.finish()
-                    } else {
-                        FirebaseAuth.getInstance().signOut()
-                        Toast.makeText(context, "Status: $status. Please wait for admin approval.", Toast.LENGTH_LONG).show()
+                        if (isBanned) {
+                            FirebaseAuth.getInstance().signOut()
+                            Toast.makeText(context, "ACCOUNT SUSPENDED", Toast.LENGTH_LONG).show()
+                        } else {
+                            context.startActivity(Intent(context, DashboardActivity::class.java))
+                            activity?.finish()
+                        }
+                        onComplete()
                     }
-                    onComplete()
-                }
             }
+
+            "seller" -> {
+                db.getReference("Seller").child(userId).get()
+                    .addOnSuccessListener { snapshot ->
+                        val isBanned = snapshot.child("banned").getValue(Boolean::class.java) ?: false
+                        val status = snapshot.child("verificationStatus").getValue(String::class.java)
+                            ?: "Unverified"
+
+                        when {
+                            isBanned -> {
+                                FirebaseAuth.getInstance().signOut()
+                                Toast.makeText(context, "ACCOUNT SUSPENDED", Toast.LENGTH_LONG).show()
+                            }
+                            status == "Verified" -> {
+                                context.startActivity(Intent(context, SellerDashboard::class.java))
+                                activity?.finish()
+                            }
+                            else -> {
+                                FirebaseAuth.getInstance().signOut()
+                                Toast.makeText(
+                                    context,
+                                    "Status: $status. Please wait for admin approval.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                        onComplete()
+                    }
+            }
+
             "admin" -> {
                 context.startActivity(Intent(context, AdminDashboardActivity::class.java))
                 activity?.finish()
                 onComplete()
             }
+
             else -> {
                 Toast.makeText(context, "Role not found", Toast.LENGTH_SHORT).show()
                 onComplete()
@@ -263,15 +337,39 @@ private fun handleUserRouting(userId: String, viewModel: BuyerViewModel, context
 fun RegistrationFooter(context: android.content.Context) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Row {
-            Text("New to Handmade Expo? ", fontSize = 14.sp)
-            Text("Register as Buyer", color = Blue, fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable { context.startActivity(Intent(context, SignupActivity::class.java)) })
+            Text(
+                text = "New to Handmade Expo? ",
+                fontSize = 14.sp
+            )
+            Text(
+                text = "Register as Buyer",
+                color = Blue,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .testTag("signup")
+                    .clickable {
+                        context.startActivity(Intent(context, SignupActivity::class.java))
+                    }
+            )
         }
+
         Spacer(modifier = Modifier.height(8.dp))
+
         Row {
-            Text("Want to sell? ", fontSize = 14.sp)
-            Text("Join as Seller", color = Blue, fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable { context.startActivity(Intent(context, SellerRegistration::class.java)) })
+            Text(
+                text = "Want to sell? ",
+                fontSize = 14.sp
+            )
+            Text(
+                text = "Join as Seller",
+                color = Blue,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .testTag("seller")
+                    .clickable {
+                        context.startActivity(Intent(context, SellerRegistration::class.java))
+                    }
+            )
         }
     }
 }

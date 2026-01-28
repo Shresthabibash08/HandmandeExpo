@@ -8,6 +8,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -17,59 +18,56 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.handmadeexpo.repo.SellerRepoImpl
-import com.example.handmadeexpo.ui.theme.MainColor
-import com.example.handmadeexpo.ui.theme.White12
 import com.example.handmadeexpo.viewmodel.SellerViewModel
+import com.example.handmadeexpo.viewmodel.SellerViewModelFactory
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 
+
 class SellerDashboard : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
-        // Get the current logged-in user ID safely
+
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
-        
+
         setContent {
-            SellerDashboardBody(currentUserId)
+            ModernSellerDashboardBody(currentUserId)
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SellerDashboardBody(sellerId: String) {
+fun ModernSellerDashboardBody(sellerId: String) {
     val context = LocalContext.current
     val activity = context as? Activity
 
-    // --- State Definitions ---
     var selectedIndex by remember { mutableIntStateOf(0) }
     var editing by remember { mutableStateOf(false) }
     var changingPassword by remember { mutableStateOf(false) }
     var chatCount by remember { mutableIntStateOf(0) }
-
-    // State to hold the seller's name fetched from Firebase
     var sellerName by remember { mutableStateOf("Seller") }
-
-    // Triple stores: (ChatID, BuyerID, BuyerName)
     var activeChatData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
-    val sellerRepo = remember { SellerRepoImpl() }
-    val sellerViewModel = remember { SellerViewModel(sellerRepo) }
+    val sellerViewModel: SellerViewModel = viewModel(
+        factory = SellerViewModelFactory(SellerRepoImpl())
+    )
 
-    // --- FIREBASE LISTENERS ---
-
-    // 1. Fetch Seller Name (Needed for Bargain/Home logic)
+    // Fetch Seller Name
     LaunchedEffect(sellerId) {
         if (sellerId.isNotEmpty()) {
             FirebaseDatabase.getInstance().getReference("Sellers").child(sellerId).child("name")
@@ -79,7 +77,7 @@ fun SellerDashboardBody(sellerId: String) {
         }
     }
 
-    // 2. Badge Listener for Incoming Chats
+    // Badge Listener for Incoming Chats
     val inboxRef = remember { FirebaseDatabase.getInstance().getReference("seller_inbox").child(sellerId) }
     LaunchedEffect(sellerId) {
         if (sellerId.isNotEmpty()) {
@@ -93,16 +91,14 @@ fun SellerDashboardBody(sellerId: String) {
         }
     }
 
-    // --- Navigation Items ---
-    data class NavItem(val icon: ImageVector, val label: String)
+    data class NavItem(val icon: ImageVector, val label: String, val color: Color)
     val listItems = listOf(
-        NavItem(Icons.Default.Home, "Home"),
-        NavItem(Icons.AutoMirrored.Filled.List, "Inventory"),
-        NavItem(Icons.AutoMirrored.Filled.Chat, "Chats"),
-        NavItem(Icons.Default.Person, "Profile")
+        NavItem(Icons.Default.Home, "Home", Color(0xFF1E88E5)),
+        NavItem(Icons.AutoMirrored.Filled.List, "Inventory", Color(0xFF4CAF50)),
+        NavItem(Icons.AutoMirrored.Filled.Chat, "Chats", Color(0xFFFF9800)),
+        NavItem(Icons.Default.Person, "Profile", Color(0xFF9C27B0))
     )
 
-    // Handle Back Press
     BackHandler(enabled = activeChatData != null || editing || changingPassword) {
         when {
             activeChatData != null -> activeChatData = null
@@ -113,26 +109,42 @@ fun SellerDashboardBody(sellerId: String) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MainColor,
-                    titleContentColor = White12
+            CenterAlignedTopAppBar(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color(0xFF1E88E5)
                 ),
                 title = {
-                    val titleText = when {
-                        selectedIndex == 2 && activeChatData != null -> activeChatData!!.third 
-                        selectedIndex == 0 -> "Seller Dashboard"
-                        selectedIndex == 1 -> "My Inventory"
-                        selectedIndex == 2 -> "Messages"
-                        else -> "My Profile"
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        val titleText = when {
+                            selectedIndex == 2 && activeChatData != null -> activeChatData!!.third
+                            selectedIndex == 0 -> "Seller Dashboard"
+                            selectedIndex == 1 -> "My Inventory"
+                            selectedIndex == 2 -> "Messages"
+                            else -> "My Profile"
+                        }
+                        Text(
+                            titleText,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        if (selectedIndex == 0 && activeChatData == null) {
+                            Text(
+                                "Welcome back!",
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
                     }
-                    Text(titleText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
             )
         },
         bottomBar = {
             if (activeChatData == null && !editing && !changingPassword) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = Color.White,
+                    tonalElevation = 8.dp
+                ) {
                     listItems.forEachIndexed { index, item ->
                         NavigationBarItem(
                             selected = selectedIndex == index,
@@ -144,33 +156,43 @@ fun SellerDashboardBody(sellerId: String) {
                             },
                             icon = {
                                 if (index == 2 && chatCount > 0) {
-                                    BadgedBox(badge = { Badge { Text("$chatCount") } }) {
+                                    BadgedBox(
+                                        badge = {
+                                            Badge(containerColor = Color(0xFFFF5722)) {
+                                                Text("$chatCount")
+                                            }
+                                        }
+                                    ) {
                                         Icon(item.icon, contentDescription = item.label)
                                     }
                                 } else {
                                     Icon(item.icon, contentDescription = item.label)
                                 }
                             },
-                            label = { Text(item.label) }
+                            label = { Text(item.label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = item.color,
+                                selectedTextColor = item.color,
+                                indicatorColor = item.color.copy(alpha = 0.15f)
+                            )
                         )
                     }
                 }
             }
-        }
+        },
+        containerColor = Color(0xFFF5F7FA)
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             when (selectedIndex) {
                 0 -> SellerHomeScreen(sellerId = sellerId, sellerName = sellerName)
-
                 1 -> InventoryScreen(sellerId)
-
                 2 -> {
                     if (activeChatData != null) {
                         ChatScreen(
                             chatId = activeChatData!!.first,
-                            sellerId = activeChatData!!.second, // BuyerID as Receiver
-                            sellerName = activeChatData!!.third, // BuyerName as Title
-                            currentUserId = sellerId,            // Seller as "Me"
+                            sellerId = activeChatData!!.second,
+                            sellerName = activeChatData!!.third,
+                            currentUserId = sellerId,
                             onBackClick = { activeChatData = null }
                         )
                     } else {

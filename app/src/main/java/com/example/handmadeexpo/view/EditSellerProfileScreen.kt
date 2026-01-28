@@ -1,24 +1,30 @@
 package com.example.handmadeexpo.view
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.model.SellerModel
-import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.SellerViewModel
-import com.example.handmadeexpo.utils.AdminEmailValidator
 
 @Composable
 fun EditSellerProfileScreen(
@@ -27,153 +33,473 @@ fun EditSellerProfileScreen(
 ) {
     val context = LocalContext.current
     val seller by viewModel.seller.observeAsState()
-    var shopName by remember { mutableStateOf(seller?.shopName ?: "") }
-    var email by remember { mutableStateOf(seller?.sellerEmail ?: "") }
-    var phone by remember { mutableStateOf(seller?.sellerPhoneNumber ?: "") }
-    var address by remember { mutableStateOf(seller?.sellerAddress ?: "") }
-    var pan by remember { mutableStateOf(seller?.panNumber ?: "") }
+
+    var fullName by remember { mutableStateOf("") }
+    var shopName by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var pan by remember { mutableStateOf("") }
 
     var loading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var emailError by remember { mutableStateOf<String?>(null) }
-    var isEmailDuplicate by remember { mutableStateOf(false) }
+
+    // Populate fields when seller data loads
+    LaunchedEffect(seller) {
+        seller?.let {
+            fullName = it.fullName
+            shopName = it.shopName
+            email = it.sellerEmail
+            phone = it.sellerPhoneNumber
+            address = it.sellerAddress
+            pan = it.panNumber
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp)
-            .verticalScroll(rememberScrollState())
+            .background(Color(0xFFF5F7FA))
     ) {
-
-        OutlinedTextField(
-            value = shopName,
-            onValueChange = { shopName = it },
-            label = { Text("Shop Name") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { newEmail ->
-                email = newEmail
-                // First check if it's admin email
-                if (AdminEmailValidator.isReservedEmail(newEmail)) {
-                    emailError = AdminEmailValidator.getReservedEmailError()
-                    isEmailDuplicate = true
-                } else if (newEmail.isNotBlank() && newEmail != seller?.sellerEmail) {
-                    // Only check database if email changed
-                    AdminEmailValidator.isSellerEmailExists(newEmail) { exists ->
-                        isEmailDuplicate = exists
-                        emailError = if (exists) {
-                            AdminEmailValidator.getDuplicateEmailError()
-                        } else {
-                            null
-                        }
-                    }
-                } else if (newEmail == seller?.sellerEmail) {
-                    emailError = null
-                    isEmailDuplicate = false
-                }
-            },
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            isError = emailError != null
-        )
-
-        if (emailError != null) {
-            Text(
-                text = emailError!!,
-                color = Color.Red,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = phone,
-            onValueChange = { phone = it },
-            label = { Text("Phone Number") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = address,
-            onValueChange = { address = it },
-            label = { Text("Address") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = pan,
-            onValueChange = { pan = it },
-            label = { Text("PAN Number") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (errorMessage != null) {
-            Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error)
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        Button(
-            onClick = {
-                // Show toast if email is duplicate or reserved
-                if (isEmailDuplicate || AdminEmailValidator.isReservedEmail(email)) {
-                    Toast.makeText(
-                        context,
-                        "Cannot save: Email already exists or is reserved",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@Button
-                }
-
-                seller?.sellerId?.let { id ->
-                    loading = true
-                    val updatedSeller = SellerModel(
-                        sellerId = id,
-                        shopName = shopName,
-                        sellerEmail = email,
-                        sellerPhoneNumber = phone,
-                        sellerAddress = address,
-                        panNumber = pan
-                    )
-                    viewModel.updateProfile(id, updatedSeller) { success, msg ->
-                        loading = false
-                        if (success) {
-                            Toast.makeText(
-                                context,
-                                "Profile updated successfully",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            onBack() // Navigate back to profile
-                        } else {
-                            errorMessage = msg
-                            Toast.makeText(
-                                context,
-                                msg ?: "Failed to update profile",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !loading && !isEmailDuplicate && !AdminEmailValidator.isReservedEmail(email),
-            colors = ButtonDefaults.buttonColors(containerColor = MainColor)
+        // Modern Header
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(4.dp, RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
         ) {
-            Text(text = if (loading) "Saving..." else "Save")
+            Column(modifier = Modifier.padding(20.dp)) {
+                // Back Button Row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color(0xFFF5F5F5), CircleShape)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color(0xFF212121)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        "Back",
+                        fontSize = 14.sp,
+                        color = Color(0xFF757575)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Title Row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(Color(0xFFFF9800).copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Store,
+                            contentDescription = null,
+                            tint = Color(0xFFFF9800),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            "Edit Shop Profile",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF212121)
+                        )
+                        Text(
+                            "Update your shop information",
+                            fontSize = 13.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
+            }
+        }
+
+        // Scrollable Content
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Main Form Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(2.dp, RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    // Info Banner
+                    Surface(
+                        color = Color(0xFFFF9800).copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color(0xFFFF9800),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                "Keep your shop details accurate for better customer trust",
+                                fontSize = 13.sp,
+                                color = Color(0xFF424242)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Full Name Field
+                    Text(
+                        "Full Name",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF424242)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = fullName,
+                        onValueChange = { fullName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Your full name") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                tint = Color(0xFF9E9E9E)
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFFF9800),
+                            unfocusedBorderColor = Color(0xFFE0E0E0)
+                        ),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Shop Name Field
+                    Text(
+                        "Shop Name",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF424242)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = shopName,
+                        onValueChange = { shopName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Your shop name") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Store,
+                                contentDescription = null,
+                                tint = Color(0xFF9E9E9E)
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFFF9800),
+                            unfocusedBorderColor = Color(0xFFE0E0E0)
+                        ),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Email Field - READ ONLY
+                    Text(
+                        "Email Address",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF424242)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { /* Read only */ },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = false,
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Email,
+                                contentDescription = null,
+                                tint = Color(0xFF9E9E9E)
+                            )
+                        },
+                        trailingIcon = {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = "Cannot change email",
+                                tint = Color(0xFF9E9E9E)
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = Color(0xFF424242),
+                            disabledBorderColor = Color(0xFFE0E0E0),
+                            disabledLabelColor = Color(0xFF757575),
+                            disabledLeadingIconColor = Color(0xFF9E9E9E),
+                            disabledTrailingIconColor = Color(0xFF9E9E9E)
+                        ),
+                        singleLine = true
+                    )
+
+                    // Email Security Notice
+                    Surface(
+                        color = Color(0xFFFFF3E0),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Security,
+                                contentDescription = null,
+                                tint = Color(0xFFE65100),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Email cannot be changed for security reasons",
+                                fontSize = 12.sp,
+                                color = Color(0xFFE65100)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Phone Field
+                    Text(
+                        "Phone Number",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF424242)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = phone,
+                        onValueChange = { phone = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("10-digit contact number") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Phone,
+                                contentDescription = null,
+                                tint = Color(0xFF9E9E9E)
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFFF9800),
+                            unfocusedBorderColor = Color(0xFFE0E0E0)
+                        ),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Address Field
+                    Text(
+                        "Shop Address",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF424242)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = address,
+                        onValueChange = { address = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Street, Area, City") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = Color(0xFF9E9E9E)
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFFF9800),
+                            unfocusedBorderColor = Color(0xFFE0E0E0)
+                        ),
+                        minLines = 2,
+                        maxLines = 3
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // PAN Number Field
+                    Text(
+                        "PAN Number",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF424242)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = pan,
+                        onValueChange = { pan = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Business PAN number") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Badge,
+                                contentDescription = null,
+                                tint = Color(0xFF9E9E9E)
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFFF9800),
+                            unfocusedBorderColor = Color(0xFFE0E0E0)
+                        ),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Error Message
+                    if (errorMessage != null) {
+                        Surface(
+                            color = Color(0xFFFFEBEE),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Error,
+                                    contentDescription = null,
+                                    tint = Color(0xFFF44336),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    errorMessage!!,
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFC62828),
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    // Save Button
+                    Button(
+                        onClick = {
+                            seller?.let { currentSeller ->
+                                loading = true
+                                errorMessage = null
+                                val updatedSeller = SellerModel(
+                                    sellerId = currentSeller.sellerId,
+                                    fullName = fullName,
+                                    shopName = shopName,
+                                    sellerEmail = email, // Email stays unchanged
+                                    sellerPhoneNumber = phone,
+                                    sellerAddress = address,
+                                    panNumber = pan,
+                                    role = currentSeller.role,
+                                    documentType = currentSeller.documentType,
+                                    documentUrl = currentSeller.documentUrl,
+                                    verificationStatus = currentSeller.verificationStatus,
+                                    banned = currentSeller.banned
+                                )
+                                viewModel.updateProfile(currentSeller.sellerId, updatedSeller) { success, msg ->
+                                    loading = false
+                                    if (success) {
+                                        Toast.makeText(
+                                            context,
+                                            "Profile updated successfully",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                        onBack()
+                                    } else {
+                                        errorMessage = msg
+                                        Toast.makeText(
+                                            context,
+                                            msg ?: "Failed to update profile",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        enabled = !loading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFF9800),
+                            disabledContainerColor = Color(0xFFE0E0E0)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        if (loading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Save,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Save Changes",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

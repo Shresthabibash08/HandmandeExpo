@@ -1,17 +1,21 @@
 package com.example.handmadeexpo.view
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -29,38 +33,79 @@ fun SellerVerificationScreen(viewModel: AdminViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(
-            selectedTabIndex = selectedTab,
-            containerColor = Color(0xFFF5F5F5)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF5F7FA))
+    ) {
+        // Sub-tabs for Pending/Verified/Rejected
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .shadow(2.dp, RoundedCornerShape(12.dp)),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(12.dp)
         ) {
-            Tab(
-                selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
-                text = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Pending")
-                        if (viewModel.pendingSellers.isNotEmpty()) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Badge { Text(viewModel.pendingSellers.size.toString()) }
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = Color.Transparent,
+                indicator = { tabPositions ->
+                    TabRowDefaults.SecondaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                        color = Color(0xFFFF9800),
+                        height = 2.dp
+                    )
+                }
+            ) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "Pending",
+                                fontSize = 13.sp,
+                                fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
+                            )
+                            if (viewModel.pendingSellers.isNotEmpty()) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Badge(containerColor = Color(0xFFFF9800)) {
+                                    Text(viewModel.pendingSellers.size.toString(), fontSize = 9.sp)
+                                }
+                            }
                         }
                     }
-                }
-            )
-            Tab(
-                selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
-                text = { Text("Verified") }
-            )
-            Tab(
-                selected = selectedTab == 2,
-                onClick = { selectedTab = 2 },
-                text = { Text("Rejected") }
-            )
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = {
+                        Text(
+                            "Verified (${viewModel.verifiedSellers.size})",
+                            fontSize = 13.sp,
+                            fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                )
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    text = {
+                        Text(
+                            "Rejected (${viewModel.rejectedSellers.size})",
+                            fontSize = 13.sp,
+                            fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                )
+            }
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
         when (selectedTab) {
-            0 -> SellerList(
+            0 -> ModernSellerList(
                 sellers = viewModel.pendingSellers,
                 status = "Pending",
                 onVerify = { seller ->
@@ -74,13 +119,13 @@ fun SellerVerificationScreen(viewModel: AdminViewModel) {
                     }
                 }
             )
-            1 -> SellerList(
+            1 -> ModernSellerList(
                 sellers = viewModel.verifiedSellers,
                 status = "Verified",
                 onVerify = null,
                 onReject = null
             )
-            2 -> SellerList(
+            2 -> ModernSellerList(
                 sellers = viewModel.rejectedSellers,
                 status = "Rejected",
                 onVerify = { seller ->
@@ -95,7 +140,7 @@ fun SellerVerificationScreen(viewModel: AdminViewModel) {
 }
 
 @Composable
-fun SellerList(
+fun ModernSellerList(
     sellers: List<SellerModel>,
     status: String,
     onVerify: ((SellerModel) -> Unit)?,
@@ -117,23 +162,24 @@ fun SellerList(
                     },
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
-                    tint = Color.Gray
+                    tint = Color.Gray.copy(alpha = 0.3f)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     "No $status sellers",
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     color = Color.Gray
                 )
             }
         }
     } else {
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(sellers) { seller ->
-                SellerVerificationCard(
+                ModernSellerVerificationCard(
                     seller = seller,
                     status = status,
                     onViewDetails = { selectedSeller = seller },
@@ -145,7 +191,7 @@ fun SellerList(
     }
 
     selectedSeller?.let { seller ->
-        SellerDetailsWithDocumentDialog(
+        ModernSellerDetailsDialog(
             seller = seller,
             onDismiss = { selectedSeller = null }
         )
@@ -153,7 +199,7 @@ fun SellerList(
 }
 
 @Composable
-fun SellerVerificationCard(
+fun ModernSellerVerificationCard(
     seller: SellerModel,
     status: String,
     onViewDetails: () -> Unit,
@@ -161,79 +207,113 @@ fun SellerVerificationCard(
     onReject: (() -> Unit)?
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(2.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        seller.shopName,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
-                    Text(
-                        seller.fullName,
-                        fontSize = 14.sp,
-                        color = Color.Gray
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(Color(0xFFFF9800).copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Store,
+                            contentDescription = null,
+                            tint = Color(0xFFFF9800),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            seller.shopName,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = Color(0xFF212121)
+                        )
+                        Text(
+                            seller.fullName,
+                            fontSize = 13.sp,
+                            color = Color.Gray
+                        )
+                    }
                 }
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = when(status) {
-                        "Verified" -> Color(0xFF4CAF50).copy(alpha = 0.1f)
-                        "Rejected" -> Color(0xFFF44336).copy(alpha = 0.1f)
-                        else -> Color(0xFFFF9800).copy(alpha = 0.1f)
+                        "Verified" -> Color(0xFF4CAF50).copy(alpha = 0.15f)
+                        "Rejected" -> Color(0xFFF44336).copy(alpha = 0.15f)
+                        else -> Color(0xFFFF9800).copy(alpha = 0.15f)
                     }
                 ) {
                     Text(
                         status,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         color = when(status) {
-                            "Verified" -> Color(0xFF4CAF50)
-                            "Rejected" -> Color(0xFFF44336)
-                            else -> Color(0xFFFF9800)
+                            "Verified" -> Color(0xFF2E7D32)
+                            "Rejected" -> Color(0xFFC62828)
+                            else -> Color(0xFFE65100)
                         },
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+            Divider(color = Color(0xFFEEEEEE))
             Spacer(modifier = Modifier.height(12.dp))
 
-            InfoRow(icon = Icons.Default.Email, text = seller.sellerEmail)
-            InfoRow(icon = Icons.Default.Phone, text = seller.sellerPhoneNumber)
-            InfoRow(icon = Icons.Default.LocationOn, text = seller.sellerAddress)
-            InfoRow(icon = Icons.Default.Badge, text = "PAN: ${seller.panNumber}")
+            // Info Section
+            ModernInfoRow(icon = Icons.Default.Email, text = seller.sellerEmail)
+            Spacer(modifier = Modifier.height(8.dp))
+            ModernInfoRow(icon = Icons.Default.Phone, text = seller.sellerPhoneNumber)
+            Spacer(modifier = Modifier.height(8.dp))
+            ModernInfoRow(icon = Icons.Default.LocationOn, text = seller.sellerAddress)
+            Spacer(modifier = Modifier.height(8.dp))
+            ModernInfoRow(icon = Icons.Default.Badge, text = "PAN: ${seller.panNumber}")
 
             if (seller.documentType.isNotEmpty()) {
-                InfoRow(
+                Spacer(modifier = Modifier.height(8.dp))
+                ModernInfoRow(
                     icon = Icons.Default.Description,
                     text = "Document: ${seller.documentType}"
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
+            // Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
                     onClick = onViewDetails,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFF757575)
+                    )
                 ) {
                     Icon(Icons.Default.Visibility, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("View Details")
+                    Text("View", fontWeight = FontWeight.Medium)
                 }
 
                 if (onVerify != null) {
@@ -242,11 +322,12 @@ fun SellerVerificationCard(
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF4CAF50)
-                        )
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Verify")
+                        Text("Verify", fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -256,11 +337,12 @@ fun SellerVerificationCard(
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFF44336)
-                        )
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Default.Cancel, null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Reject")
+                        Text("Reject", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -269,45 +351,47 @@ fun SellerVerificationCard(
 }
 
 @Composable
-fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+fun ModernInfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
     Row(
-        modifier = Modifier.padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             icon,
             contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = Color.Gray
+            modifier = Modifier.size(18.dp),
+            tint = Color(0xFF757575)
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text,
-            fontSize = 13.sp,
-            color = Color.Gray
+            fontSize = 14.sp,
+            color = Color(0xFF424242)
         )
     }
 }
 
 @Composable
-fun DetailItem(label: String, value: String) {
-    Column(modifier = Modifier.padding(vertical = 6.dp)) {
+fun ModernDetailItem(label: String, value: String) {
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Text(
             label,
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             color = Color.Gray,
             fontWeight = FontWeight.Medium
         )
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             value.ifEmpty { "N/A" },
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Normal
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF212121)
         )
     }
 }
 
 @Composable
-fun SellerDetailsWithDocumentDialog(
+fun ModernSellerDetailsDialog(
     seller: SellerModel,
     onDismiss: () -> Unit
 ) {
@@ -318,181 +402,254 @@ fun SellerDetailsWithDocumentDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.9f),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(20.dp)
+                modifier = Modifier.fillMaxSize()
             ) {
+                // Header
                 item {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Color(0xFFFF9800),
+                                RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+                            )
+                            .padding(20.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            "Seller Verification",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(Color.White.copy(alpha = 0.3f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Store,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                "Seller Verification",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                color = Color.White
+                            )
+                        }
                         IconButton(onClick = onDismiss) {
-                            Icon(Icons.Default.Close, "Close")
+                            Icon(
+                                Icons.Default.Close,
+                                "Close",
+                                tint = Color.White
+                            )
                         }
                     }
+                }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                item { Spacer(modifier = Modifier.height(8.dp)) }
+
+                // Business Information Section
+                item {
+                    Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .background(Color(0xFFFF9800), CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Business Information",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = Color(0xFFFF9800)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                 }
 
                 item {
-                    Text(
-                        "Business Information",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = Color(0xFF4CAF50)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                        ModernDetailItem("Shop Name", seller.shopName)
+                        ModernDetailItem("Owner Name", seller.fullName)
+                        ModernDetailItem("Email", seller.sellerEmail)
+                        ModernDetailItem("Phone", seller.sellerPhoneNumber)
+                        ModernDetailItem("Address", seller.sellerAddress)
+                        ModernDetailItem("PAN Number", seller.panNumber)
+                    }
                 }
 
-                item { DetailItem("Shop Name", seller.shopName) }
-                item { DetailItem("Owner Name", seller.fullName) }
-                item { DetailItem("Email", seller.sellerEmail) }
-                item { DetailItem("Phone", seller.sellerPhoneNumber) }
-                item { DetailItem("Address", seller.sellerAddress) }
-                item { DetailItem("PAN Number", seller.panNumber) }
-
+                // Verification Document Section
                 if (seller.documentType.isNotEmpty() || seller.documentUrl.isNotEmpty()) {
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "Verification Document",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = Color(0xFF4CAF50)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .background(Color(0xFF4CAF50), CircleShape)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Verification Document",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = Color(0xFF4CAF50)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
                     }
 
-                    item {
-                        if (seller.documentType.isNotEmpty()) {
-                            DetailItem("Document Type", seller.documentType)
-                            Spacer(modifier = Modifier.height(12.dp))
+                    if (seller.documentType.isNotEmpty()) {
+                        item {
+                            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                                ModernDetailItem("Document Type", seller.documentType)
+                            }
                         }
                     }
 
                     if (seller.documentUrl.isNotEmpty()) {
                         item {
-                            Text(
-                                "Document Image",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Gray
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "Document Image",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Gray
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
 
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(300.dp),
-                                elevation = CardDefaults.cardElevation(4.dp),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    AsyncImage(
-                                        model = seller.documentUrl,
-                                        contentDescription = "Verification Document",
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Fit,
-                                        error = painterResource(android.R.drawable.ic_menu_report_image)
-                                    )
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(300.dp)
+                                        .shadow(2.dp, RoundedCornerShape(12.dp)),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Box(modifier = Modifier.fillMaxSize()) {
+                                        AsyncImage(
+                                            model = seller.documentUrl,
+                                            contentDescription = "Verification Document",
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Fit,
+                                            error = painterResource(android.R.drawable.ic_menu_report_image)
+                                        )
 
-                                    // Zoom button with better styling
-                                    IconButton(
-                                        onClick = { showFullImage = true },
-                                        modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .padding(12.dp)
-                                    ) {
-                                        Surface(
-                                            color = Color.Black.copy(alpha = 0.7f),
-                                            shape = RoundedCornerShape(20.dp)
+                                        IconButton(
+                                            onClick = { showFullImage = true },
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .padding(12.dp)
                                         ) {
-                                            Icon(
-                                                Icons.Default.ZoomIn,
-                                                "View Full Image",
-                                                tint = Color.White,
-                                                modifier = Modifier.padding(12.dp).size(24.dp)
-                                            )
+                                            Surface(
+                                                color = Color.Black.copy(alpha = 0.7f),
+                                                shape = CircleShape
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.ZoomIn,
+                                                    "View Full Image",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.padding(12.dp).size(20.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                            }
 
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Default.Info,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp),
-                                    tint = Color.Gray
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    "Tap zoom icon to view full image",
-                                    fontSize = 12.sp,
-                                    color = Color.Gray
-                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Surface(
+                                    color = Color(0xFFE3F2FD),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Info,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            tint = Color(0xFF1E88E5)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "Tap zoom icon to view full image",
+                                            fontSize = 12.sp,
+                                            color = Color(0xFF1976D2)
+                                        )
+                                    }
+                                }
                             }
                         }
                     } else {
                         item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFFFF3E0)
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color(0xFFFFF3E0)
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Icon(
-                                        Icons.Default.Warning,
-                                        contentDescription = null,
-                                        tint = Color(0xFFFF9800),
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        "No verification document uploaded",
-                                        fontSize = 14.sp,
-                                        color = Color(0xFFE65100)
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Warning,
+                                            contentDescription = null,
+                                            tint = Color(0xFFFF9800),
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            "No verification document uploaded",
+                                            fontSize = 14.sp,
+                                            color = Color(0xFFE65100),
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
+                // Status Section
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    DetailItem("Verification Status", seller.verificationStatus)
+                    Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                        ModernDetailItem("Verification Status", seller.verificationStatus)
+                    }
                 }
 
+                // Close Button
                 item {
                     Spacer(modifier = Modifier.height(20.dp))
-                    Button(
-                        onClick = onDismiss,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4CAF50)
-                        )
-                    ) {
-                        Text("Close")
+                    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)) {
+                        Button(
+                            onClick = onDismiss,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFF9800)
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Close", fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
+                        }
                     }
                 }
             }
@@ -500,7 +657,7 @@ fun SellerDetailsWithDocumentDialog(
     }
 
     if (showFullImage && seller.documentUrl.isNotEmpty()) {
-        FullImageDialog(
+        ModernFullImageDialog(
             imageUrl = seller.documentUrl,
             onDismiss = { showFullImage = false }
         )
@@ -508,7 +665,7 @@ fun SellerDetailsWithDocumentDialog(
 }
 
 @Composable
-fun FullImageDialog(
+fun ModernFullImageDialog(
     imageUrl: String,
     onDismiss: () -> Unit
 ) {
@@ -517,7 +674,7 @@ fun FullImageDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.9f),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(20.dp)
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 AsyncImage(
@@ -536,7 +693,7 @@ fun FullImageDialog(
                 ) {
                     Surface(
                         color = Color.Black.copy(alpha = 0.7f),
-                        shape = RoundedCornerShape(50)
+                        shape = CircleShape
                     ) {
                         Icon(
                             Icons.Default.Close,
