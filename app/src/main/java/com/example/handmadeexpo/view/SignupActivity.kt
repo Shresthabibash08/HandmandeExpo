@@ -21,12 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Color.Companion.Blue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -71,7 +69,6 @@ fun SignupBody() {
 
     Scaffold { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            // Background Image
             Image(
                 painter = painterResource(R.drawable.img_1),
                 contentDescription = null,
@@ -88,7 +85,6 @@ fun SignupBody() {
             ) {
                 Spacer(modifier = Modifier.height(30.dp))
 
-                // Logo Section
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
@@ -103,7 +99,9 @@ fun SignupBody() {
                 }
 
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
@@ -114,7 +112,6 @@ fun SignupBody() {
                     )
                 }
 
-                // Input Fields
                 AppOutlinedTextField(
                     label = "Full Name",
                     value = fullName,
@@ -126,11 +123,9 @@ fun SignupBody() {
                     value = email,
                     onValueChange = { newEmail ->
                         email = newEmail
-                        // First check if it's admin email
                         if (AdminEmailValidator.isReservedEmail(newEmail)) {
                             emailError = AdminEmailValidator.getReservedEmailError()
                         } else if (newEmail.isNotBlank()) {
-                            // Then check if email exists in database
                             AdminEmailValidator.isBuyerEmailExists(newEmail) { exists ->
                                 emailError = if (exists) {
                                     AdminEmailValidator.getDuplicateEmailError()
@@ -183,7 +178,6 @@ fun SignupBody() {
                     onTogglePasswordVisibility = { confirmVisibility = !confirmVisibility }
                 )
 
-                // Terms and Conditions Row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -201,7 +195,6 @@ fun SignupBody() {
                     Text("I agree to Terms & Conditions", fontSize = 14.sp)
                 }
 
-                // Sign Up Button
                 Button(
                     onClick = {
                         when {
@@ -215,13 +208,12 @@ fun SignupBody() {
                             else -> {
                                 buyerViewModel.register(email, password) { success, msg, userId ->
                                     if (success && userId != null) {
-                                        // ✅ FIXED: Correct parameter order
                                         val model = BuyerModel(
                                             buyerId = userId,
                                             buyerName = fullName,
                                             buyerEmail = email,
-                                            buyerPhoneNumber = phoneNumber,  // ✅ Phone goes to phoneNumber
-                                            buyerAddress = address,          // ✅ Address goes to address
+                                            buyerPhoneNumber = phoneNumber,
+                                            buyerAddress = address,
                                             role = "buyer",
                                             banned = false
                                         )
@@ -249,7 +241,6 @@ fun SignupBody() {
                     Text("Sign Up", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
 
-                // Sign In Redirection
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -260,7 +251,7 @@ fun SignupBody() {
                     Text("Already have an account? ", color = Color.Black)
                     Text(
                         text = "Sign In",
-                        color = Blue,
+                        color = Color.Blue,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.clickable {
                             context.startActivity(Intent(context, SignInActivity::class.java))
@@ -286,7 +277,7 @@ fun AppOutlinedTextField(
         label = { Text(label) },
         keyboardOptions = keyboardOptions,
         modifier = Modifier
-            .testTag(label)
+            .testTag(label)  // ✅ For UI testing
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
         shape = RoundedCornerShape(12.dp),
@@ -321,11 +312,12 @@ fun PasswordTextField(
                         if (isPasswordVisible) R.drawable.baseline_visibility_off_24
                         else R.drawable.baseline_visibility_24
                     ),
-                    contentDescription = null
+                    contentDescription = if (isPasswordVisible) "Hide password" else "Show password"
                 )
             }
         },
         modifier = Modifier
+            .testTag(label)  // ✅ For UI testing
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
         shape = RoundedCornerShape(12.dp),

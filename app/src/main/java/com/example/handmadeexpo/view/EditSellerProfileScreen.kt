@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,9 +24,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.handmadeexpo.model.SellerModel
-import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.SellerViewModel
-import com.example.handmadeexpo.utils.AdminEmailValidator
 
 @Composable
 fun EditSellerProfileScreen(
@@ -35,16 +34,27 @@ fun EditSellerProfileScreen(
     val context = LocalContext.current
     val seller by viewModel.seller.observeAsState()
 
-    var shopName by remember { mutableStateOf(seller?.shopName ?: "") }
-    var email by remember { mutableStateOf(seller?.sellerEmail ?: "") }
-    var phone by remember { mutableStateOf(seller?.sellerPhoneNumber ?: "") }
-    var address by remember { mutableStateOf(seller?.sellerAddress ?: "") }
-    var pan by remember { mutableStateOf(seller?.panNumber ?: "") }
+    var fullName by remember { mutableStateOf("") }
+    var shopName by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var pan by remember { mutableStateOf("") }
 
     var loading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var emailError by remember { mutableStateOf<String?>(null) }
-    var isEmailDuplicate by remember { mutableStateOf(false) }
+
+    // Populate fields when seller data loads
+    LaunchedEffect(seller) {
+        seller?.let {
+            fullName = it.fullName
+            shopName = it.shopName
+            email = it.sellerEmail
+            phone = it.sellerPhoneNumber
+            address = it.sellerAddress
+            pan = it.panNumber
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -72,7 +82,7 @@ fun EditSellerProfileScreen(
                             .background(Color(0xFFF5F5F5), CircleShape)
                     ) {
                         Icon(
-                            Icons.Default.ArrowBack,
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Color(0xFF212121)
                         )
@@ -168,6 +178,36 @@ fun EditSellerProfileScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    // Full Name Field
+                    Text(
+                        "Full Name",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF424242)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = fullName,
+                        onValueChange = { fullName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Your full name") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                tint = Color(0xFF9E9E9E)
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFFF9800),
+                            unfocusedBorderColor = Color(0xFFE0E0E0)
+                        ),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     // Shop Name Field
                     Text(
                         "Shop Name",
@@ -198,7 +238,7 @@ fun EditSellerProfileScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Email Field
+                    // Email Field - READ ONLY
                     Text(
                         "Email Address",
                         fontSize = 13.sp,
@@ -208,68 +248,60 @@ fun EditSellerProfileScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = email,
-                        onValueChange = { newEmail ->
-                            email = newEmail
-                            if (AdminEmailValidator.isReservedEmail(newEmail)) {
-                                emailError = AdminEmailValidator.getReservedEmailError()
-                                isEmailDuplicate = true
-                            } else if (newEmail.isNotBlank() && newEmail != seller?.sellerEmail) {
-                                AdminEmailValidator.isSellerEmailExists(newEmail) { exists ->
-                                    isEmailDuplicate = exists
-                                    emailError = if (exists) {
-                                        AdminEmailValidator.getDuplicateEmailError()
-                                    } else {
-                                        null
-                                    }
-                                }
-                            } else if (newEmail == seller?.sellerEmail) {
-                                emailError = null
-                                isEmailDuplicate = false
-                            }
-                        },
+                        onValueChange = { /* Read only */ },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("shop@email.com") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        enabled = false,
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Email,
                                 contentDescription = null,
-                                tint = if (emailError != null) Color(0xFFF44336) else Color(0xFF9E9E9E)
+                                tint = Color(0xFF9E9E9E)
                             )
                         },
                         trailingIcon = {
-                            if (emailError != null) {
-                                Icon(
-                                    Icons.Default.Error,
-                                    contentDescription = "Error",
-                                    tint = Color(0xFFF44336)
-                                )
-                            } else if (email.isNotBlank() && email == seller?.sellerEmail) {
-                                Icon(
-                                    Icons.Default.CheckCircle,
-                                    contentDescription = "Valid",
-                                    tint = Color(0xFF4CAF50)
-                                )
-                            }
-                        },
-                        isError = emailError != null,
-                        supportingText = {
-                            if (emailError != null) {
-                                Text(
-                                    emailError!!,
-                                    color = Color(0xFFF44336),
-                                    fontSize = 12.sp
-                                )
-                            }
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = "Cannot change email",
+                                tint = Color(0xFF9E9E9E)
+                            )
                         },
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFFF9800),
-                            unfocusedBorderColor = Color(0xFFE0E0E0),
-                            errorBorderColor = Color(0xFFF44336)
+                            disabledTextColor = Color(0xFF424242),
+                            disabledBorderColor = Color(0xFFE0E0E0),
+                            disabledLabelColor = Color(0xFF757575),
+                            disabledLeadingIconColor = Color(0xFF9E9E9E),
+                            disabledTrailingIconColor = Color(0xFF9E9E9E)
                         ),
                         singleLine = true
                     )
+
+                    // Email Security Notice
+                    Surface(
+                        color = Color(0xFFFFF3E0),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Security,
+                                contentDescription = null,
+                                tint = Color(0xFFE65100),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Email cannot be changed for security reasons",
+                                fontSize = 12.sp,
+                                color = Color(0xFFE65100)
+                            )
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -365,35 +397,6 @@ fun EditSellerProfileScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Warning for Email Issues
-                    if (isEmailDuplicate || AdminEmailValidator.isReservedEmail(email)) {
-                        Surface(
-                            color = Color(0xFFFFF3E0),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Default.Warning,
-                                    contentDescription = null,
-                                    tint = Color(0xFFFF9800),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    "Cannot save: Email is already in use or reserved",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFFE65100),
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
                     // Error Message
                     if (errorMessage != null) {
                         Surface(
@@ -426,26 +429,24 @@ fun EditSellerProfileScreen(
                     // Save Button
                     Button(
                         onClick = {
-                            if (isEmailDuplicate || AdminEmailValidator.isReservedEmail(email)) {
-                                Toast.makeText(
-                                    context,
-                                    "Cannot save: Email already exists or is reserved",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                return@Button
-                            }
-
-                            seller?.sellerId?.let { id ->
+                            seller?.let { currentSeller ->
                                 loading = true
+                                errorMessage = null
                                 val updatedSeller = SellerModel(
-                                    sellerId = id,
+                                    sellerId = currentSeller.sellerId,
+                                    fullName = fullName,
                                     shopName = shopName,
-                                    sellerEmail = email,
+                                    sellerEmail = email, // Email stays unchanged
                                     sellerPhoneNumber = phone,
                                     sellerAddress = address,
-                                    panNumber = pan
+                                    panNumber = pan,
+                                    role = currentSeller.role,
+                                    documentType = currentSeller.documentType,
+                                    documentUrl = currentSeller.documentUrl,
+                                    verificationStatus = currentSeller.verificationStatus,
+                                    banned = currentSeller.banned
                                 )
-                                viewModel.updateProfile(id, updatedSeller) { success, msg ->
+                                viewModel.updateProfile(currentSeller.sellerId, updatedSeller) { success, msg ->
                                     loading = false
                                     if (success) {
                                         Toast.makeText(
@@ -468,7 +469,7 @@ fun EditSellerProfileScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        enabled = !loading && !isEmailDuplicate && !AdminEmailValidator.isReservedEmail(email),
+                        enabled = !loading,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFFF9800),
                             disabledContainerColor = Color(0xFFE0E0E0)

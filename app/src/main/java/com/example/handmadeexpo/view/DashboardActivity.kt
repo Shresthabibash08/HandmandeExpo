@@ -7,10 +7,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -57,7 +56,6 @@ fun DashboardBody(userId: String) {
     var editing by remember { mutableStateOf(false) }
     var changingPassword by remember { mutableStateOf(false) }
     var showAllSellers by remember { mutableStateOf(false) }
-    var buyerName by remember { mutableStateOf("Buyer") }
     var chatCount by remember { mutableIntStateOf(0) }
 
     // Reporting State
@@ -74,27 +72,21 @@ fun DashboardBody(userId: String) {
     val cartRepo = remember { CartRepoImpl() }
     val cartViewModel = remember { CartViewModel(cartRepo) }
 
-    // Fetch Buyer Name
-    LaunchedEffect(userId) {
-        if (userId.isNotEmpty()) {
-            FirebaseDatabase.getInstance().getReference("Buyers").child(userId).child("name")
-                .get().addOnSuccessListener { snapshot ->
-                    buyerName = snapshot.value?.toString() ?: "Buyer"
-                }
-        }
-    }
-
     // Badge Listener for Incoming Chats
-    val inboxRef = remember { FirebaseDatabase.getInstance().getReference("buyer_inbox").child(userId) }
-    LaunchedEffect(userId) {
-        if (userId.isNotEmpty()) {
-            val listener = object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    chatCount = snapshot.childrenCount.toInt()
-                }
-                override fun onCancelled(error: DatabaseError) {}
+    DisposableEffect(userId) {
+        if (userId.isEmpty()) return@DisposableEffect onDispose { }
+
+        val inboxRef = FirebaseDatabase.getInstance().getReference("buyer_inbox").child(userId)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                chatCount = snapshot.childrenCount.toInt()
             }
-            inboxRef.addValueEventListener(listener)
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        inboxRef.addValueEventListener(listener)
+
+        onDispose {
+            inboxRef.removeEventListener(listener)
         }
     }
 
@@ -157,7 +149,6 @@ fun DashboardBody(userId: String) {
                     }
                 },
                 navigationIcon = {
-                    // Show back button for chat, seller list, or reporting screens
                     if (activeChatData != null || showAllSellers || reportProductId != null || reportSellerId != null) {
                         IconButton(
                             onClick = {
@@ -170,7 +161,7 @@ fun DashboardBody(userId: String) {
                             }
                         ) {
                             Icon(
-                                Icons.Default.ArrowBack,
+                                Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
                                 tint = Color.White
                             )
@@ -225,7 +216,6 @@ fun DashboardBody(userId: String) {
         },
         containerColor = Color(0xFFF5F7FA),
         floatingActionButton = {
-            // Floating Action Button for New Chat
             if (selectedIndex == 1 && activeChatData == null && !showAllSellers && reportProductId == null && reportSellerId == null) {
                 FloatingActionButton(
                     onClick = { showAllSellers = true },
@@ -242,87 +232,71 @@ fun DashboardBody(userId: String) {
             }
         }
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // Global Overlays (Reporting)
-            if (reportSellerId != null) {
-                ReportSellerScreen(
-                    sellerId = reportSellerId!!,
-                    onBackClick = { reportSellerId = null }
-                )
-            } else if (reportProductId != null) {
-                ReportProductScreen(
-                    productId = reportProductId!!,
-                    onBackClick = { reportProductId = null }
-                )
-            } else {
-                when (selectedIndex) {
-                    // Home Tab
-                    0 -> {
-                        HomeScreen(
-                            onReportProductClick = { productId ->
-                                reportProductId = productId
-                            },
-                            onReportSellerClick = { sellerId ->
-                                reportSellerId = sellerId
-                            }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            when {
+                reportSellerId != null -> {
+                    ReportSellerScreen(
+                        sellerId = reportSellerId!!,
+                        onBackClick = { reportSellerId = null }
+                    )
+                }
+                reportProductId != null -> {
+                    ReportProductScreen(
+                        productId = reportProductId!!,
+                        onBackClick = { reportProductId = null }
+                    )
+                }
+                else -> {
+                    when (selectedIndex) {
+                        0 -> HomeScreen(
+                            onReportProductClick = { reportProductId = it },
+                            onReportSellerClick = { reportSellerId = it }
                         )
-                    }
 
-                    // Inbox Tab
-                    1 -> when {
-                        activeChatData != null -> {
-                            ChatScreen(
+                        1 -> when {
+                            activeChatData != null -> ChatScreen(
                                 chatId = activeChatData!!.first,
                                 sellerId = activeChatData!!.second,
                                 sellerName = activeChatData!!.third,
                                 currentUserId = userId,
                                 onBackClick = { activeChatData = null }
                             )
-                        }
-                        showAllSellers -> {
-                            AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
+                            showAllSellers -> AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
                                 activeChatData = Triple(chatId, sellerId, sellerName)
                                 showAllSellers = false
                             }
-                        }
-                        else -> {
-                            BuyerChatListScreen(userId) { chatId, sellerId, sellerName ->
+                            else -> BuyerChatListScreen(userId) { chatId, sellerId, sellerName ->
                                 activeChatData = Triple(chatId, sellerId, sellerName)
                             }
                         }
-                    }
 
-                    // Cart Tab
-                    2 -> {
-                        CartScreen(
+                        2 -> CartScreen(
                             cartViewModel = cartViewModel,
                             currentUserId = userId
                         )
-                    }
 
-                    // Profile Tab
-                    3 -> when {
-                        changingPassword -> {
-                            ChangePasswordScreen(
+                        3 -> when {
+                            changingPassword -> ChangePasswordScreen(
                                 viewModel = buyerViewModel,
                                 onBackClick = { changingPassword = false },
                                 onPasswordChanged = { changingPassword = false }
                             )
-                        }
-                        editing -> {
-                            EditBuyerProfileScreen(
+                            editing -> EditBuyerProfileScreen(
                                 viewModel = buyerViewModel,
                                 onBack = { editing = false }
                             )
-                        }
-                        else -> {
-                            BuyerProfileScreen(
+                            else -> BuyerProfileScreen(
                                 viewModel = buyerViewModel,
                                 onEditClick = { editing = true },
                                 onChangePasswordClick = { changingPassword = true },
                                 onLogoutSuccess = {
-                                    val intent = Intent(context, SignInActivity::class.java)
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    val intent = Intent(context, SignInActivity::class.java).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    }
                                     context.startActivity(intent)
                                     activity?.finish()
                                 }

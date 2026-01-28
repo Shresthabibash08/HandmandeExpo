@@ -1,5 +1,6 @@
 package com.example.handmadeexpo.view
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,7 +37,7 @@ fun BuyerProfileScreen(
 ) {
     val buyer by viewModel.buyer.observeAsState()
     val loading by viewModel.loading.observeAsState(false)
-    val buyerId = FirebaseAuth.getInstance().currentUser?.uid
+    val buyerId = FirebaseAuth.getInstance().currentUser?.uid  // ✅ Fixed typo
 
     var showLogoutDialog by remember { mutableStateOf(false) }
     var isLoggingOut by remember { mutableStateOf(false) }
@@ -43,6 +45,18 @@ fun BuyerProfileScreen(
     LaunchedEffect(Unit) {
         buyerId?.let {
             viewModel.getBuyerDetailsById(it)
+        }
+    }
+
+    // Debug logging
+    LaunchedEffect(buyer) {
+        buyer?.let {
+            Log.d("ProfileScreen", "========== BUYER DATA ==========")
+            Log.d("ProfileScreen", "Name: ${it.buyerName}")
+            Log.d("ProfileScreen", "Email: ${it.buyerEmail}")
+            Log.d("ProfileScreen", "Phone: ${it.buyerPhoneNumber}")
+            Log.d("ProfileScreen", "Address: ${it.buyerAddress}")
+            Log.d("ProfileScreen", "================================")
         }
     }
 
@@ -111,9 +125,7 @@ fun BuyerProfileScreen(
                 OutlinedButton(
                     onClick = { showLogoutDialog = false },
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF757575)
-                    )
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF757575))
                 ) {
                     Text("Cancel", fontWeight = FontWeight.Medium)
                 }
@@ -135,10 +147,7 @@ fun BuyerProfileScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(
-                            color = MainColor,
-                            strokeWidth = 3.dp
-                        )
+                        CircularProgressIndicator(color = MainColor, strokeWidth = 3.dp)
                         Spacer(modifier = Modifier.height(16.dp))
                         Text("Loading profile...", color = Color.Gray, fontSize = 14.sp)
                     }
@@ -165,7 +174,6 @@ fun BuyerProfileScreen(
                                 .padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // Profile Picture
                             Box(
                                 modifier = Modifier
                                     .size(120.dp)
@@ -182,9 +190,8 @@ fun BuyerProfileScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            // Name
                             Text(
-                                text = buyer?.buyerName ?: "",
+                                text = buyer?.buyerName ?: "No Name",
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF212121)
@@ -192,7 +199,6 @@ fun BuyerProfileScreen(
 
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            // Badge
                             Surface(
                                 color = MainColor.copy(alpha = 0.15f),
                                 shape = RoundedCornerShape(20.dp)
@@ -219,7 +225,6 @@ fun BuyerProfileScreen(
 
                             Spacer(modifier = Modifier.height(20.dp))
 
-                            // Edit Profile Button
                             Button(
                                 onClick = onEditClick,
                                 modifier = Modifier
@@ -228,24 +233,16 @@ fun BuyerProfileScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = MainColor),
                                 shape = RoundedCornerShape(24.dp)
                             ) {
-                                Icon(
-                                    Icons.Default.Edit,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                Icon(Icons.Default.Edit, null, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Edit Profile",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
-                                )
+                                Text("Edit Profile", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Profile Details Section
+                    // Personal Information Section
                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                         Text(
                             "Personal Information",
@@ -263,31 +260,34 @@ fun BuyerProfileScreen(
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
+                                // Email
                                 ModernProfileRow(
                                     icon = Icons.Default.Email,
                                     iconColor = Color(0xFF1E88E5),
                                     title = "Email",
-                                    value = buyer?.buyerEmail ?: ""
+                                    value = buyer?.buyerEmail ?: "Not provided"
                                 )
-                                Divider(
+                                HorizontalDivider(
                                     modifier = Modifier.padding(vertical = 12.dp),
                                     color = Color(0xFFEEEEEE)
                                 )
+                                // Phone - using buyerPhoneNumber
                                 ModernProfileRow(
                                     icon = Icons.Default.Phone,
                                     iconColor = Color(0xFF4CAF50),
                                     title = "Phone",
-                                    value = buyer?.buyerPhoneNumber ?: ""
+                                    value = buyer?.buyerPhoneNumber ?: "Not provided"
                                 )
-                                Divider(
+                                HorizontalDivider(
                                     modifier = Modifier.padding(vertical = 12.dp),
                                     color = Color(0xFFEEEEEE)
                                 )
+                                // Address - using buyerAddress
                                 ModernProfileRow(
                                     icon = Icons.Default.LocationOn,
                                     iconColor = Color(0xFFF44336),
                                     title = "Address",
-                                    value = buyer?.buyerAddress ?: ""
+                                    value = buyer?.buyerAddress ?: "Not provided"
                                 )
                             }
                         }
@@ -295,7 +295,7 @@ fun BuyerProfileScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Account Actions Section
+                    // Account Settings Section
                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                         Text(
                             "Account Settings",
@@ -313,54 +313,32 @@ fun BuyerProfileScreen(
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                // Change Password Button
                                 OutlinedButton(
                                     onClick = onChangePasswordClick,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(56.dp),
                                     shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = MainColor
-                                    )
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MainColor)
                                 ) {
-                                    Icon(
-                                        Icons.Default.Lock,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(22.dp)
-                                    )
+                                    Icon(Icons.Default.Lock, null, modifier = Modifier.size(22.dp))
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        "Change Password",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp
-                                    )
+                                    Text("Change Password", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                 }
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
-                                // Logout Button
                                 Button(
                                     onClick = { showLogoutDialog = true },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(56.dp),
                                     shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFFF44336)
-                                    )
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336))
                                 ) {
-                                    Icon(
-                                        Icons.Default.ExitToApp,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(22.dp)
-                                    )
+                                    Icon(Icons.Default.ExitToApp, null, modifier = Modifier.size(22.dp))
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        "Logout",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp
-                                    )
+                                    Text("Logout", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                 }
                             }
                         }
@@ -371,10 +349,7 @@ fun BuyerProfileScreen(
             }
 
             else -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             Icons.Default.PersonOff,
@@ -383,12 +358,7 @@ fun BuyerProfileScreen(
                             tint = Color.Gray.copy(alpha = 0.3f)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "Profile not found",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.Gray
-                        )
+                        Text("Profile not found", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
                         Spacer(modifier = Modifier.height(24.dp))
                         Button(
                             onClick = { showLogoutDialog = true },
@@ -407,39 +377,24 @@ fun BuyerProfileScreen(
 }
 
 @Composable
-fun ModernProfileRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+private fun ModernProfileRow(
+    icon: ImageVector,
     iconColor: Color,
     title: String,
     value: String
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
         Box(
             modifier = Modifier
                 .size(40.dp)
                 .background(iconColor.copy(alpha = 0.15f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = iconColor,
-                modifier = Modifier.size(20.dp)
-            )
+            Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
         }
-
         Spacer(modifier = Modifier.width(16.dp))
-
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                title,
-                fontSize = 12.sp,
-                color = Color(0xFF9E9E9E),
-                fontWeight = FontWeight.Medium
-            )
+            Text(title, fontSize = 12.sp, color = Color(0xFF9E9E9E), fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 value.ifEmpty { "Not provided" },
