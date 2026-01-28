@@ -256,7 +256,7 @@ fun SignupBody() {
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Already have an account ? ", color = Color.Black)
+                    Text("Already have an account? ", color = Color.Black)
                     Text(
                         text = "Sign In",
                         color = Blue,
