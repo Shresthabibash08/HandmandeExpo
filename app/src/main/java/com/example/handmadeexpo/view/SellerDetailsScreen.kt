@@ -2,6 +2,7 @@ package com.example.handmadeexpo.view
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -15,21 +16,27 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.handmadeexpo.R
-import com.example.handmadeexpo.ui.theme.MainColor
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+
+// --- Modern Design Constants ---
+private val AppBackground = Color(0xFFF5F7FA)
+private val PrimaryGreen = Color(0xFF4CAF50)
+private val TextDark = Color(0xFF212121)
+private val TextGray = Color(0xFF757575)
 
 data class SellerInfo(
     val sellerId: String = "",
@@ -46,19 +53,17 @@ data class SellerInfo(
     val rating: Double = 0.0
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SellerDetailsScreen(
     sellerId: String,
     onBackClick: () -> Unit,
     onContactClick: () -> Unit = {}
 ) {
-    val context = LocalContext.current
     var sellerInfo by remember { mutableStateOf<SellerInfo?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    // Fetch seller details
+    // Fetch seller details logic (Unchanged)
     LaunchedEffect(sellerId) {
         val sellerRef = FirebaseDatabase.getInstance().getReference("Seller").child(sellerId)
 
@@ -116,354 +121,358 @@ fun SellerDetailsScreen(
         })
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Seller Details", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MainColor,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
-            )
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Background
-            Image(
-                painter = painterResource(R.drawable.bg10),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-
-            when {
-                isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = MainColor)
-                    }
-                }
-
-                error != null -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.Default.Error,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = Color.Gray
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                error ?: "Unknown error",
-                                color = Color.Gray,
-                                fontSize = 16.sp
-                            )
-                        }
-                    }
-                }
-
-                sellerInfo != null -> {
-                    SellerDetailsContent(
-                        seller = sellerInfo!!,
-                        onContactClick = onContactClick
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun SellerDetailsContent(
-    seller: SellerInfo,
-    onContactClick: () -> Unit
-) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(AppBackground)
     ) {
-        // Profile Picture and Shop Name
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(8.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Profile Image
+        when {
+            isLoading -> {
                 Box(
-                    contentAlignment = Alignment.BottomEnd
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.profilephoto),
-                        contentDescription = "Profile Photo",
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(CircleShape)
-                            .background(Color.LightGray),
-                        contentScale = ContentScale.Crop
-                    )
+                    CircularProgressIndicator(color = PrimaryGreen)
+                }
+            }
 
-                    // Verification Badge
-                    if (seller.verificationStatus == "Verified") {
-                        Surface(
-                            shape = CircleShape,
-                            color = Color(0xFF4CAF50),
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = "Verified",
-                                tint = Color.White,
-                                modifier = Modifier.padding(4.dp)
-                            )
+            error != null -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.ErrorOutline,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            error ?: "Unknown error",
+                            color = Color.Gray,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = onBackClick, colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)) {
+                            Text("Go Back")
                         }
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
+            sellerInfo != null -> {
+                val seller = sellerInfo!!
 
-                // Shop Name
-                Text(
-                    text = seller.shopName,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MainColor
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Verification Status
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = when (seller.verificationStatus) {
-                        "Verified" -> Color(0xFF4CAF50).copy(alpha = 0.1f)
-                        "Pending" -> Color(0xFFFF9800).copy(alpha = 0.1f)
-                        else -> Color.Gray.copy(alpha = 0.1f)
-                    }
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    Text(
-                        text = seller.verificationStatus,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        color = when (seller.verificationStatus) {
-                            "Verified" -> Color(0xFF4CAF50)
-                            "Pending" -> Color(0xFFFF9800)
-                            else -> Color.Gray
-                        },
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    // --- 1. Header Section (Overlapping) ---
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        // Green Gradient Banner
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp)
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(PrimaryGreen, Color(0xFF43A047))
+                                    ),
+                                    shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
+                                )
+                        ) {
+                            // Custom Back Button in Header
+                            IconButton(
+                                onClick = onBackClick,
+                                modifier = Modifier
+                                    .padding(top = 40.dp, start = 8.dp)
+                                    .align(Alignment.TopStart)
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = Color.White
+                                )
+                            }
+
+                            Text(
+                                "Seller Details",
+                                color = Color.White,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(top = 52.dp)
+                            )
+                        }
+
+                        // Floating Profile Content
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 100.dp), // Push down to overlap
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Profile Image
+                            Card(
+                                shape = CircleShape,
+                                elevation = CardDefaults.cardElevation(8.dp),
+                                modifier = Modifier.size(120.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White)
+                            ) {
+                                Image(
+                                    painter = painterResource(R.drawable.profilephoto),
+                                    contentDescription = "Profile Photo",
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(4.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Shop Name & Badge
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = seller.shopName,
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextDark
+                                )
+                                if (seller.verificationStatus == "Verified") {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(
+                                        Icons.Default.Verified,
+                                        contentDescription = "Verified",
+                                        tint = PrimaryGreen,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+
+                            // Verification Status Text
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = when (seller.verificationStatus) {
+                                    "Verified" -> PrimaryGreen.copy(alpha = 0.1f)
+                                    "Pending" -> Color(0xFFFF9800).copy(alpha = 0.1f)
+                                    else -> Color.Gray.copy(alpha = 0.1f)
+                                }
+                            ) {
+                                Text(
+                                    text = seller.verificationStatus,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                    color = when (seller.verificationStatus) {
+                                        "Verified" -> PrimaryGreen
+                                        "Pending" -> Color(0xFFFF9800)
+                                        else -> Color.Gray
+                                    },
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // --- 2. Statistics Row ---
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        ModernStatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Inventory,
+                            label = "Total Products",
+                            value = seller.totalProducts.toString(),
+                            accentColor = Color(0xFF2196F3)
+                        )
+
+                        ModernStatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.ShoppingBag,
+                            label = "Total Sales",
+                            value = seller.totalSales.toString(),
+                            accentColor = Color(0xFFFF9800)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // --- 3. Information Card ---
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .shadow(2.dp, RoundedCornerShape(16.dp)),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(20.dp)) {
+                            Text(
+                                "Contact Information",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextDark,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            )
+
+                            if (seller.fullName.isNotEmpty()) {
+                                ModernInfoRow(Icons.Default.Person, "Owner Name", seller.fullName)
+                            }
+                            if (seller.sellerEmail.isNotEmpty()) {
+                                ModernInfoRow(Icons.Default.Email, "Email Address", seller.sellerEmail)
+                            }
+                            if (seller.sellerPhoneNumber.isNotEmpty()) {
+                                ModernInfoRow(Icons.Default.Phone, "Phone Number", seller.sellerPhoneNumber)
+                            }
+                            if (seller.sellerAddress.isNotEmpty()) {
+                                ModernInfoRow(Icons.Default.LocationOn, "Shop Address", seller.sellerAddress)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // --- 4. Action Button ---
+                    Button(
+                        onClick = onContactClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .height(56.dp)
+                            .shadow(4.dp, RoundedCornerShape(12.dp)),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                    ) {
+                        Icon(Icons.Default.Chat, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Contact Seller",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Statistics Cards
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            StatCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Default.Inventory,
-                label = "Products",
-                value = seller.totalProducts.toString()
-            )
-
-            StatCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Default.ShoppingBag,
-                label = "Sales",
-                value = seller.totalSales.toString()
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Seller Information Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(8.dp)
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(
-                    "Seller Information",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MainColor
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (seller.fullName.isNotEmpty()) {
-                    InfoRow(
-                        icon = Icons.Default.Person,
-                        label = "Owner",
-                        value = seller.fullName
-                    )
-                }
-
-                if (seller.sellerEmail.isNotEmpty()) {
-                    InfoRow(
-                        icon = Icons.Default.Email,
-                        label = "Email",
-                        value = seller.sellerEmail
-                    )
-                }
-
-                if (seller.sellerPhoneNumber.isNotEmpty()) {
-                    InfoRow(
-                        icon = Icons.Default.Phone,
-                        label = "Phone",
-                        value = seller.sellerPhoneNumber
-                    )
-                }
-
-                if (seller.sellerAddress.isNotEmpty()) {
-                    InfoRow(
-                        icon = Icons.Default.LocationOn,
-                        label = "Address",
-                        value = seller.sellerAddress
-                    )
-                }
-
-                if (seller.panNumber.isNotEmpty()) {
-                    InfoRow(
-                        icon = Icons.Default.Badge,
-                        label = "PAN Number",
-                        value = seller.panNumber
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Contact Button
-        Button(
-            onClick = onContactClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MainColor)
-        ) {
-            Icon(
-                Icons.Default.Chat,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                "Contact Seller",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
 @Composable
-fun StatCard(
+fun ModernStatCard(
     modifier: Modifier = Modifier,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String,
-    value: String
+    value: String,
+    accentColor: Color
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(4.dp)
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MainColor,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(accentColor.copy(alpha = 0.1f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
-                value,
+                text = value,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = MainColor
+                color = TextDark
             )
             Text(
-                label,
+                text = label,
                 fontSize = 12.sp,
-                color = Color.Gray
+                color = TextGray,
+                fontWeight = FontWeight.Medium
             )
         }
     }
 }
 
 @Composable
-fun InfoRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+fun ModernInfoRow(
+    icon: ImageVector,
     label: String,
     value: String
 ) {
-    Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Icon Box
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(PrimaryGreen.copy(alpha = 0.1f), CircleShape),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
-                icon,
+                imageVector = icon,
                 contentDescription = null,
-                tint = MainColor,
+                tint = PrimaryGreen,
                 modifier = Modifier.size(20.dp)
             )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(
-                    label,
-                    fontSize = 12.sp,
-                    color = Color.Gray,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    value,
-                    fontSize = 15.sp,
-                    color = Color.Black,
-                    fontWeight = FontWeight.Normal
-                )
-            }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // Text Content
+        Column {
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                color = TextGray,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = value,
+                fontSize = 15.sp,
+                color = TextDark,
+                fontWeight = FontWeight.Normal
+            )
+        }
     }
+    // Subtle Divider
+    Divider(
+        color = Color.Gray.copy(alpha = 0.1f),
+        thickness = 1.dp,
+        modifier = Modifier.padding(start = 56.dp)
+    )
 }

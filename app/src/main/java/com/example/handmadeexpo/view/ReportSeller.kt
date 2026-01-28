@@ -20,13 +20,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.ReportViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReportProductScreen(
-    productId: String,
+fun ReportSellerScreen(
+    sellerId: String,
     onBackClick: () -> Unit
 ) {
     val viewModel: ReportViewModel = viewModel()
@@ -83,26 +82,26 @@ fun ReportProductScreen(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .background(Color(0xFFF44336).copy(alpha = 0.15f), CircleShape),
+                            .background(Color(0xFFFF5722).copy(alpha = 0.15f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Default.Flag,
+                            Icons.Default.Store,
                             contentDescription = null,
-                            tint = Color(0xFFF44336),
+                            tint = Color(0xFFFF5722),
                             modifier = Modifier.size(28.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text(
-                            "Report Product",
+                            "Report Seller",
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF212121)
                         )
                         Text(
-                            "Help us maintain quality",
+                            "Help us maintain trust",
                             fontSize = 13.sp,
                             color = Color.Gray
                         )
@@ -131,7 +130,7 @@ fun ReportProductScreen(
                 Column(modifier = Modifier.padding(20.dp)) {
                     // Info Banner
                     Surface(
-                        color = Color(0xFFFFF3E0),
+                        color = Color(0xFFFFEBEE),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -140,21 +139,21 @@ fun ReportProductScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                Icons.Default.Info,
+                                Icons.Default.Shield,
                                 contentDescription = null,
-                                tint = Color(0xFFFF9800),
+                                tint = Color(0xFFF44336),
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    "Your report is important",
+                                    "Report helps protect the community",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFE65100)
+                                    color = Color(0xFFC62828)
                                 )
                                 Text(
-                                    "Help us identify issues and maintain a safe marketplace",
+                                    "Your report will be reviewed by our moderation team",
                                     fontSize = 12.sp,
                                     color = Color(0xFF424242)
                                 )
@@ -178,14 +177,14 @@ fun ReportProductScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                "What's wrong with this product?",
+                                "Why are you reporting this seller?",
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF212121)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "Please provide specific details so we can review and take appropriate action",
+                                "Provide details about the seller's behavior or business practices that concern you",
                                 fontSize = 13.sp,
                                 color = Color(0xFF616161),
                                 lineHeight = 18.sp
@@ -212,7 +211,7 @@ fun ReportProductScreen(
                             .height(160.dp),
                         placeholder = {
                             Text(
-                                "e.g., Misleading description, Counterfeit item, Inappropriate content...",
+                                "e.g., Sent fake products, Scammed me, Harassment, Non-delivery...",
                                 fontSize = 13.sp,
                                 color = Color(0xFF9E9E9E)
                             )
@@ -254,18 +253,19 @@ fun ReportProductScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    "Common Issues",
+                                    "Common Seller Issues",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF424242)
                                 )
                             }
                             Spacer(modifier = Modifier.height(8.dp))
-                            CommonIssueChip("Counterfeit or fake")
-                            CommonIssueChip("Misleading information")
-                            CommonIssueChip("Inappropriate content")
-                            CommonIssueChip("Safety concerns")
-                            CommonIssueChip("Poor quality")
+                            CommonSellerIssueChip("Selling counterfeit items")
+                            CommonSellerIssueChip("Fraudulent business practices")
+                            CommonSellerIssueChip("Harassment or threatening behavior")
+                            CommonSellerIssueChip("Non-delivery of paid items")
+                            CommonSellerIssueChip("Misleading product descriptions")
+                            CommonSellerIssueChip("Requesting off-platform payment")
                         }
                     }
 
@@ -273,7 +273,7 @@ fun ReportProductScreen(
 
                     // Warning Banner
                     Surface(
-                        color = Color(0xFFFFEBEE),
+                        color = Color(0xFFFFF3E0),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -284,14 +284,14 @@ fun ReportProductScreen(
                             Icon(
                                 Icons.Default.Warning,
                                 contentDescription = null,
-                                tint = Color(0xFFF44336),
+                                tint = Color(0xFFFF9800),
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                "False reports may result in account penalties",
+                                "False accusations may result in account suspension",
                                 fontSize = 11.sp,
-                                color = Color(0xFFC62828),
+                                color = Color(0xFFE65100),
                                 fontWeight = FontWeight.Medium
                             )
                         }
@@ -321,7 +321,7 @@ fun ReportProductScreen(
                             onClick = {
                                 if (reason.isNotBlank()) {
                                     isSubmitting = true
-                                    viewModel.submitReport(productId, reason) { success: Boolean, msg: String ->
+                                    viewModel.reportSeller(sellerId, reason) { success, msg ->
                                         isSubmitting = false
                                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                         if (success) {
@@ -368,7 +368,7 @@ fun ReportProductScreen(
 }
 
 @Composable
-fun CommonIssueChip(text: String) {
+fun CommonSellerIssueChip(text: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
