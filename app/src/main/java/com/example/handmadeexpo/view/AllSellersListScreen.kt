@@ -1,4 +1,3 @@
-
 package com.example.handmadeexpo.view
 
 import androidx.compose.foundation.background
@@ -27,7 +26,9 @@ fun AllSellersListScreen(
     currentUserId: String,
     onSellerSelected: (String, String, String) -> Unit
 ) {
-    val sellersRef = remember { FirebaseDatabase.getInstance().getReference("sellers") }
+    // *** FIX 1: Changed "sellers" to "Seller" to match your Database structure ***
+    val sellersRef = remember { FirebaseDatabase.getInstance().getReference("Seller") }
+
     var sellerList by remember { mutableStateOf<List<Map<String, String>>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
@@ -35,9 +36,25 @@ fun AllSellersListScreen(
         sellersRef.get().addOnSuccessListener { snapshot ->
             val list = mutableListOf<Map<String, String>>()
             snapshot.children.forEach { child ->
-                val name = child.child("name").value.toString()
+                // *** FIX 2: Fetch 'shopName' or 'fullName' because 'name' does not exist in your SellerModel ***
+                val shopName = child.child("shopName").value?.toString()
+                val fullName = child.child("fullName").value?.toString()
+
+                // Prioritize Shop Name, then Full Name, then Fallback
+                val displayName = if (!shopName.isNullOrEmpty()) {
+                    shopName
+                } else if (!fullName.isNullOrEmpty()) {
+                    fullName
+                } else {
+                    "Unknown Seller"
+                }
+
                 val id = child.key.toString()
-                if (id != currentUserId) list.add(mapOf("name" to name, "id" to id))
+
+                // Only add if ID is valid and it's not the current user (if user is also a seller)
+                if (id.isNotEmpty() && id != currentUserId) {
+                    list.add(mapOf("name" to displayName!!, "id" to id))
+                }
             }
             sellerList = list
             isLoading = false
@@ -147,6 +164,7 @@ fun AllSellersListScreen(
                             .fillMaxWidth()
                             .shadow(2.dp, RoundedCornerShape(16.dp))
                             .clickable {
+                                // Generate Chat ID and navigate
                                 val chatId = ChatUtils.generateChatId(currentUserId, sId)
                                 onSellerSelected(chatId, sId, sName)
                             },
@@ -181,7 +199,7 @@ fun AllSellersListScreen(
                                     color = Color(0xFF212121)
                                 )
                                 Text(
-                                    "Seller",
+                                    "Tap to chat",
                                     fontSize = 13.sp,
                                     color = Color.Gray
                                 )
