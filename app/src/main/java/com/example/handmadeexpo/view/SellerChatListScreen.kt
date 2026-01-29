@@ -20,6 +20,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.database.*
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun SellerChatListScreen(
@@ -31,7 +33,7 @@ fun SellerChatListScreen(
     var activeChats by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Properly dispose listener when composable leaves composition
+    // Fetch Chat List
     DisposableEffect(currentUserId) {
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -52,45 +54,65 @@ fun SellerChatListScreen(
             .fillMaxSize()
             .background(Color(0xFFF5F7FA))
     ) {
+        // Header
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(4.dp, RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(Color(0xFF1E88E5).copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Message,
+                            contentDescription = null,
+                            tint = Color(0xFF1E88E5),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            "Messages",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF212121)
+                        )
+                        Text(
+                            "${activeChats.size} conversations",
+                            fontSize = 13.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         if (isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(
-                        color = Color(0xFF1E88E5),
-                        strokeWidth = 3.dp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Loading messages...", color = Color.Gray, fontSize = 14.sp)
-                }
+                CircularProgressIndicator(color = Color(0xFF1E88E5))
             }
         } else if (activeChats.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.ChatBubbleOutline,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = Color.Gray.copy(alpha = 0.3f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "No messages yet",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.Gray
-                    )
-                    Text(
-                        "Your conversations will appear here",
-                        fontSize = 13.sp,
-                        color = Color.Gray.copy(alpha = 0.7f)
-                    )
-                }
+                Text("No messages yet", color = Color.Gray)
             }
         } else {
             LazyColumn(
@@ -102,23 +124,24 @@ fun SellerChatListScreen(
                     val buyerId = chat["participantId"]?.toString() ?: ""
                     val chatId = chat["chatId"]?.toString() ?: ""
                     val lastMessage = chat["lastMessage"]?.toString() ?: "No message"
+                    val timestamp = chat["timestamp"] as? Long ?: 0L
 
                     var buyerDisplayName by remember { mutableStateOf("Loading...") }
 
-                    // Properly dispose listener for buyer name
+                    // *** FIX: Robust Buyer Name Fetching ***
                     DisposableEffect(buyerId) {
                         if (buyerId.isNotEmpty()) {
-                            val ref = FirebaseDatabase.getInstance().getReference("buyers").child(buyerId)
+                            // Target "Buyer" node (Singular)
+                            val ref = FirebaseDatabase.getInstance().getReference("Buyer").child(buyerId)
 
                             val nameListener = object : ValueEventListener {
                                 override fun onDataChange(snapshot: DataSnapshot) {
-                                    // Try buyerName first, then fallback to name
+                                    // *** FIX: Look for 'buyerName' first ***
                                     val bName = snapshot.child("buyerName").value?.toString()
-                                    if (!bName.isNullOrEmpty()) {
-                                        buyerDisplayName = bName
-                                    } else {
-                                        buyerDisplayName = snapshot.child("name").value?.toString() ?: "Customer"
-                                    }
+                                        ?: snapshot.child("name").value?.toString()
+                                        ?: snapshot.child("fullName").value?.toString()
+
+                                    buyerDisplayName = if (!bName.isNullOrEmpty()) bName else "Customer"
                                 }
                                 override fun onCancelled(error: DatabaseError) {}
                             }
@@ -132,6 +155,7 @@ fun SellerChatListScreen(
                     ChatListItem(
                         name = buyerDisplayName,
                         lastMessage = lastMessage,
+                        timestamp = timestamp,
                         onClick = { onChatClick(chatId, buyerId, buyerDisplayName) }
                     )
                 }
@@ -144,6 +168,7 @@ fun SellerChatListScreen(
 private fun ChatListItem(
     name: String,
     lastMessage: String,
+    timestamp: Long,
     onClick: () -> Unit
 ) {
     Card(
@@ -177,12 +202,20 @@ private fun ChatListItem(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = Color(0xFF212121)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = Color(0xFF212121)
+                    )
+                    if (timestamp > 0) {
+                        Text("Recent", fontSize = 11.sp, color = Color.Gray)
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = lastMessage,

@@ -26,7 +26,8 @@ import java.util.*
 @Composable
 fun BuyerChatListScreen(
     currentUserId: String,
-    onChatClick: (String, String, String) -> Unit
+    onChatClick: (String, String, String) -> Unit,
+    onAddClick: () -> Unit // *** NEW: Callback for Add Button ***
 ) {
     val database = FirebaseDatabase.getInstance().getReference("buyer_inbox").child(currentUserId)
 
@@ -49,153 +50,168 @@ fun BuyerChatListScreen(
         onDispose { database.removeEventListener(listener) }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F7FA))
-    ) {
-        // Modern Header
-        Card(
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAddClick, // *** Trigger navigation to All Sellers ***
+                containerColor = Color(0xFF1E88E5),
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "New Chat")
+            }
+        },
+        containerColor = Color(0xFFF5F7FA) // Set background for Scaffold
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .shadow(4.dp, RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                .fillMaxSize()
+                .padding(paddingValues) // Respect Scaffold padding
+                .background(Color(0xFFF5F7FA))
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+            // Modern Header
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(Color(0xFF1E88E5).copy(alpha = 0.15f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Message,
+                                contentDescription = null,
+                                tint = Color(0xFF1E88E5),
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                "Messages",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF212121)
+                            )
+                            Text(
+                                "${activeChats.size} conversations",
+                                fontSize = 13.sp,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            when {
+                isLoading -> {
                     Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(Color(0xFF1E88E5).copy(alpha = 0.15f), CircleShape),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.Default.Message,
-                            contentDescription = null,
-                            tint = Color(0xFF1E88E5),
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            "Messages",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF212121)
-                        )
-                        Text(
-                            "${activeChats.size} conversations",
-                            fontSize = 13.sp,
-                            color = Color.Gray
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        when {
-            isLoading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(
-                            color = Color(0xFF1E88E5),
-                            strokeWidth = 3.dp
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Loading messages...", color = Color.Gray, fontSize = 14.sp)
-                    }
-                }
-            }
-
-            activeChats.isEmpty() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.ChatBubbleOutline,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = Color.Gray.copy(alpha = 0.3f)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "No messages yet",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.Gray
-                        )
-                        Text(
-                            "Start chatting with sellers",
-                            fontSize = 14.sp,
-                            color = Color.Gray.copy(alpha = 0.7f)
-                        )
-                    }
-                }
-            }
-
-            else -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(activeChats, key = { it["chatId"].toString() }) { chat ->
-                        val sellerId = chat["participantId"]?.toString() ?: ""
-                        val chatId = chat["chatId"]?.toString() ?: ""
-                        val lastMessage = chat["lastMessage"]?.toString() ?: "No message"
-                        val timestamp = chat["timestamp"] as? Long ?: 0L
-
-                        var shopName by remember { mutableStateOf("Loading...") }
-
-                        // Properly dispose listener for seller name
-                        DisposableEffect(sellerId) {
-                            if (sellerId.isNotEmpty()) {
-                                val ref = FirebaseDatabase.getInstance()
-                                    .getReference("sellers")
-                                    .child(sellerId)
-
-                                val nameListener = object : ValueEventListener {
-                                    override fun onDataChange(snapshot: DataSnapshot) {
-                                        // Try shopName first, then fallback to name/fullName
-                                        val fetchedName = snapshot.child("shopName").value?.toString()
-                                            ?: snapshot.child("name").value?.toString()
-                                            ?: snapshot.child("fullName").value?.toString()
-
-                                        shopName = if (!fetchedName.isNullOrEmpty()) {
-                                            fetchedName
-                                        } else if (snapshot.exists()) {
-                                            "Seller"
-                                        } else {
-                                            "Unknown"
-                                        }
-                                    }
-                                    override fun onCancelled(error: DatabaseError) {}
-                                }
-                                ref.addValueEventListener(nameListener)
-                                onDispose { ref.removeEventListener(nameListener) }
-                            } else {
-                                onDispose { }
-                            }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(
+                                color = Color(0xFF1E88E5),
+                                strokeWidth = 3.dp
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Loading messages...", color = Color.Gray, fontSize = 14.sp)
                         }
+                    }
+                }
 
-                        BuyerChatItem(
-                            sellerName = shopName,
-                            lastMessage = lastMessage,
-                            timestamp = timestamp,
-                            onClick = { onChatClick(chatId, sellerId, shopName) }
-                        )
+                activeChats.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.ChatBubbleOutline,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = Color.Gray.copy(alpha = 0.3f)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "No messages yet",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Gray
+                            )
+                            Text(
+                                "Tap + to start chatting with sellers",
+                                fontSize = 14.sp,
+                                color = Color.Gray.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(activeChats, key = { it["chatId"].toString() }) { chat ->
+                            val sellerId = chat["participantId"]?.toString() ?: ""
+                            val chatId = chat["chatId"]?.toString() ?: ""
+                            val lastMessage = chat["lastMessage"]?.toString() ?: "No message"
+                            val timestamp = chat["timestamp"] as? Long ?: 0L
+
+                            var shopName by remember { mutableStateOf("Loading...") }
+
+                            // Properly dispose listener for seller name
+                            DisposableEffect(sellerId) {
+                                if (sellerId.isNotEmpty()) {
+                                    // *** FIX: Changed "sellers" to "Seller" (Singular) ***
+                                    val ref = FirebaseDatabase.getInstance()
+                                        .getReference("Seller")
+                                        .child(sellerId)
+
+                                    val nameListener = object : ValueEventListener {
+                                        override fun onDataChange(snapshot: DataSnapshot) {
+                                            // Try shopName first, then fallback to name/fullName
+                                            val fetchedName = snapshot.child("shopName").value?.toString()
+                                                ?: snapshot.child("name").value?.toString()
+                                                ?: snapshot.child("fullName").value?.toString()
+
+                                            shopName = if (!fetchedName.isNullOrEmpty()) {
+                                                fetchedName
+                                            } else if (snapshot.exists()) {
+                                                "Seller"
+                                            } else {
+                                                "Unknown"
+                                            }
+                                        }
+                                        override fun onCancelled(error: DatabaseError) {}
+                                    }
+                                    ref.addValueEventListener(nameListener)
+                                    onDispose { ref.removeEventListener(nameListener) }
+                                } else {
+                                    onDispose { }
+                                }
+                            }
+
+                            BuyerChatItem(
+                                sellerName = shopName,
+                                lastMessage = lastMessage,
+                                timestamp = timestamp,
+                                onClick = { onChatClick(chatId, sellerId, shopName) }
+                            )
+                        }
                     }
                 }
             }

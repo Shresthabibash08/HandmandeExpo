@@ -119,7 +119,7 @@ fun DashboardBody(userId: String) {
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color(0xFF1E88E5)
+                    containerColor = Color(0xFF4CAF50) // Changed to Green
                 ),
                 title = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -139,13 +139,6 @@ fun DashboardBody(userId: String) {
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
-                        if (selectedIndex == 0 && activeChatData == null && reportProductId == null && reportSellerId == null) {
-                            Text(
-                                "Discover unique products",
-                                fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
-                        }
                     }
                 },
                 navigationIcon = {
@@ -216,6 +209,7 @@ fun DashboardBody(userId: String) {
         },
         containerColor = Color(0xFFF5F7FA),
         floatingActionButton = {
+            // Only show floating action button in Inbox tab when no chat is open
             if (selectedIndex == 1 && activeChatData == null && !showAllSellers && reportProductId == null && reportSellerId == null) {
                 FloatingActionButton(
                     onClick = { showAllSellers = true },
@@ -239,8 +233,9 @@ fun DashboardBody(userId: String) {
         ) {
             when {
                 reportSellerId != null -> {
-                    ReportSellerScreen(
-                        sellerId = reportSellerId!!,
+                    ReportScreen(
+                        targetId = reportSellerId!!,
+                        isReportingSeller = true,
                         onBackClick = { reportSellerId = null }
                     )
                 }
@@ -263,15 +258,21 @@ fun DashboardBody(userId: String) {
                                 sellerId = activeChatData!!.second,
                                 sellerName = activeChatData!!.third,
                                 currentUserId = userId,
-                                onBackClick = { activeChatData = null }
+                                onBackClick = { activeChatData = null },
+                                isReportingSeller = true,
+                                onReportClick = { reportSellerId = activeChatData!!.second }
                             )
                             showAllSellers -> AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
                                 activeChatData = Triple(chatId, sellerId, sellerName)
                                 showAllSellers = false
                             }
-                            else -> BuyerChatListScreen(userId) { chatId, sellerId, sellerName ->
-                                activeChatData = Triple(chatId, sellerId, sellerName)
-                            }
+                            else -> BuyerChatListScreen(
+                                currentUserId = userId,
+                                onChatClick = { chatId, sellerId, sellerName ->
+                                    activeChatData = Triple(chatId, sellerId, sellerName)
+                                },
+                                onAddClick = { showAllSellers = true }
+                            )
                         }
 
                         2 -> CartScreen(

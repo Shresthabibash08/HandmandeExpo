@@ -65,10 +65,12 @@ fun ChatScreen(
         viewModel.listenForMessages(chatId)
     }
 
-    // Fetch correct name based on user type
+    // Fetch correct name based on user type (FIXED DATABASE NODES)
     DisposableEffect(sellerId, isReportingSeller) {
         val database = FirebaseDatabase.getInstance()
-        val nodeName = if (isReportingSeller) "sellers" else "buyers"
+
+        // *** FIX: Changed to Singular "Seller" and "Buyer" ***
+        val nodeName = if (isReportingSeller) "Seller" else "Buyer"
         val targetField = if (isReportingSeller) "shopName" else "buyerName"
 
         val ref = database.getReference(nodeName).child(sellerId)
@@ -248,7 +250,8 @@ fun ChatScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
-                    .imePadding(),
+                //.imePadding() // Uncomment if you have IME handling extension
+                ,
                 verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -302,7 +305,7 @@ fun ChatScreen(
         }
     }
 
-    // Built-in Report Dialog
+    // Built-in Report Dialog (Fallback if onReportClick is not used)
     if (showReportDialog) {
         ModernReportDialog(
             name = displayName,
@@ -496,7 +499,7 @@ fun ModernReportDialog(
                 shape = RoundedCornerShape(12.dp),
                 enabled = reason.isNotBlank()
             ) {
-                Icon(Icons.Default.Send, null, modifier = Modifier.size(18.dp))
+                Icon(Icons.AutoMirrored.Filled.Send, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text("Submit Report", fontWeight = FontWeight.Bold)
             }
