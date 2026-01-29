@@ -123,7 +123,7 @@ fun ModernSellerDashboardBody(sellerId: String) {
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color(0xFF1E88E5)
+                    containerColor = Color(0xFF4CAF50) // Changed to Green
                 ),
                 title = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -192,7 +192,6 @@ fun ModernSellerDashboardBody(sellerId: String) {
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             when {
                 reportBuyerId != null -> {
-                    // *** FIX: Uses correct 'targetId' parameter ***
                     ReportScreen(
                         targetId = reportBuyerId!!,
                         isReportingSeller = false, // Seller reporting Buyer
@@ -210,7 +209,6 @@ fun ModernSellerDashboardBody(sellerId: String) {
                                 sellerName = activeChatData!!.third,
                                 currentUserId = sellerId,
                                 onBackClick = { activeChatData = null },
-                                // *** FIX: Added missing params for Seller side ***
                                 isReportingSeller = false, // Seller viewing Buyer
                                 onReportClick = { reportBuyerId = activeChatData!!.second }
                             )

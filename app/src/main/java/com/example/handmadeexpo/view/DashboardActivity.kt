@@ -119,7 +119,7 @@ fun DashboardBody(userId: String) {
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color(0xFF1E88E5)
+                    containerColor = Color(0xFF4CAF50) // Changed to Green
                 ),
                 title = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -233,10 +233,9 @@ fun DashboardBody(userId: String) {
         ) {
             when {
                 reportSellerId != null -> {
-                    // *** FIX: Updated to use the new ReportScreen ***
                     ReportScreen(
                         targetId = reportSellerId!!,
-                        isReportingSeller = true, // Buyer is reporting a Seller
+                        isReportingSeller = true,
                         onBackClick = { reportSellerId = null }
                     )
                 }
