@@ -17,45 +17,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.HandmadeExpo"
         tools:replace="android:fullBackupContent">
-        <activity
-            android:name=".view.ReportSeller"
-            android:exported="true"
-            android:label="@string/title_activity_report_seller"
-            android:theme="@style/Theme.HandmadeExpo">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name=".view.AdminReportScreen"
-            android:exported="true"
-            android:label="@string/title_activity_admin_report_screen"
-            android:theme="@style/Theme.HandmadeExpo">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name=".view.AdminReportListScreen"
-            android:exported="false"
-            android:label="@string/title_activity_admin_report_list_screen"
-            android:theme="@style/Theme.HandmadeExpo" />
-        <activity
-            android:name=".view.ReportProductScreen"
-            android:exported="true"
-            android:label="@string/title_activity_report_product_screen"
-            android:theme="@style/Theme.HandmadeExpo">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
+                <activity
             android:name=".view.SplashActivity"
             android:exported="true"
             android:label="@string/title_activity_splash"
@@ -87,28 +50,7 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity> <!-- <activity -->
-        <!-- android:name=".view.NewProduct" -->
-        <!-- android:exported="true" -->
-        <!-- android:label="@string/title_activity_new_product" -->
-        <!-- android:theme="@style/Theme.HandmadeExpo" > -->
-        <!-- <intent-filter> -->
-        <!-- <action android:name="android.intent.action.MAIN" /> -->
-        <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
-        <!-- </intent-filter> -->
-        <!-- </activity> &lt;!&ndash; <activity &ndash;&gt; -->
-        <!-- android:name=".view.ProfileScreen" -->
-        <!-- android:exported="true" -->
-        <!-- android:label="@string/title_activity_profile_screen" -->
-        <!-- android:name=".view.SellerInventoryActivity" -->
-        <!-- android:exported="true" -->
-        <!-- android:label="@string/title_activity_seller_inventory" -->
-        <!-- android:theme="@style/Theme.HandmadeExpo"> -->
-        <!-- <intent-filter> -->
-        <!-- <action android:name="android.intent.action.MAIN" /> -->
-        <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
-        <!-- </intent-filter> -->
-        <!-- </activity> -->
+        </activity>
         <activity
             android:name=".view.AddProductActivity"
             android:exported="true"
@@ -147,45 +89,7 @@
             android:exported="true"
             android:label="@string/title_activity_seller_registration"
             android:theme="@style/Theme.HandmadeExpo" /> <!-- <activity -->
-        <!-- android:name=".Sample" -->
-        <!-- android:exported="true" -->
-        <!-- android:label="@string/title_activity_sample" -->
-        <!-- android:theme="@style/Theme.HandmadeExpo"> -->
-        <!-- <intent-filter> -->
-        <!-- <action android:name="android.intent.action.MAIN" /> -->
-        <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
-        <!-- </intent-filter> -->
-        <!-- </activity> -->
-        <!-- <activity -->
-        <!-- android:name=".view.ForgetPasswordActivity" -->
-        <!-- android:exported="true" -->
-        <!-- android:label="@string/title_activity_forget_password" -->
-        <!-- android:theme="@style/Theme.HandmadeExpo"> -->
-        <!-- <intent-filter> -->
-        <!-- <action android:name="android.intent.action.MAIN" /> -->
-        <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
-        <!-- </intent-filter> -->
-        <!-- </activity> -->
-        <!-- <activity -->
-        <!-- android:name=".view.SignInActivity" -->
-        <!-- android:exported="true" -->
-        <!-- android:label="@string/title_activity_sign_in" -->
-        <!-- android:theme="@style/Theme.HandmadeExpo"> -->
-        <!-- <intent-filter> -->
-        <!-- <action android:name="android.intent.action.MAIN" /> -->
-        <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
-        <!-- </intent-filter> -->
-        <!-- </activity> -->
-        <!-- <activity -->
-        <!-- android:name=".view.LogInActivity" -->
-        <!-- android:exported="true" -->
-        <!-- android:label="@string/title_activity_log_in" -->
-        <!-- android:theme="@style/Theme.HandmadeExpo"> -->
-        <!-- <intent-filter> -->
-        <!-- <action android:name="android.intent.action.MAIN" /> -->
-        <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
-        <!-- </intent-filter> -->
-        <!-- </activity> -->
+
         <activity
             android:name=".view.DashboardActivity"
             android:exported="true"
@@ -196,16 +100,7 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity> <!-- <activity -->
-        <!-- android:name=".ui.theme.view.MainActivityDashboard" -->
-        <!-- android:exported="true" -->
-        <!-- android:label="@string/title_activity_main_dashboard" -->
-        <!-- android:theme="@style/Theme.HandmadeExpo"> -->
-        <!-- <intent-filter> -->
-        <!-- <action android:name="android.intent.action.MAIN" /> -->
-        <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
-        <!-- </intent-filter> -->
-        <!-- </activity> -->
+        </activity>
         <activity
             android:name=".view.SellerVerificationActivity"
             android:exported="true"
