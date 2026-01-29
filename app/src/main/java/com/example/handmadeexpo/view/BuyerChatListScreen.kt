@@ -1,6 +1,6 @@
-
 package com.example.handmadeexpo.view
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,159 +16,205 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.handmadeexpo.R
 import com.google.firebase.database.*
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun BuyerChatListScreen(
-    userId: String,
+    currentUserId: String,
     onChatClick: (String, String, String) -> Unit
 ) {
-    val database = remember(userId) {
-        FirebaseDatabase.getInstance().getReference("buyer_inbox").child(userId)
-    }
+    val database = FirebaseDatabase.getInstance().getReference("buyer_inbox").child(currentUserId)
 
-    var chattedSellers by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var activeChats by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    LaunchedEffect(userId) {
-        database.addValueEventListener(object : ValueEventListener {
+    // Properly dispose listener when composable leaves composition
+    DisposableEffect(currentUserId) {
+        val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val list = mutableListOf<Map<String, Any>>()
-                snapshot.children.forEach { doc ->
-                    (doc.value as? Map<String, Any>)?.let { list.add(it) }
-                }
-                chattedSellers = list.sortedByDescending { it["timestamp"] as? Long ?: 0L }
+                val list = snapshot.children.mapNotNull { it.value as? Map<String, Any> }
+                activeChats = list.sortedByDescending { it["timestamp"] as? Long ?: 0L }
                 isLoading = false
             }
-            override fun onCancelled(error: DatabaseError) { isLoading = false }
-        })
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F7FA))
-    ) {
-        // Modern Header
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(4.dp, RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(Color(0xFF1E88E5).copy(alpha = 0.15f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Message,
-                            contentDescription = null,
-                            tint = Color(0xFF1E88E5),
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            "Messages",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF212121)
-                        )
-                        Text(
-                            "${chattedSellers.size} conversations",
-                            fontSize = 13.sp,
-                            color = Color.Gray
-                        )
-                    }
-                }
+            override fun onCancelled(error: DatabaseError) {
+                isLoading = false
             }
         }
+        database.addValueEventListener(listener)
+        onDispose { database.removeEventListener(listener) }
+    }
 
-        Spacer(modifier = Modifier.height(16.dp))
+    // --- ROOT BOX FOR BACKGROUND ---
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // 1. BACKGROUND IMAGE
+        Image(
+            painter = painterResource(id = R.drawable.bg7),
+            contentDescription = "Background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
 
-        // Content
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+        // 2. MAIN CONTENT
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+            // Removed solid background color so image shows
+        ) {
+            // Modern Header
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(
-                        color = Color(0xFF1E88E5),
-                        strokeWidth = 3.dp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Loading messages...", color = Color.Gray, fontSize = 14.sp)
-                }
-            }
-        } else if (chattedSellers.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.ChatBubbleOutline,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = Color.Gray.copy(alpha = 0.3f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "No messages yet",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.Gray
-                    )
-                    Text(
-                        "Start chatting with sellers",
-                        fontSize = 14.sp,
-                        color = Color.Gray.copy(alpha = 0.7f)
-                    )
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(chattedSellers) { chat ->
-                    val sId = chat["participantId"].toString()
-                    val cId = chat["chatId"].toString()
-                    val lastMsg = chat["lastMessage"].toString()
-                    val timestamp = chat["timestamp"] as? Long ?: 0L
-
-                    // Fetch real name from sellers node
-                    var sellerName by remember { mutableStateOf("Loading...") }
-                    LaunchedEffect(sId) {
-                        FirebaseDatabase.getInstance().getReference("sellers").child(sId).child("name")
-                            .get().addOnSuccessListener { snapshot ->
-                                sellerName = snapshot.value?.toString() ?: "Unknown Seller"
-                            }
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(Color(0xFF1E88E5).copy(alpha = 0.15f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Message,
+                                contentDescription = null,
+                                tint = Color(0xFF1E88E5),
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                "Messages",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF212121)
+                            )
+                            Text(
+                                "${activeChats.size} conversations",
+                                fontSize = 13.sp,
+                                color = Color.Gray
+                            )
+                        }
                     }
+                }
+            }
 
-                    ModernChatItem(
-                        sellerName = sellerName,
-                        lastMessage = lastMsg,
-                        timestamp = timestamp,
-                        onClick = { onChatClick(cId, sId, sellerName) }
-                    )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            when {
+                isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(
+                                color = Color(0xFF1E88E5),
+                                strokeWidth = 3.dp
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Loading messages...", color = Color.Gray, fontSize = 14.sp)
+                        }
+                    }
+                }
+
+                activeChats.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.ChatBubbleOutline,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = Color.Gray.copy(alpha = 0.3f)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "No messages yet",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Gray
+                            )
+                            Text(
+                                "Start chatting with sellers",
+                                fontSize = 14.sp,
+                                color = Color.Gray.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(activeChats, key = { it["chatId"].toString() }) { chat ->
+                            val sellerId = chat["participantId"]?.toString() ?: ""
+                            val chatId = chat["chatId"]?.toString() ?: ""
+                            val lastMessage = chat["lastMessage"]?.toString() ?: "No message"
+                            val timestamp = chat["timestamp"] as? Long ?: 0L
+
+                            var shopName by remember { mutableStateOf("Loading...") }
+
+                            // Properly dispose listener for seller name
+                            DisposableEffect(sellerId) {
+                                if (sellerId.isNotEmpty()) {
+                                    val ref = FirebaseDatabase.getInstance()
+                                        .getReference("sellers")
+                                        .child(sellerId)
+
+                                    val nameListener = object : ValueEventListener {
+                                        override fun onDataChange(snapshot: DataSnapshot) {
+                                            // Try shopName first, then fallback to name/fullName
+                                            val fetchedName = snapshot.child("shopName").value?.toString()
+                                                ?: snapshot.child("name").value?.toString()
+                                                ?: snapshot.child("fullName").value?.toString()
+
+                                            shopName = if (!fetchedName.isNullOrEmpty()) {
+                                                fetchedName
+                                            } else if (snapshot.exists()) {
+                                                "Seller"
+                                            } else {
+                                                "Unknown"
+                                            }
+                                        }
+                                        override fun onCancelled(error: DatabaseError) {}
+                                    }
+                                    ref.addValueEventListener(nameListener)
+                                    onDispose { ref.removeEventListener(nameListener) }
+                                } else {
+                                    onDispose { }
+                                }
+                            }
+
+                            BuyerChatItem(
+                                sellerName = shopName,
+                                lastMessage = lastMessage,
+                                timestamp = timestamp,
+                                onClick = { onChatClick(chatId, sellerId, shopName) }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -176,7 +222,7 @@ fun BuyerChatListScreen(
 }
 
 @Composable
-fun ModernChatItem(
+private fun BuyerChatItem(
     sellerName: String,
     lastMessage: String,
     timestamp: Long,
@@ -185,8 +231,8 @@ fun ModernChatItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .shadow(2.dp, RoundedCornerShape(16.dp)),
+            .shadow(2.dp, RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -196,14 +242,10 @@ fun ModernChatItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar
             Box(
                 modifier = Modifier
                     .size(52.dp)
-                    .background(
-                        Color(0xFF1E88E5).copy(alpha = 0.15f),
-                        CircleShape
-                    ),
+                    .background(Color(0xFF1E88E5).copy(alpha = 0.15f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -216,10 +258,7 @@ fun ModernChatItem(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Message Content
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -236,7 +275,7 @@ fun ModernChatItem(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = formatTimestamp(timestamp),
+                        text = formatChatTimestamp(timestamp),
                         fontSize = 11.sp,
                         color = Color.Gray
                     )
@@ -255,7 +294,6 @@ fun ModernChatItem(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Arrow Icon
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = null,
@@ -266,7 +304,7 @@ fun ModernChatItem(
     }
 }
 
-private fun formatTimestamp(timestamp: Long): String {
+private fun formatChatTimestamp(timestamp: Long): String {
     if (timestamp == 0L) return ""
 
     val now = System.currentTimeMillis()

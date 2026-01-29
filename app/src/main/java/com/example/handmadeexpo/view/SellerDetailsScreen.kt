@@ -33,6 +33,7 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 
 // --- Modern Design Constants ---
+// AppBackground is defined but no longer used on the root container so the image shows
 private val AppBackground = Color(0xFFF5F7FA)
 private val PrimaryGreen = Color(0xFF4CAF50)
 private val TextDark = Color(0xFF212121)
@@ -121,11 +122,21 @@ fun SellerDetailsScreen(
         })
     }
 
+    // --- ROOT BOX WITH BACKGROUND ---
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(AppBackground)
+        // Removed .background(AppBackground) so image shows
     ) {
+        // 1. BACKGROUND IMAGE
+        Image(
+            painter = painterResource(id = R.drawable.bg7),
+            contentDescription = "Background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        // 2. CONTENT LAYERS
         when {
             isLoading -> {
                 Box(

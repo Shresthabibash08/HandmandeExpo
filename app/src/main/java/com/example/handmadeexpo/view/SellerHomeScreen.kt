@@ -2,6 +2,7 @@ package com.example.handmadeexpo.view
 
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.clip
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
@@ -33,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.example.handmadeexpo.R
 import com.example.handmadeexpo.model.BargainModel
 import com.example.handmadeexpo.model.ProductModel
 import com.example.handmadeexpo.repo.ProductRepoImpl
@@ -66,238 +69,252 @@ fun SellerHomeScreen(
     val rejectedProducts = sellerProducts.filter { it.verificationStatus == "Rejected" }
     val nonVerifiedProducts = pendingProducts + rejectedProducts
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F7FA))
+    // --- ROOT BOX FOR BACKGROUND ---
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
-        if (!showBargainSection) {
-            // Modern Tabs Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .shadow(2.dp, RoundedCornerShape(16.dp)),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                TabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = Color.Transparent,
-                    indicator = { tabPositions ->
-                        TabRowDefaults.SecondaryIndicator(
-                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                            color = Color(0xFF4CAF50),
-                            height = 3.dp
+        // 1. BACKGROUND IMAGE
+        Image(
+            painter = painterResource(id = R.drawable.bg7),
+            contentDescription = "Background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        // 2. MAIN CONTENT
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+            // Removed solid background color so image shows
+        ) {
+            if (!showBargainSection) {
+                // Modern Tabs Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .shadow(2.dp, RoundedCornerShape(16.dp)),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    TabRow(
+                        selectedTabIndex = selectedTab,
+                        containerColor = Color.Transparent,
+                        indicator = { tabPositions ->
+                            TabRowDefaults.SecondaryIndicator(
+                                modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                color = Color(0xFF4CAF50),
+                                height = 3.dp
+                            )
+                        }
+                    ) {
+                        Tab(
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0 },
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        "Verified",
+                                        fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 14.sp
+                                    )
+                                    if (verifiedProducts.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Badge(containerColor = Color(0xFF4CAF50)) {
+                                            Text(verifiedProducts.size.toString(), fontSize = 10.sp)
+                                        }
+                                    }
+                                }
+                            }
+                        )
+                        Tab(
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        "Pending/Rejected",
+                                        fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 14.sp
+                                    )
+                                    if (nonVerifiedProducts.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Badge(containerColor = Color(0xFFFF9800)) {
+                                            Text(nonVerifiedProducts.size.toString(), fontSize = 10.sp)
+                                        }
+                                    }
+                                }
+                            }
                         )
                     }
-                ) {
-                    Tab(
-                        selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
-                        text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    "Verified",
-                                    fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 14.sp
-                                )
-                                if (verifiedProducts.isNotEmpty()) {
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Badge(containerColor = Color(0xFF4CAF50)) {
-                                        Text(verifiedProducts.size.toString(), fontSize = 10.sp)
-                                    }
-                                }
-                            }
-                        }
-                    )
-                    Tab(
-                        selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
-                        text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    "Pending/Rejected",
-                                    fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 14.sp
-                                )
-                                if (nonVerifiedProducts.isNotEmpty()) {
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Badge(containerColor = Color(0xFFFF9800)) {
-                                        Text(nonVerifiedProducts.size.toString(), fontSize = 10.sp)
-                                    }
-                                }
-                            }
-                        }
-                    )
                 }
             }
-        }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            if (showBargainSection) {
-                // BARGAIN SECTION
-                if (bargainViewModel.sellerBargains.isEmpty()) {
-                    item {
-                        Box(
-                            Modifier
-                                .fillParentMaxHeight(0.8f)
-                                .fillMaxWidth(),
-                            Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    Icons.Default.Gavel,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(64.dp),
-                                    tint = Color.Gray.copy(alpha = 0.3f)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    "No pending bargain offers",
-                                    fontSize = 16.sp,
-                                    color = Color.Gray
-                                )
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (showBargainSection) {
+                    // BARGAIN SECTION
+                    if (bargainViewModel.sellerBargains.isEmpty()) {
+                        item {
+                            Box(
+                                Modifier
+                                    .fillParentMaxHeight(0.8f)
+                                    .fillMaxWidth(),
+                                Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Default.Gavel,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(64.dp),
+                                        tint = Color.Gray.copy(alpha = 0.3f)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        "No pending bargain offers",
+                                        fontSize = 16.sp,
+                                        color = Color.Gray
+                                    )
+                                }
                             }
+                        }
+                    } else {
+                        items(bargainViewModel.sellerBargains) { bargain ->
+                            ModernBargainRequestCard(
+                                bargain = bargain,
+                                onAccept = {
+                                    bargainViewModel.updateStatus(
+                                        bargain.buyerId,
+                                        bargain.productId,
+                                        "Accepted",
+                                        "",
+                                        sellerName
+                                    )
+                                },
+                                onReject = {
+                                    bargainViewModel.updateStatus(
+                                        bargain.buyerId,
+                                        bargain.productId,
+                                        "Rejected",
+                                        "",
+                                        sellerName
+                                    )
+                                },
+                                onCounter = { counterPrice ->
+                                    bargainViewModel.updateStatus(
+                                        bargain.buyerId,
+                                        bargain.productId,
+                                        "Counter",
+                                        counterPrice,
+                                        sellerName
+                                    )
+                                }
+                            )
                         }
                     }
                 } else {
-                    items(bargainViewModel.sellerBargains) { bargain ->
-                        ModernBargainRequestCard(
-                            bargain = bargain,
-                            onAccept = {
-                                bargainViewModel.updateStatus(
-                                    bargain.buyerId,
-                                    bargain.productId,
-                                    "Accepted",
-                                    "",
-                                    sellerName
-                                )
-                            },
-                            onReject = {
-                                bargainViewModel.updateStatus(
-                                    bargain.buyerId,
-                                    bargain.productId,
-                                    "Rejected",
-                                    "",
-                                    sellerName
-                                )
-                            },
-                            onCounter = { counterPrice ->
-                                bargainViewModel.updateStatus(
-                                    bargain.buyerId,
-                                    bargain.productId,
-                                    "Counter",
-                                    counterPrice,
-                                    sellerName
-                                )
-                            }
+                    // DASHBOARD SECTION
+                    item {
+                        ModernBargainShortcutCard(
+                            count = bargainViewModel.sellerBargains.size,
+                            onClick = { showBargainSection = true }
                         )
                     }
-                }
-            } else {
-                // DASHBOARD SECTION
-                item {
-                    ModernBargainShortcutCard(
-                        count = bargainViewModel.sellerBargains.size,
-                        onClick = { showBargainSection = true }
-                    )
-                }
 
-                when (selectedTab) {
-                    0 -> { // Verified Tab
-                        if (verifiedProducts.isEmpty()) {
-                            item {
-                                ModernEmptyState(
-                                    icon = Icons.Default.CheckCircle,
-                                    message = "No verified products yet",
-                                    subMessage = "Products will appear here once admin approves them"
-                                )
-                            }
-                        } else {
-                            items(verifiedProducts) { product ->
-                                ModernSellerProductCard(product)
+                    when (selectedTab) {
+                        0 -> { // Verified Tab
+                            if (verifiedProducts.isEmpty()) {
+                                item {
+                                    ModernEmptyState(
+                                        icon = Icons.Default.CheckCircle,
+                                        message = "No verified products yet",
+                                        subMessage = "Products will appear here once admin approves them"
+                                    )
+                                }
+                            } else {
+                                items(verifiedProducts) { product ->
+                                    ModernSellerProductCard(product)
+                                }
                             }
                         }
-                    }
-                    1 -> { // Pending/Rejected Tab
-                        if (nonVerifiedProducts.isEmpty()) {
-                            item {
-                                ModernEmptyState(
-                                    icon = Icons.Default.HourglassEmpty,
-                                    message = "No pending or rejected products",
-                                    subMessage = "All your products are verified!"
-                                )
-                            }
-                        } else {
-                            if (pendingProducts.isNotEmpty()) {
+                        1 -> { // Pending/Rejected Tab
+                            if (nonVerifiedProducts.isEmpty()) {
                                 item {
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = Color(0xFFFFF3E0)
-                                        ),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(12.dp),
-                                            verticalAlignment = Alignment.CenterVertically
+                                    ModernEmptyState(
+                                        icon = Icons.Default.HourglassEmpty,
+                                        message = "No pending or rejected products",
+                                        subMessage = "All your products are verified!"
+                                    )
+                                }
+                            } else {
+                                if (pendingProducts.isNotEmpty()) {
+                                    item {
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = Color(0xFFFFF3E0)
+                                            ),
+                                            shape = RoundedCornerShape(12.dp)
                                         ) {
-                                            Icon(
-                                                Icons.Default.HourglassEmpty,
-                                                contentDescription = null,
-                                                tint = Color(0xFFFF9800),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                "Pending Verification (${pendingProducts.size})",
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFE65100)
-                                            )
+                                            Row(
+                                                modifier = Modifier.padding(12.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.HourglassEmpty,
+                                                    contentDescription = null,
+                                                    tint = Color(0xFFFF9800),
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    "Pending Verification (${pendingProducts.size})",
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFFE65100)
+                                                )
+                                            }
                                         }
                                     }
-                                }
-                                items(pendingProducts) { product ->
-                                    ModernSellerProductCard(product)
-                                }
-                            }
-                            if (rejectedProducts.isNotEmpty()) {
-                                item {
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = Color(0xFFFFEBEE)
-                                        ),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(12.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Cancel,
-                                                contentDescription = null,
-                                                tint = Color(0xFFF44336),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                "Rejected (${rejectedProducts.size})",
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFC62828)
-                                            )
-                                        }
+                                    items(pendingProducts) { product ->
+                                        ModernSellerProductCard(product)
                                     }
                                 }
-                                items(rejectedProducts) { product ->
-                                    ModernSellerProductCard(product)
+                                if (rejectedProducts.isNotEmpty()) {
+                                    item {
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = Color(0xFFFFEBEE)
+                                            ),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(12.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Cancel,
+                                                    contentDescription = null,
+                                                    tint = Color(0xFFF44336),
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    "Rejected (${rejectedProducts.size})",
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFFC62828)
+                                                )
+                                            }
+                                        }
+                                    }
+                                    items(rejectedProducts) { product ->
+                                        ModernSellerProductCard(product)
+                                    }
                                 }
                             }
                         }

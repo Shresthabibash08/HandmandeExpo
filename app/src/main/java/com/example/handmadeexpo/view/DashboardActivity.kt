@@ -7,10 +7,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -19,10 +19,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.handmadeexpo.R
 import com.example.handmadeexpo.repo.BuyerRepoImpl
 import com.example.handmadeexpo.repo.CartRepoImpl
 import com.example.handmadeexpo.viewmodel.BuyerViewModel
@@ -57,7 +60,6 @@ fun DashboardBody(userId: String) {
     var editing by remember { mutableStateOf(false) }
     var changingPassword by remember { mutableStateOf(false) }
     var showAllSellers by remember { mutableStateOf(false) }
-    var buyerName by remember { mutableStateOf("Buyer") }
     var chatCount by remember { mutableIntStateOf(0) }
 
     // Reporting State
@@ -74,29 +76,26 @@ fun DashboardBody(userId: String) {
     val cartRepo = remember { CartRepoImpl() }
     val cartViewModel = remember { CartViewModel(cartRepo) }
 
-    // Fetch Buyer Name
-    LaunchedEffect(userId) {
-        if (userId.isNotEmpty()) {
-            FirebaseDatabase.getInstance().getReference("Buyers").child(userId).child("name")
-                .get().addOnSuccessListener { snapshot ->
-                    buyerName = snapshot.value?.toString() ?: "Buyer"
-                }
+    // Badge Listener for Incoming Chats
+    DisposableEffect(userId) {
+        if (userId.isEmpty()) return@DisposableEffect onDispose { }
+
+        val inboxRef = FirebaseDatabase.getInstance().getReference("buyer_inbox").child(userId)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                chatCount = snapshot.childrenCount.toInt()
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        inboxRef.addValueEventListener(listener)
+
+        onDispose {
+            inboxRef.removeEventListener(listener)
         }
     }
 
-    // Badge Listener for Incoming Chats
-    val inboxRef = remember { FirebaseDatabase.getInstance().getReference("buyer_inbox").child(userId) }
-    LaunchedEffect(userId) {
-        if (userId.isNotEmpty()) {
-            val listener = object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    chatCount = snapshot.childrenCount.toInt()
-                }
-                override fun onCancelled(error: DatabaseError) {}
-            }
-            inboxRef.addValueEventListener(listener)
-        }
-    }
+    // --- Updated Palette ---
+    val primaryGreen = Color(0xFF4CAF50) // Greenish Top Bar Color
 
     data class NavItem(val icon: ImageVector, val label: String, val color: Color)
     val listItems = listOf(
@@ -123,210 +122,204 @@ fun DashboardBody(userId: String) {
         }
     }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color(0xFF1E88E5)
-                ),
-                title = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        val titleText = when {
-                            reportSellerId != null -> "Report Seller"
-                            reportProductId != null -> "Report Product"
-                            selectedIndex == 1 && activeChatData != null -> activeChatData!!.third
-                            selectedIndex == 1 && showAllSellers -> "Select Seller"
-                            selectedIndex == 0 -> "Handmade Expo"
-                            selectedIndex == 1 -> "Messages"
-                            selectedIndex == 2 -> "My Cart"
-                            else -> "My Profile"
-                        }
-                        Text(
-                            titleText,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        if (selectedIndex == 0 && activeChatData == null && reportProductId == null && reportSellerId == null) {
-                            Text(
-                                "Discover unique products",
-                                fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    // Show back button for chat, seller list, or reporting screens
-                    if (activeChatData != null || showAllSellers || reportProductId != null || reportSellerId != null) {
-                        IconButton(
-                            onClick = {
-                                when {
-                                    reportSellerId != null -> reportSellerId = null
-                                    reportProductId != null -> reportProductId = null
-                                    activeChatData != null -> activeChatData = null
-                                    showAllSellers -> showAllSellers = false
-                                }
+    // Root Box for Background Image
+    Box(modifier = Modifier.fillMaxSize()) {
+        // --- Background Image ---
+        Image(
+            painter = painterResource(id = R.drawable.bg), // Ensure 3.jpeg is named green_bg in drawable
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        Scaffold(
+            // Make Scaffold container transparent to show the background image
+            containerColor = Color.Transparent,
+            topBar = {
+                CenterAlignedTopAppBar(
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = primaryGreen // CHANGED TO GREEN
+                    ),
+                    title = {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            val titleText = when {
+                                reportSellerId != null -> "Report Seller"
+                                reportProductId != null -> "Report Product"
+                                selectedIndex == 1 && activeChatData != null -> activeChatData!!.third
+                                selectedIndex == 1 && showAllSellers -> "Select Seller"
+                                selectedIndex == 0 -> "Handmade Expo"
+                                selectedIndex == 1 -> "Messages"
+                                selectedIndex == 2 -> "My Cart"
+                                else -> "My Profile"
                             }
-                        ) {
-                            Icon(
-                                Icons.Default.ArrowBack,
-                                contentDescription = "Back",
-                                tint = Color.White
+                            Text(
+                                titleText,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
                             )
+                            if (selectedIndex == 0 && activeChatData == null && reportProductId == null && reportSellerId == null) {
+                                Text(
+                                    "Discover unique products",
+                                    fontSize = 12.sp,
+                                    color = Color.White.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                    },
+                    navigationIcon = {
+                        if (activeChatData != null || showAllSellers || reportProductId != null || reportSellerId != null) {
+                            IconButton(
+                                onClick = {
+                                    when {
+                                        reportSellerId != null -> reportSellerId = null
+                                        reportProductId != null -> reportProductId = null
+                                        activeChatData != null -> activeChatData = null
+                                        showAllSellers -> showAllSellers = false
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = Color.White
+                                )
+                            }
                         }
                     }
-                }
-            )
-        },
-        bottomBar = {
-            if (activeChatData == null && reportProductId == null && reportSellerId == null && !editing && !changingPassword) {
-                NavigationBar(
-                    containerColor = Color.White,
-                    tonalElevation = 8.dp
-                ) {
-                    listItems.forEachIndexed { index, item ->
-                        NavigationBarItem(
-                            selected = selectedIndex == index,
-                            onClick = {
-                                selectedIndex = index
-                                editing = false
-                                changingPassword = false
-                                showAllSellers = false
-                                reportProductId = null
-                                reportSellerId = null
-                                if (index != 1) activeChatData = null
-                            },
-                            icon = {
-                                if (index == 1 && chatCount > 0) {
-                                    BadgedBox(
-                                        badge = {
-                                            Badge(containerColor = Color(0xFFFF5722)) {
-                                                Text("$chatCount")
+                )
+            },
+            bottomBar = {
+                if (activeChatData == null && reportProductId == null && reportSellerId == null && !editing && !changingPassword) {
+                    NavigationBar(
+                        containerColor = Color.White,
+                        tonalElevation = 8.dp
+                    ) {
+                        listItems.forEachIndexed { index, item ->
+                            NavigationBarItem(
+                                selected = selectedIndex == index,
+                                onClick = {
+                                    selectedIndex = index
+                                    editing = false
+                                    changingPassword = false
+                                    showAllSellers = false
+                                    reportProductId = null
+                                    reportSellerId = null
+                                    if (index != 1) activeChatData = null
+                                },
+                                icon = {
+                                    if (index == 1 && chatCount > 0) {
+                                        BadgedBox(
+                                            badge = {
+                                                Badge(containerColor = Color(0xFFFF5722)) {
+                                                    Text("$chatCount")
+                                                }
                                             }
+                                        ) {
+                                            Icon(item.icon, contentDescription = item.label)
                                         }
-                                    ) {
+                                    } else {
                                         Icon(item.icon, contentDescription = item.label)
                                     }
-                                } else {
-                                    Icon(item.icon, contentDescription = item.label)
-                                }
-                            },
-                            label = { Text(item.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = item.color,
-                                selectedTextColor = item.color,
-                                indicatorColor = item.color.copy(alpha = 0.15f)
+                                },
+                                label = { Text(item.label) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = item.color,
+                                    selectedTextColor = item.color,
+                                    indicatorColor = item.color.copy(alpha = 0.15f)
+                                )
                             )
+                        }
+                    }
+                }
+            },
+            floatingActionButton = {
+                if (selectedIndex == 1 && activeChatData == null && !showAllSellers && reportProductId == null && reportSellerId == null) {
+                    FloatingActionButton(
+                        onClick = { showAllSellers = true },
+                        containerColor = primaryGreen, // Consistent Green
+                        contentColor = Color.White,
+                        modifier = Modifier.size(64.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "New Chat",
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                 }
             }
-        },
-        containerColor = Color(0xFFF5F7FA),
-        floatingActionButton = {
-            // Floating Action Button for New Chat
-            if (selectedIndex == 1 && activeChatData == null && !showAllSellers && reportProductId == null && reportSellerId == null) {
-                FloatingActionButton(
-                    onClick = { showAllSellers = true },
-                    containerColor = Color(0xFF4CAF50),
-                    contentColor = Color.White,
-                    modifier = Modifier.size(64.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = "New Chat",
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-        }
-    ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // Global Overlays (Reporting)
-            if (reportSellerId != null) {
-                ReportSellerScreen(
-                    sellerId = reportSellerId!!,
-                    onBackClick = { reportSellerId = null }
-                )
-            } else if (reportProductId != null) {
-                ReportProductScreen(
-                    productId = reportProductId!!,
-                    onBackClick = { reportProductId = null }
-                )
-            } else {
-                when (selectedIndex) {
-                    // Home Tab
-                    0 -> {
-                        HomeScreen(
-                            onReportProductClick = { productId ->
-                                reportProductId = productId
-                            },
-                            onReportSellerClick = { sellerId ->
-                                reportSellerId = sellerId
-                            }
+        ) { padding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                when {
+                    reportSellerId != null -> {
+                        ReportSellerScreen(
+                            sellerId = reportSellerId!!,
+                            onBackClick = { reportSellerId = null }
                         )
                     }
-
-                    // Inbox Tab
-                    1 -> when {
-                        activeChatData != null -> {
-                            ChatScreen(
-                                chatId = activeChatData!!.first,
-                                sellerId = activeChatData!!.second,
-                                sellerName = activeChatData!!.third,
-                                currentUserId = userId,
-                                onBackClick = { activeChatData = null }
-                            )
-                        }
-                        showAllSellers -> {
-                            AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
-                                activeChatData = Triple(chatId, sellerId, sellerName)
-                                showAllSellers = false
-                            }
-                        }
-                        else -> {
-                            BuyerChatListScreen(userId) { chatId, sellerId, sellerName ->
-                                activeChatData = Triple(chatId, sellerId, sellerName)
-                            }
-                        }
-                    }
-
-                    // Cart Tab
-                    2 -> {
-                        CartScreen(
-                            cartViewModel = cartViewModel,
-                            currentUserId = userId
+                    reportProductId != null -> {
+                        ReportProductScreen(
+                            productId = reportProductId!!,
+                            onBackClick = { reportProductId = null }
                         )
                     }
+                    else -> {
+                        when (selectedIndex) {
+                            0 -> HomeScreen(
+                                onReportProductClick = { reportProductId = it },
+                                onReportSellerClick = { reportSellerId = it }
+                            )
 
-                    // Profile Tab
-                    3 -> when {
-                        changingPassword -> {
-                            ChangePasswordScreen(
-                                viewModel = buyerViewModel,
-                                onBackClick = { changingPassword = false },
-                                onPasswordChanged = { changingPassword = false }
-                            )
-                        }
-                        editing -> {
-                            EditBuyerProfileScreen(
-                                viewModel = buyerViewModel,
-                                onBack = { editing = false }
-                            )
-                        }
-                        else -> {
-                            BuyerProfileScreen(
-                                viewModel = buyerViewModel,
-                                onEditClick = { editing = true },
-                                onChangePasswordClick = { changingPassword = true },
-                                onLogoutSuccess = {
-                                    val intent = Intent(context, SignInActivity::class.java)
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                    context.startActivity(intent)
-                                    activity?.finish()
+                            1 -> when {
+                                activeChatData != null -> ChatScreen(
+                                    chatId = activeChatData!!.first,
+                                    sellerId = activeChatData!!.second,
+                                    sellerName = activeChatData!!.third,
+                                    currentUserId = userId,
+                                    onBackClick = { activeChatData = null }
+                                )
+                                showAllSellers -> AllSellersListScreen(userId) { chatId, sellerId, sellerName ->
+                                    activeChatData = Triple(chatId, sellerId, sellerName)
+                                    showAllSellers = false
                                 }
+                                else -> BuyerChatListScreen(userId) { chatId, sellerId, sellerName ->
+                                    activeChatData = Triple(chatId, sellerId, sellerName)
+                                }
+                            }
+
+                            2 -> CartScreen(
+                                cartViewModel = cartViewModel,
+                                currentUserId = userId
                             )
+
+                            3 -> when {
+                                changingPassword -> ChangePasswordScreen(
+                                    viewModel = buyerViewModel,
+                                    onBackClick = { changingPassword = false },
+                                    onPasswordChanged = { changingPassword = false }
+                                )
+                                editing -> EditBuyerProfileScreen(
+                                    viewModel = buyerViewModel,
+                                    onBack = { editing = false }
+                                )
+                                else -> BuyerProfileScreen(
+                                    viewModel = buyerViewModel,
+                                    onEditClick = { editing = true },
+                                    onChangePasswordClick = { changingPassword = true },
+                                    onLogoutSuccess = {
+                                        val intent = Intent(context, SignInActivity::class.java).apply {
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                        }
+                                        context.startActivity(intent)
+                                        activity?.finish()
+                                    }
+                                )
+                            }
                         }
                     }
                 }

@@ -1,5 +1,6 @@
 package com.example.handmadeexpo.view
 
+//import CategoryScreen
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -19,8 +20,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -33,7 +32,6 @@ import com.example.handmadeexpo.R
 import com.example.handmadeexpo.model.ProductModel
 import com.example.handmadeexpo.repo.ProductRepoImpl
 import com.example.handmadeexpo.repo.CartRepoImpl
-import com.example.handmadeexpo.ui.theme.MainColor
 import com.example.handmadeexpo.viewmodel.ProductViewModel
 import com.example.handmadeexpo.viewmodel.ProductViewModelFactory
 import com.example.handmadeexpo.viewmodel.CartViewModel
@@ -71,7 +69,6 @@ fun HomeScreen(
 
     val currentUserId = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "Guest" }
 
-    // Handle system back button for nested screens
     BackHandler(enabled = isChatOpen || selectedProduct != null || showCart || selectedCategory != null) {
         when {
             showCart -> showCart = false
@@ -82,10 +79,19 @@ fun HomeScreen(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F7FA))
+        modifier = Modifier.fillMaxSize()
+        // Removed the solid background color here so the image shows
     ) {
+        // --- BACKGROUND IMAGE ADDED HERE ---
+        // NOTE: Rename your '3.jpeg' to 'home_background.jpeg' in res/drawable
+        Image(
+            painter = painterResource(id = R.drawable.bg),
+            contentDescription = "Background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+        // -----------------------------------
+
         when {
             showCart -> {
                 CartScreen(cartViewModel = cartViewModel, currentUserId = currentUserId)
@@ -176,7 +182,7 @@ fun MainHomeContent(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F7FA))
+        // Removed .background(Color(0xFFF5F7FA)) here so the list is transparent
     ) {
         item {
             Column(
@@ -184,12 +190,10 @@ fun MainHomeContent(
                     .fillMaxWidth()
                     .padding(bottom = 16.dp)
             ) {
-                // Search Bar
                 SearchBarInput(query = searchQuery, onQueryChange = { searchQuery = it })
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Categories Header
                 Text(
                     text = "Categories",
                     fontWeight = FontWeight.Bold,
@@ -198,19 +202,16 @@ fun MainHomeContent(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
-                // Category List
                 CategoryList(categories = categories, onCategoryClick = onCategoryClick)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Price Slider
                 GradientPriceSliderSection(sliderValue, maxPrice, onSliderChange, onCategorySelect)
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
 
-        // Sale Section
         item {
             SectionHeader("Featured Products", "${filteredList.size} items available", true)
             ProductRow(filteredList, onProductClick, onChatClick)
@@ -220,7 +221,6 @@ fun MainHomeContent(
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // Recommended Section
         item {
             SectionHeader("Recommended", "Handpicked for you", true)
             ProductRow(filteredList.reversed(), onProductClick, onChatClick)
@@ -243,9 +243,7 @@ fun CategoryList(
                 modifier = Modifier
                     .width(80.dp)
                     .clickable { onCategoryClick(name) },
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White
-                ),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -333,7 +331,9 @@ fun GradientPriceSliderSection(
                 value = value,
                 onValueChange = {
                     onValueChange(it)
-                    onCategorySelect(it.toDouble())
+                    // Calculate actual price from slider percentage
+                    val actualPrice = (it / 100f) * 100000.0
+                    onCategorySelect(actualPrice)
                 },
                 valueRange = 0f..100f,
                 colors = SliderDefaults.colors(
@@ -377,7 +377,6 @@ fun ProductCard(
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            // Product Image
             Card(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
@@ -394,7 +393,6 @@ fun ProductCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Product Name
             Text(
                 product.name,
                 fontSize = 15.sp,
@@ -405,7 +403,6 @@ fun ProductCard(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Price and Chat Button Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -425,7 +422,6 @@ fun ProductCard(
                     )
                 }
 
-                // Chat Button
                 IconButton(
                     onClick = { onChatClick(product) },
                     modifier = Modifier

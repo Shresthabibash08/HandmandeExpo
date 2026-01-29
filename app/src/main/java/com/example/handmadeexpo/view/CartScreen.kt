@@ -1,8 +1,8 @@
-
 package com.example.handmadeexpo.view
 
 import android.app.Activity
 import android.content.Intent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -70,148 +70,162 @@ fun CartScreen(
         priceToUse * item.quantity.toDouble()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F7FA))
+    // --- ROOT BOX FOR BACKGROUND ---
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
-        // Modern Header
-        Card(
+        // 1. BACKGROUND IMAGE
+        Image(
+            painter = painterResource(id = R.drawable.bg7),
+            contentDescription = "Background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        // 2. MAIN CONTENT
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .shadow(4.dp, RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                .fillMaxSize()
+            // Removed solid background color so image shows
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+            // Modern Header
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(MainColor.copy(alpha = 0.15f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.ShoppingCart,
+                                contentDescription = null,
+                                tint = MainColor,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                "My Cart",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF212121)
+                            )
+                            Text(
+                                "${cartItems.size} items",
+                                fontSize = 13.sp,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Content
+            Box(modifier = Modifier.weight(1f)) {
+                if (isLoading) {
                     Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(MainColor.copy(alpha = 0.15f), CircleShape),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.Default.ShoppingCart,
-                            contentDescription = null,
-                            tint = MainColor,
-                            modifier = Modifier.size(28.dp)
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(
+                                color = MainColor,
+                                strokeWidth = 3.dp
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Loading cart...", color = Color.Gray, fontSize = 14.sp)
+                        }
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            "My Cart",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF212121)
-                        )
-                        Text(
-                            "${cartItems.size} items",
-                            fontSize = 13.sp,
-                            color = Color.Gray
-                        )
+                } else if (cartItems.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.ShoppingCartCheckout,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = Color.Gray.copy(alpha = 0.3f)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "Your cart is empty",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Gray
+                            )
+                            Text(
+                                "Add items to get started",
+                                fontSize = 14.sp,
+                                color = Color.Gray.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(cartItems, key = { it.productId }) { item ->
+                            ModernCartItemCard(
+                                item = item,
+                                cartViewModel = cartViewModel,
+                                bargainViewModel = bargainViewModel,
+                                userId = currentUserId,
+                                userName = currentUserName,
+                                onPriceUpdate = { newPrice -> acceptedPrices[item.productId] = newPrice },
+                                onDeleteClick = {
+                                    itemToDelete = item
+                                    showDeleteDialog = true
+                                }
+                            )
+                        }
+                        item { Spacer(modifier = Modifier.height(80.dp)) }
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            // Bottom Bar
+            if (!isLoading && cartItems.isNotEmpty()) {
+                ModernCartBottomBar(
+                    total = total,
+                    itemCount = cartItems.size,
+                    onCheckoutClick = {
+                        val orderItems = ArrayList(cartItems.map { cartItem ->
+                            val finalPrice = acceptedPrices[cartItem.productId] ?: cartItem.price.toDouble()
+                            OrderItem(
+                                productId = cartItem.productId,
+                                productName = cartItem.name,
+                                price = finalPrice,
+                                quantity = cartItem.quantity,
+                                imageUrl = cartItem.image
+                            )
+                        })
 
-        // Content
-        Box(modifier = Modifier.weight(1f)) {
-            if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(
-                            color = MainColor,
-                            strokeWidth = 3.dp
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Loading cart...", color = Color.Gray, fontSize = 14.sp)
+                        val intent = Intent(context, CheckoutActivity::class.java).apply {
+                            putExtra("cartItems", orderItems)
+                            putExtra("isFromCart", true)
+                        }
+                        context.startActivity(intent)
                     }
-                }
-            } else if (cartItems.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.ShoppingCartCheckout,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = Color.Gray.copy(alpha = 0.3f)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "Your cart is empty",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.Gray
-                        )
-                        Text(
-                            "Add items to get started",
-                            fontSize = 14.sp,
-                            color = Color.Gray.copy(alpha = 0.7f)
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(cartItems, key = { it.productId }) { item ->
-                        ModernCartItemCard(
-                            item = item,
-                            cartViewModel = cartViewModel,
-                            bargainViewModel = bargainViewModel,
-                            userId = currentUserId,
-                            userName = currentUserName,
-                            onPriceUpdate = { newPrice -> acceptedPrices[item.productId] = newPrice },
-                            onDeleteClick = {
-                                itemToDelete = item
-                                showDeleteDialog = true
-                            }
-                        )
-                    }
-                    item { Spacer(modifier = Modifier.height(80.dp)) }
-                }
+                )
             }
-        }
-
-        // Bottom Bar
-        if (!isLoading && cartItems.isNotEmpty()) {
-            ModernCartBottomBar(
-                total = total,
-                itemCount = cartItems.size,
-                onCheckoutClick = {
-                    val orderItems = ArrayList(cartItems.map { cartItem ->
-                        val finalPrice = acceptedPrices[cartItem.productId] ?: cartItem.price.toDouble()
-                        OrderItem(
-                            productId = cartItem.productId,
-                            productName = cartItem.name,
-                            price = finalPrice,
-                            quantity = cartItem.quantity,
-                            imageUrl = cartItem.image
-                        )
-                    })
-
-                    val intent = Intent(context, CheckoutActivity::class.java).apply {
-                        putExtra("cartItems", orderItems)
-                        putExtra("isFromCart", true)
-                    }
-                    context.startActivity(intent)
-                }
-            )
         }
     }
 

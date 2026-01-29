@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,12 +28,14 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.handmadeexpo.R
 import com.example.handmadeexpo.model.ProductModel
 import com.example.handmadeexpo.repo.ProductRepoImpl
 import com.example.handmadeexpo.viewmodel.ProductViewModel
@@ -73,163 +76,177 @@ fun InventoryScreen(sellerId: String) {
         refreshTrigger++
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F7FA))
+    // --- ROOT BOX FOR BACKGROUND LAYERING ---
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
-        // --- Header Card ---
-        Card(
+        // 1. BACKGROUND IMAGE
+        Image(
+            painter = painterResource(id = R.drawable.bg),
+            contentDescription = "Background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        // 2. MAIN CONTENT
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .shadow(4.dp, RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                .fillMaxSize()
+            // Removed solid background color here to show image
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(Color(0xFF4CAF50).copy(alpha = 0.15f), CircleShape),
-                        contentAlignment = Alignment.Center
+            // --- Header Card ---
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            Icons.Default.Inventory,
-                            contentDescription = null,
-                            tint = Color(0xFF4CAF50),
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            "Inventory Manager",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF212121)
-                        )
-                        Text(
-                            "${sellerProducts.size} products",
-                            fontSize = 13.sp,
-                            color = Color.Gray
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // --- Statistics Card ---
-        ModernInventoryHeaderCard(sellerProducts.size, totalAmount)
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // --- Main Content Area (List + Loading Overlay) ---
-        Box(modifier = Modifier.weight(1f)) {
-            // 1. Product List
-            if (!isLoading) {
-                if (sellerProducts.isNotEmpty()) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 8.dp,
-                            bottom = 100.dp // Space for FAB
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(sellerProducts, key = { it.productId }) { product ->
-                            ModernProductItemRow(
-                                product = product,
-                                onEdit = {
-                                    productViewModel.getProductById(product.productId)
-                                    showDialog = true
-                                },
-                                onDelete = {
-                                    productViewModel.deleteProduct(product.productId) { success, msg ->
-                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                        if (success) {
-                                            refreshTrigger++
-                                        }
-                                    }
-                                }
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(Color(0xFF4CAF50).copy(alpha = 0.15f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Inventory,
+                                contentDescription = null,
+                                tint = Color(0xFF4CAF50),
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                "Inventory Manager",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF212121)
+                            )
+                            Text(
+                                "${sellerProducts.size} products",
+                                fontSize = 13.sp,
+                                color = Color.Gray
                             )
                         }
                     }
-                } else {
-                    ModernEmptyInventoryView()
                 }
             }
 
-            // 2. Loading Overlay
-            this@Column.AnimatedVisibility(
-                visible = isLoading,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.Center)
-            ) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFFF5F7FA)),
-                    contentAlignment = Alignment.Center
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --- Statistics Card ---
+            ModernInventoryHeaderCard(sellerProducts.size, totalAmount)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --- Main Content Area (List + Loading Overlay) ---
+            Box(modifier = Modifier.weight(1f)) {
+                // 1. Product List
+                if (!isLoading) {
+                    if (sellerProducts.isNotEmpty()) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 8.dp,
+                                bottom = 100.dp // Space for FAB
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(sellerProducts, key = { it.productId }) { product ->
+                                ModernProductItemRow(
+                                    product = product,
+                                    onEdit = {
+                                        productViewModel.getProductById(product.productId)
+                                        showDialog = true
+                                    },
+                                    onDelete = {
+                                        productViewModel.deleteProduct(product.productId) { success, msg ->
+                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                            if (success) {
+                                                refreshTrigger++
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    } else {
+                        ModernEmptyInventoryView()
+                    }
+                }
+
+                // 2. Loading Overlay
+                this@Column.AnimatedVisibility(
+                    visible = isLoading,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.Center)
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(
-                            color = Color(0xFF4CAF50),
-                            strokeWidth = 3.dp
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Loading inventory...", color = Color.Gray, fontSize = 14.sp)
+                    Box(
+                        Modifier
+                            .fillMaxSize(),
+                        // Removed solid background here so image shows while loading
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(
+                                color = Color(0xFF4CAF50),
+                                strokeWidth = 3.dp
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Loading inventory...", color = Color.DarkGray, fontSize = 14.sp)
+                        }
                     }
                 }
             }
-        }
 
-        // --- FAB ---
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            contentAlignment = Alignment.BottomEnd
-        ) {
-            FloatingActionButton(
-                onClick = {
-                    val intent = Intent(context, AddProductActivity::class.java)
-                    addProductLauncher.launch(intent)
-                },
-                containerColor = Color(0xFF4CAF50),
-                contentColor = Color.White,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.size(width = 160.dp, height = 56.dp)
+            // --- FAB ---
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                contentAlignment = Alignment.BottomEnd
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                FloatingActionButton(
+                    onClick = {
+                        val intent = Intent(context, AddProductActivity::class.java)
+                        addProductLauncher.launch(intent)
+                    },
+                    containerColor = Color(0xFF4CAF50),
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.size(width = 160.dp, height = 56.dp)
                 ) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add Product", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(Icons.Default.Add, null, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Add Product", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
                 }
             }
-        }
 
-        // --- Edit Dialog ---
-        if (showDialog && selectedProduct != null) {
-            ModernEditProductDialog(
-                product = selectedProduct!!,
-                productViewModel = productViewModel,
-                onDismiss = {
-                    showDialog = false
-                    refreshTrigger++
-                }
-            )
+            // --- Edit Dialog ---
+            if (showDialog && selectedProduct != null) {
+                ModernEditProductDialog(
+                    product = selectedProduct!!,
+                    productViewModel = productViewModel,
+                    onDismiss = {
+                        showDialog = false
+                        refreshTrigger++
+                    }
+                )
+            }
         }
     }
 }
